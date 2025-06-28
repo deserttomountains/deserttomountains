@@ -3,7 +3,7 @@
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { CheckCircle, Package, Truck, Clock, MapPin, Phone, Mail, ArrowRight, Home, ShoppingBag } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -17,7 +17,7 @@ interface OrderDetails {
   items: any[];
 }
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
@@ -292,5 +292,28 @@ export default function OrderConfirmationPage() {
       
       <Footer />
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-amber-100 via-white to-orange-100">
+      <Navigation />
+      <main className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-amber-700 font-semibold">Loading order details...</p>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <OrderConfirmationContent />
+    </Suspense>
   );
 } 
