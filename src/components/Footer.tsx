@@ -17,7 +17,6 @@ export default function Footer() {
             <ul className="space-y-2 text-gray-400">
               <li><Link href="/aura" className="hover:text-amber-400 transition-colors">Aura Wall Plaster</Link></li>
               <li><Link href="/dhunee" className="hover:text-amber-400 transition-colors">Dhunee Incense</Link></li>
-              <li><a href="#" className="hover:text-amber-400 transition-colors">Accessories</a></li>
             </ul>
           </div>
           
@@ -25,7 +24,7 @@ export default function Footer() {
             <h4 className="font-semibold mb-4">Company</h4>
             <ul className="space-y-2 text-gray-400">
               <li><Link href="/about" className="hover:text-amber-400 transition-colors">About Us</Link></li>
-              <li><a href="#" className="hover:text-amber-400 transition-colors">Our Story</a></li>
+              <li><Link href="/gallery" className="hover:text-amber-400 transition-colors">Gallery</Link></li>
               <li><Link href="/contact" className="hover:text-amber-400 transition-colors">Contact</Link></li>
             </ul>
           </div>
