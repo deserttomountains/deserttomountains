@@ -36,7 +36,7 @@ export default function Navigation() {
 
   return (
     <>
-      <nav className={`fixed top-0 left-0 right-0 z-50 bg-amber-900 border-b border-amber-800 shadow-lg transition-transform duration-500 ${showNav ? 'translate-y-0' : '-translate-y-full'}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 bg-[#5E4E06] border-b border-[#3D3204] shadow-lg transition-transform duration-500 ${showNav ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="relative max-w-7xl mx-auto px-6 py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -55,26 +55,26 @@ export default function Navigation() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="relative px-5 py-2 font-semibold rounded-xl text-white hover:text-amber-900 hover:bg-amber-400 transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                  className="relative px-5 py-2 font-semibold rounded-xl text-white hover:text-[#5E4E06] hover:bg-[#E6C866] transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]"
                 >
                   <span className="relative z-10">{link.label}</span>
                   {/* Bold underline on hover */}
-                  <span className="absolute left-0 bottom-0 w-0 h-1 bg-amber-400 rounded-full group-hover:w-full transition-all duration-200"></span>
+                  <span className="absolute left-0 bottom-0 w-0 h-1 bg-[#E6C866] rounded-full group-hover:w-full transition-all duration-200"></span>
                 </Link>
               ))}
             </div>
             {/* Action Buttons */}
             <div className="flex items-center space-x-3">
-              <Link href="/login" className="relative p-2 rounded-xl text-white bg-amber-400 hover:bg-white hover:text-amber-900 shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
+              <Link href="/login" className="relative p-2 rounded-xl text-white bg-[#8B7A1A] hover:bg-white hover:text-[#5E4E06] shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]">
                 <LogIn className="w-5 h-5" />
               </Link>
-              <Link href="/cart" className="relative p-2 rounded-xl text-white bg-amber-400 hover:bg-white hover:text-amber-900 shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400" aria-label="Cart">
+              <Link href="/cart" className="relative p-2 rounded-xl text-white bg-[#8B7A1A] hover:bg-white hover:text-[#5E4E06] shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]" aria-label="Cart">
                 <ShoppingCart className="w-5 h-5" />
               </Link>
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden relative p-2 rounded-xl text-white bg-amber-400 hover:bg-white hover:text-amber-900 shadow-md transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                className="md:hidden relative p-2 rounded-xl text-white bg-[#8B7A1A] hover:bg-white hover:text-[#5E4E06] shadow-md transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]"
               >
                 {isMobileMenuOpen ? (
                   <X className="w-5 h-5" />
@@ -90,7 +90,7 @@ export default function Navigation() {
       <div className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-in-out md:hidden ${
         isMobileMenuOpen ? 'translate-y-0' : '-translate-y-full'
       }`}>
-        <div className="bg-amber-900 shadow-lg border-b border-amber-800 mt-20 rounded-b-2xl">
+        <div className="bg-[#5E4E06] shadow-lg border-b border-[#3D3204] mt-20 rounded-b-2xl">
           <div className="px-6 py-6">
             <div className="flex flex-col space-y-3">
               {navLinks.map((link) => (
@@ -98,7 +98,7 @@ export default function Navigation() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="px-4 py-4 text-white font-semibold rounded-xl transition-all duration-200 hover:text-amber-900 hover:bg-amber-400 bg-transparent group focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                  className="px-4 py-4 text-white font-semibold rounded-xl transition-all duration-200 hover:text-[#5E4E06] hover:bg-[#E6C866] bg-transparent group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]"
                 >
                   {link.label}
                 </Link>

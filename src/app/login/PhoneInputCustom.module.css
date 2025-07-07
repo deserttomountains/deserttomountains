@@ -1,0 +1,48 @@
+.phoneContainer {
+  width: 100%;
+  background: transparent;
+  border-radius: 1rem;
+}
+
+.phoneInput {
+  width: 100% !important;
+  padding: 1.25rem 1.25rem 1.25rem 3.5rem !important;
+  border: 2px solid #D4AF37 !important;
+  border-radius: 1rem !important;
+  background: rgba(255,255,255,0.9) !important;
+  color: #5E4E06 !important;
+  font-size: 1.125rem !important;
+  font-weight: 500 !important;
+  transition: border 0.3s, box-shadow 0.3s;
+}
+
+.phoneInput:focus {
+  outline: none !important;
+  border-color: #8B7A1A !important;
+  box-shadow: 0 0 0 4px rgba(139, 122, 26, 0.2) !important;
+}
+
+.phoneButton {
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0.75rem 0 0 0.75rem !important;
+  color: #8B7A1A !important;
+  font-size: 1.1rem !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+.phoneDropdown {
+  border-radius: 1rem !important;
+  border: 2px solid #D4AF37 !important;
+  background: #fffbe6 !important;
+  color: #5E4E06 !important;
+  font-size: 1rem !important;
+  box-shadow: 0 8px 32px rgba(212, 175, 55, 0.15) !important;
+  z-index: 1000 !important;
+}
+
+.error {
+  border-color: #e53e3e !important;
+  background: #fff5f5 !important;
+} 
