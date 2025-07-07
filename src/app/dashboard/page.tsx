@@ -7,7 +7,7 @@ import { useState } from 'react';
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Simulate active link for demo
-  const active = 'Dashboard';
+  const active: string = 'Dashboard';
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex flex-col">
       <Navigation />

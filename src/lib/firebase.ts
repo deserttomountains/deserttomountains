@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, FirebaseApp } from 'firebase/app';
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -9,7 +9,8 @@ import {
   RecaptchaVerifier,
   PhoneAuthProvider,
   UserCredential,
-  AuthError
+  AuthError,
+  Auth
 } from 'firebase/auth';
 
 // Your Firebase configuration
@@ -24,8 +25,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
-let auth;
+let app: FirebaseApp;
+let auth: Auth;
 
 try {
   app = initializeApp(firebaseConfig);
@@ -38,6 +39,7 @@ try {
     onAuthStateChanged: () => () => {},
     signOut: async () => {},
   } as any;
+  app = {} as FirebaseApp;
 }
 
 // Initialize providers
@@ -60,7 +62,7 @@ facebookProvider.setCustomParameters({
 export class AuthService {
   // Check if Firebase is properly configured
   private static isFirebaseConfigured(): boolean {
-    return process.env.NEXT_PUBLIC_FIREBASE_API_KEY && 
+    return !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
            process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key';
   }
 
