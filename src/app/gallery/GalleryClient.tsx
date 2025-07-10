@@ -6,14 +6,13 @@ import Footer from '@/components/Footer';
 
 export default function GalleryClient() {
   const galleryItems = [
-    { id: 1, image: 'https://picsum.photos/1920/1080?random=10' },
-    { id: 2, image: 'https://picsum.photos/1200/600?random=11' },
-    { id: 3, image: 'https://picsum.photos/800/400?random=12' },
-    { id: 4, image: 'https://picsum.photos/1920/720?random=13' },
-    { id: 5, image: 'https://picsum.photos/1920/1080?random=14' },
-    { id: 6, image: 'https://picsum.photos/1280/720?random=15' },
-    { id: 7, image: 'https://picsum.photos/1440/720?random=16' },
-    { id: 8, image: 'https://picsum.photos/1200/600?random=17' },
+    { id: 1, image: '/images/gallery/1.webp' },
+    { id: 2, image: '/images/gallery/2.webp' },
+    { id: 3, image: '/images/gallery/3.webp' },
+    { id: 4, image: '/images/gallery/4.webp' },
+    { id: 5, image: '/images/gallery/5.webp' },
+    { id: 6, image: '/images/gallery/6.webp' },
+    { id: 7, image: '/images/gallery/7.webp' },
   ];
 
   const [lightboxOpen, setLightboxOpen] = useState(false);

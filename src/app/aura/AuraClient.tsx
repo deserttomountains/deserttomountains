@@ -6,9 +6,13 @@ import Footer from '@/components/Footer';
 import { Sparkles, Shield, CheckCircle, Leaf, Heart, Star, ArrowRight, Package, Truck, Clock, Palette, ShoppingCart, Zap, Mountain, Sun } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useCart } from '@/components/CartContext';
+import { useToast } from '@/components/ToastContext';
 
 export default function AuraClient() {
   const router = useRouter();
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
   const [selectedSize, setSelectedSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [productType, setProductType] = useState<'wallplaster' | 'sample'>('wallplaster');
   const [selectedSamplePack, setSelectedSamplePack] = useState<3 | 6 | 12>(3);
@@ -115,59 +119,49 @@ export default function AuraClient() {
       if (productType === 'wallplaster') {
         if (wallPlasterType === 'neutral') {
           cartItem = {
-            id: 'aura-neutral-wallplaster',
-            name: 'Aura Natural Wall Plaster - Neutral',
-            type: 'wallplaster',
-            variant: 'neutral',
+            id: 1,
+            name: 'Aura Wall Plaster 25kg',
+            image: '/images/aura_1.webp',
+            price: pack.price,
             quantity: neutralQuantity,
-            price: pack.price * neutralQuantity,
-            packSize: '25kg',
-            coverage: pack.coverage
+            subtitle: 'Natural Gypsum & Cow Dung',
           };
         } else {
-          // Pigmented wall plaster
+          // Pigmented wall plaster with shade details
           const selectedShades = Object.entries(pigmentedSelections)
             .filter(([_, qty]) => qty > 0)
             .map(([shadeId, qty]) => {
               const color = shaderColors.find(c => c.id === shadeId);
               return {
                 shadeId,
-                shadeName: color?.name,
-                shadeHex: color?.hex,
+                shadeName: color?.name || '',
+                shadeHex: color?.hex || '',
                 quantity: qty
               };
             });
-          
           cartItem = {
-            id: 'aura-pigmented-wallplaster',
-            name: 'Aura Natural Wall Plaster - Pigmented',
-            type: 'wallplaster',
-            variant: 'pigmented',
+            id: 3,
+            name: 'Aura Wall Plaster Pigmented',
+            image: '/images/aura_1.webp',
+            price: 1099, // price per unit
+            quantity: getPigmentedTotalQty(),
+            subtitle: 'Pigmented Shades',
             shades: selectedShades,
-            totalQuantity: getPigmentedTotalQty(),
-            price: getPigmentedTotalPrice(),
-            pricePerKg: 1099
           };
         }
       } else {
         // Sample pack
-        const selectedShadeNames = selectedColors.map(id => shaderColors.find(c => c.id === id)?.name);
         cartItem = {
-          id: 'aura-sample-pack',
-          name: `Aura Sample Pack - ${selectedSamplePack} Colors`,
-          type: 'sample',
-          packSize: selectedSamplePack,
-          selectedColors: selectedShadeNames,
-          price: getCurrentPrice()
+          id: 2,
+          name: `Sample Pack (${selectedSamplePack} Colors)` ,
+          image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80',
+          price: selectedPack?.price || 0,
+          quantity: 1,
+          subtitle: 'Choose your favorite shades',
         };
       }
-      
-      // Add to cart (store in localStorage for now)
-      const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
-      existingCart.push(cartItem);
-      localStorage.setItem('cart', JSON.stringify(existingCart));
-      
-      // Redirect to cart page
+      addToCart(cartItem);
+      showToast('Added to cart!', 'success');
       router.push('/cart');
       
     } catch (error) {
@@ -201,8 +195,8 @@ export default function AuraClient() {
       <section className="relative z-10">
         <div className="w-full h-96 md:h-[500px] relative overflow-hidden">
           <img
-            src="https://picsum.photos/1200/600?random=1"
-            alt="Aura Natural Wall Plaster"
+            src="/images/aura-on-site-1-1.webp"
+            alt="Aura On Site"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#2A2418]/30 to-transparent"></div>
@@ -595,7 +589,7 @@ export default function AuraClient() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-2xl opacity-20"></div>
               <img
-                src="https://picsum.photos/600/500?random=2"
+                src="/images/aura_1.webp"
                 alt="Aura Application"
                 className="relative w-full h-96 object-cover rounded-3xl shadow-2xl"
               />

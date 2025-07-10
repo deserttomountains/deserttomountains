@@ -4,10 +4,17 @@ import { useState } from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Sparkles, CheckCircle, ShoppingCart, Star, ArrowRight } from 'lucide-react';
+import { useCart } from '@/components/CartContext';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ToastContext';
 
 export default function DhuneeClient() {
   const [selectedSize, setSelectedSize] = useState<'small' | 'large'>('small');
+  const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
+  const router = useRouter();
 
   const sizes = [
     { key: 'small', label: 'Small', price: 249 },
@@ -36,10 +43,21 @@ export default function DhuneeClient() {
 
   const handleAddToCart = async () => {
     setIsAddingToCart(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsAddingToCart(false);
-    // Add cart logic here
+    try {
+      const cartItem = {
+        id: selectedSize === 'small' ? 4 : 5,
+        name: `Dhunee Organic Incense (${selected?.label})`,
+        image: '/images/dhunee_1.webp',
+        price: selected?.price || 0,
+        quantity,
+        subtitle: 'Himalayan Herbs & Cow Dung',
+      };
+      addToCart(cartItem);
+      showToast('Added to cart!', 'success');
+      router.push('/cart');
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   return (
@@ -58,7 +76,7 @@ export default function DhuneeClient() {
           <div className="flex justify-center">
             <div className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-fade-in-up">
               <img
-                src="https://picsum.photos/500/300?random=3"
+                src="/images/dhunee_1.webp"
                 alt="Dhunee Organic Incense"
                 className="w-full h-80 object-cover rounded-3xl"
               />
@@ -105,9 +123,31 @@ export default function DhuneeClient() {
               </div>
             </div>
             
-            {/* Price and Add to Cart */}
+            {/* Price, Quantity Selector, and Add to Cart */}
             <div className="flex flex-col sm:flex-row gap-4 items-center mb-6 sm:mb-8">
               <span className="text-2xl sm:text-3xl font-black text-[#5E4E06]">₹{selected?.price}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  className="w-8 h-8 rounded-full bg-[#F8F6F0] text-[#5E4E06] font-bold flex items-center justify-center border border-[#B8A94A] hover:bg-[#E6C866] transition-colors"
+                  disabled={quantity <= 1}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-12 text-center font-bold text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#8B7A1A] transition text-sm"
+                />
+                <button
+                  onClick={() => setQuantity(q => q + 1)}
+                  className="w-8 h-8 rounded-full bg-[#F8F6F0] text-[#5E4E06] font-bold flex items-center justify-center border border-[#B8A94A] hover:bg-[#E6C866] transition-colors"
+                >
+                  +
+                </button>
+              </div>
               <button
                 onClick={handleAddToCart}
                 disabled={isAddingToCart}
@@ -215,7 +255,7 @@ export default function DhuneeClient() {
           {/* Visual/Illustration Side */}
           <div className="relative flex justify-center items-center">
             <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06]/20 to-[#8B7A1A]/20 rounded-3xl blur-2xl opacity-30"></div>
-            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80" alt="Hawan Ritual" className="relative w-full h-64 sm:h-80 object-cover rounded-3xl shadow-2xl" />
+            <img src="/images/dhunee_2.webp" alt="Hawan Ritual" className="relative w-full h-64 sm:h-80 object-cover rounded-3xl shadow-2xl" />
           </div>
           {/* Text Side */}
           <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-[#E8E4D8]">

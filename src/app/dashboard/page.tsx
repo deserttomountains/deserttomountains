@@ -1,101 +1,270 @@
 'use client';
-import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
-import { User, Settings, LogOut, ShoppingBag, Bell, Edit3, Menu, LayoutDashboard } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  User, 
+  Settings, 
+  LogOut, 
+  ShoppingBag, 
+  Bell, 
+  Edit3, 
+  Menu, 
+  LayoutDashboard,
+  Package,
+  Calendar,
+  DollarSign,
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Star,
+  TrendingUp,
+  Heart
+} from 'lucide-react';
+import { AuthService, auth, UserProfile } from '@/lib/firebase';
+import DashboardLayout from './DashboardLayout';
 
 export default function DashboardPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  // Simulate active link for demo
-  const active: string = 'Dashboard';
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex flex-col">
-      <Navigation />
-      <div className="flex flex-1 relative">
-        {/* Sidebar */}
-        <aside className={`fixed z-20 top-0 left-0 h-screen w-72 bg-gradient-to-br from-[#FFFBE6] to-[#F5F2E8] border-r-2 border-[#D4AF37] shadow-2xl flex flex-col items-center pt-0 transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:w-72 lg:translate-x-0`}>
-          {/* Logo/Site Name */}
-          <div className="w-full flex items-center justify-center h-20 border-b-2 border-[#D4AF37] bg-gradient-to-r from-[#F8F6F0] to-[#E6DCC0]">
-            <span className="font-black text-2xl text-[#5E4E06] tracking-wide">Desert<span className="text-[#D4AF37]">2</span>Mountains</span>
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          const profile = await AuthService.getUserProfile(user.uid);
+          setUserProfile(profile);
+          
+          // Load recent orders from localStorage
+          const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+          setRecentOrders(orders.slice(0, 3)); // Show last 3 orders
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+        }
+      } else {
+        router.push('/login');
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleLogout = async () => {
+    try {
+      await AuthService.signOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getOrderStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return 'text-green-600 bg-green-100';
+      case 'shipped':
+        return 'text-blue-600 bg-blue-100';
+      case 'processing':
+        return 'text-yellow-600 bg-yellow-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getYear = (createdAt: any) => {
+    if (!createdAt) return '2024';
+    let date;
+    if (typeof createdAt === 'object' && createdAt.seconds) {
+      // Firestore Timestamp
+      date = new Date(createdAt.seconds * 1000);
+    } else {
+      date = new Date(createdAt);
+    }
+    return isNaN(date.getTime()) ? '2024' : date.getFullYear();
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout active="Dashboard">
+        <div className="max-w-5xl mx-auto py-12 px-4 pt-32 md:pt-24">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
           </div>
-          {/* User Info Card */}
-          <div className="mt-8 mb-10 w-11/12 bg-gradient-to-br from-[#FFFBE6] to-[#F5F2E8] border border-[#D4AF37] rounded-2xl shadow flex flex-col items-center p-5">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] flex items-center justify-center shadow-lg border-4 border-white mb-2">
-              <User className="w-8 h-8 text-white" />
-            </div>
-            <div className="text-center">
-              <div className="font-black text-lg text-[#5E4E06]">[User]</div>
-              <div className="text-[#8B7A1A] text-xs mb-2">user@email.com</div>
-              <button className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl shadow hover:scale-105 transition-all duration-300 cursor-pointer text-xs" disabled>
-                <Edit3 className="w-4 h-4" /> Edit Profile
-              </button>
-            </div>
-          </div>
-          {/* Navigation Links */}
-          <nav className="flex-1 w-full">
-            <ul className="space-y-2 px-6 mt-4">
-              <li>
-                <a href="#" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-lg ${active === 'Dashboard' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}><LayoutDashboard className="w-5 h-5" /> Dashboard</a>
-              </li>
-              <li>
-                <a href="#" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-lg ${active === 'Orders' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}><ShoppingBag className="w-5 h-5" /> My Orders</a>
-              </li>
-              <li>
-                <a href="#" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-lg ${active === 'Settings' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}><Settings className="w-5 h-5" /> Account Settings</a>
-              </li>
-              <li>
-                <a href="#" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-lg ${active === 'Notifications' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}><Bell className="w-5 h-5" /> Notifications</a>
-              </li>
-              <li>
-                <a href="#" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-lg ${active === 'Logout' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}><LogOut className="w-5 h-5" /> Logout</a>
-              </li>
-            </ul>
-          </nav>
-          <div className="mt-auto mb-8 text-xs text-[#8B7A1A] px-6 text-center">Desert to Mountains &copy; {new Date().getFullYear()}</div>
-        </aside>
-        {/* Sidebar overlay for mobile */}
-        {sidebarOpen && (
-          <div className="fixed inset-0 bg-black/30 z-10 lg:hidden" onClick={() => setSidebarOpen(false)}></div>
-        )}
-        {/* Main Content */}
-        <div className="flex-1 ml-0 lg:ml-72 w-full min-h-screen relative z-10">
-          {/* Mobile sidebar toggle */}
-          <button className="lg:hidden fixed top-6 left-6 z-30 bg-white/90 border-2 border-[#D4AF37] rounded-full p-2 shadow-lg" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <Menu className="w-7 h-7 text-[#8B7A1A]" />
-          </button>
-          <main className="max-w-5xl mx-auto py-12 px-4 pt-32 md:pt-24">
-            {/* Welcome Section */}
-            <div className="mb-10">
-              <h1 className="text-4xl md:text-5xl font-black text-[#5E4E06] mb-2">Welcome back, [User]!</h1>
-              <p className="text-[#8B7A1A] text-lg mb-4">Your personal dashboard for all things Desert to Mountains</p>
-            </div>
-            {/* Recent Activity / Announcements */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-8 mb-10 animate-fade-in">
-              <h2 className="text-2xl font-bold text-[#5E4E06] mb-4 flex items-center gap-2">
-                <Bell className="w-6 h-6 text-[#8B7A1A]" />
-                Recent Activity & Announcements
-              </h2>
-              <ul className="space-y-4">
-                <li className="flex items-start gap-4">
-                  <span className="w-3 h-3 mt-2 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] inline-block"></span>
-                  <div>
-                    <span className="font-semibold text-[#5E4E06]">No recent activity yet.</span>
-                    <p className="text-[#8B7A1A] text-sm">Your updates and order history will appear here.</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="w-3 h-3 mt-2 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] inline-block"></span>
-                  <div>
-                    <span className="font-semibold text-[#5E4E06]">Welcome to your new dashboard!</span>
-                    <p className="text-[#8B7A1A] text-sm">Stay tuned for new features and updates.</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </main>
         </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!userProfile) {
+  return (
+      <DashboardLayout active="Dashboard">
+        <div className="max-w-5xl mx-auto py-12 px-4 pt-32 md:pt-24">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-[#5E4E06] mb-4">Profile Not Found</h1>
+            <p className="text-[#8B7A1A]">Unable to load your profile. Please try logging in again.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout active="Dashboard">
+      <main className="max-w-5xl mx-auto py-12 px-4 pt-32 md:pt-24">
+        {/* Welcome Section */}
+        <div className="mb-10">
+          <h1 className="text-4xl md:text-5xl font-black text-[#5E4E06] mb-2">
+            Welcome back, {userProfile.firstName || 'Valued Customer'}!
+          </h1>
+          <p className="text-[#8B7A1A] text-lg mb-4">
+            Your personal dashboard for all things Desert to Mountains
+          </p>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[#8B7A1A] text-sm font-medium">Total Orders</p>
+                <p className="text-3xl font-bold text-[#5E4E06]">{recentOrders.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
+                <ShoppingBag className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[#8B7A1A] text-sm font-medium">Member Since</p>
+                <p className="text-3xl font-bold text-[#5E4E06]">
+                  {getYear(userProfile.createdAt)}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[#8B7A1A] text-sm font-medium">Account Status</p>
+                <p className="text-3xl font-bold text-[#5E4E06]">Active</p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Orders */}
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-8 mb-10">
+          <h2 className="text-2xl font-bold text-[#5E4E06] mb-6 flex items-center gap-2">
+            <Package className="w-6 h-6 text-[#8B7A1A]" />
+            Recent Orders
+              </h2>
+          
+          {recentOrders.length > 0 ? (
+            <div className="space-y-4">
+              {recentOrders.map((order, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border border-[#D4AF37]/30">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center">
+                      <Package className="w-6 h-6 text-white" />
+                    </div>
+                  <div>
+                      <p className="font-semibold text-[#5E4E06]">Order #{order.orderId || `ORD-${Date.now()}`}</p>
+                      <p className="text-[#8B7A1A] text-sm">
+                        {order.items?.length || 0} items • {formatDate(order.orderDate || new Date().toISOString())}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-[#5E4E06]">₹{order.totalAmount || '0'}</p>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getOrderStatusColor(order.status || 'Processing')}`}> 
+                      {order.status || 'Processing'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Package className="w-16 h-16 text-[#8B7A1A] mx-auto mb-4 opacity-50" />
+              <p className="text-[#8B7A1A] text-lg font-medium mb-2">No orders yet</p>
+              <p className="text-[#8B7A1A] text-sm">Start shopping to see your order history here</p>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-8">
+          <h2 className="text-2xl font-bold text-[#5E4E06] mb-6 flex items-center gap-2">
+            <TrendingUp className="w-6 h-6 text-[#8B7A1A]" />
+            Quick Actions
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button 
+              onClick={() => router.push('/aura')}
+              className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group"
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <span className="font-semibold text-[#5E4E06] text-center">Shop Aura</span>
+            </button>
+
+            <button 
+              onClick={() => router.push('/dhunee')}
+              className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group"
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Heart className="w-6 h-6 text-white" />
+              </div>
+              <span className="font-semibold text-[#5E4E06] text-center">Shop Dhunee</span>
+            </button>
+
+            <button 
+              onClick={() => router.push('/dashboard/orders')}
+              className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group"
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ShoppingBag className="w-6 h-6 text-white" />
+              </div>
+              <span className="font-semibold text-[#5E4E06] text-center">View Orders</span>
+            </button>
+
+            <button 
+              onClick={() => router.push('/dashboard/settings')}
+              className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group"
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Settings className="w-6 h-6 text-white" />
+              </div>
+              <span className="font-semibold text-[#5E4E06] text-center">Settings</span>
+            </button>
       </div>
-      <Footer />
     </div>
+      </main>
+    </DashboardLayout>
   );
 } 

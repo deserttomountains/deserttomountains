@@ -7,9 +7,11 @@ import { ShoppingCart, MapPin, CreditCard, ArrowLeft, ArrowRight, CheckCircle, H
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import addressService from '@/services/addressService';
+import { useToast } from '@/components/ToastContext';
 
 export default function AddressPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [shippingAddress, setShippingAddress] = useState({
     fullName: '',
     phone: '',
@@ -67,18 +69,15 @@ export default function AddressPage() {
 
   const handleContinue = async () => {
     setIsSubmitting(true);
-    
     try {
       // Validate required fields
       const requiredFields = ['fullName', 'phone', 'email', 'address', 'city', 'state', 'pincode'];
       const shippingValid = requiredFields.every(field => shippingAddress[field as keyof typeof shippingAddress].trim());
       const billingValid = sameAsShipping || requiredFields.every(field => billingAddress[field as keyof typeof billingAddress].trim());
-      
       if (!shippingValid || !billingValid) {
         alert('Please fill in all required fields');
         return;
       }
-
       // Store addresses in localStorage
       const checkoutData = {
         shippingAddress,
@@ -86,7 +85,7 @@ export default function AddressPage() {
         sameAsShipping
       };
       localStorage.setItem('checkoutData', JSON.stringify(checkoutData));
-      
+      showToast('Address saved!', 'success');
       // Navigate to payment page
       router.push('/payment');
     } catch (error) {

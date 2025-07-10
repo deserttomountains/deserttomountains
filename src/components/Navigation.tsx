@@ -1,14 +1,41 @@
 'use client';
 
-import { LogIn, ShoppingCart, Menu, X } from 'lucide-react';
+import { LogIn, ShoppingCart, Menu, X, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import { useCart } from '@/components/CartContext';
+import { auth, AuthService } from '@/lib/firebase';
+
+import { useRouter } from 'next/navigation';
 
 export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNav, setShowNav] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const { cart } = useCart();
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      setIsLoggedIn(!!user);
+      if (user) {
+        try {
+          const role = await AuthService.getUserRole(user.uid);
+          setUserRole(role);
+        } catch (error) {
+          console.error('Error getting user role:', error);
+          setUserRole('customer'); // Default to customer if error
+        }
+      } else {
+        setUserRole(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,14 +51,21 @@ export default function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  const handleDashboardClick = () => {
+    if (userRole === 'admin') {
+      router.push('/admin');
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/aura', label: 'Aura' },
     { href: '/dhunee', label: 'Dhunee' },
     { href: '/gallery', label: 'Gallery' },
     { href: '/about', label: 'About' },
-    { href: '/contact', label: 'Contact' },
-    { href: '/admin', label: 'Admin' }
+    { href: '/contact', label: 'Contact' }
   ];
 
   return (
@@ -65,11 +99,26 @@ export default function Navigation() {
             </div>
             {/* Action Buttons */}
             <div className="flex items-center space-x-3">
+              {isLoggedIn ? (
+                <button 
+                  onClick={handleDashboardClick}
+                  className="relative p-2 rounded-xl text-white bg-[#8B7A1A] hover:bg-white hover:text-[#5E4E06] shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]" 
+                  aria-label={userRole === 'admin' ? 'Admin Dashboard' : 'Dashboard'}
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                </button>
+              ) : (
               <Link href="/login" className="relative p-2 rounded-xl text-white bg-[#8B7A1A] hover:bg-white hover:text-[#5E4E06] shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]">
                 <LogIn className="w-5 h-5" />
               </Link>
+              )}
               <Link href="/cart" className="relative p-2 rounded-xl text-white bg-[#8B7A1A] hover:bg-white hover:text-[#5E4E06] shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]" aria-label="Cart">
                 <ShoppingCart className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#E6C866] text-[#5E4E06] text-xs font-bold rounded-full px-1.5 py-0.5 shadow-lg border-2 border-white animate-bounce">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
               {/* Mobile Menu Button */}
               <button

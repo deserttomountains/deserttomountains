@@ -18,6 +18,7 @@ import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import React from 'react';
 
 export default function HomeClient() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -25,7 +26,7 @@ export default function HomeClient() {
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
+    },5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -54,82 +55,90 @@ export default function HomeClient() {
     { icon: Star, title: "Ancient Wisdom", desc: "5000+ years of tradition" }
   ];
 
+  // Helper to split text into spans for letter animation
+  function AnimatedTitle({ text, className = '' }: { text: string; className?: string }) {
+    return (
+      <span className={className}>
+        {text.split('').map((char: string, i: number) => (
+          <span
+            key={i}
+            className="inline-block animate-letter-reveal"
+            style={{
+              animationDelay: `${0.15 + i * 0.06}s`,
+              animationDuration: '0.7s',
+              animationFillMode: 'both',
+            }}
+          >
+            {char === ' ' ? '\u00A0' : char}
+          </span>
+        ))}
+      </span>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <Navigation />
 
-      {/* Hero Section - Enhanced with Dynamic Elements */}
-      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-[#E8E4D8] overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-[#5E4E06]/10 to-[#8B7A1A]/10 rounded-full animate-pulse"></div>
-          <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-[#E6C866]/20 to-[#D4AF37]/20 rounded-full animate-bounce" style={{animationDelay: '1s'}}></div>
-          <div className="absolute bottom-40 left-1/4 w-20 h-20 bg-gradient-to-br from-[#B8A94A]/15 to-[#5E4E06]/15 rounded-full animate-ping" style={{animationDelay: '2s'}}></div>
-          <div className="absolute top-1/2 right-1/3 w-16 h-16 bg-gradient-to-br from-[#8B7A1A]/10 to-[#E6C866]/10 rounded-full animate-spin" style={{animationDuration: '20s'}}></div>
-        </div>
-
-        {/* Floating Icons */}
-        <div className="absolute inset-0 pointer-events-none">
-          <Mountain className="absolute top-32 left-16 w-8 h-8 text-[#5E4E06]/20 animate-float" />
-          <Sun className="absolute top-24 right-24 w-6 h-6 text-[#E6C866]/30 animate-float" style={{animationDelay: '1.5s'}} />
-          <Leaf className="absolute bottom-32 left-32 w-5 h-5 text-[#8B7A1A]/25 animate-float" style={{animationDelay: '2.5s'}} />
-          <Zap className="absolute bottom-40 right-16 w-7 h-7 text-[#D4AF37]/20 animate-float" style={{animationDelay: '3s'}} />
-        </div>
-
-        <div className="max-w-6xl mx-auto px-6 text-center relative z-10">
-          {/* Badge with Enhanced Animation */}
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] border border-[#B8A94A] text-[#5E4E06] rounded-full text-sm font-semibold shadow-lg backdrop-blur-sm animate-fade-in-up">
-              <Sparkles className="w-4 h-4 animate-spin" style={{animationDuration: '3s'}} />
-              <span>Ancient Wisdom • Modern Living</span>
-              <Sparkles className="w-4 h-4 animate-spin" style={{animationDuration: '3s', animationDirection: 'reverse'}} />
-            </div>
-          </div>
-
-          {/* Main Headline with Enhanced Typography */}
-          <h1 className="text-5xl md:text-7xl font-black text-[#2A2418] mb-8 leading-tight animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-            Transform Your Space with
-            <span className="block bg-gradient-to-r from-[#5E4E06] via-[#8B7A1A] to-[#D4AF37] bg-clip-text text-transparent animate-gradient">
-              Nature's Finest
-            </span>
-          </h1>
-          
-          {/* Subheadline */}
-          <p className="text-xl md:text-2xl text-[#2A2418]/80 mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-            Discover our premium natural wall plaster and organic incense, crafted from ancient Indian traditions 
-            to create healthy, beautiful, and spiritually harmonious environments.
-          </p>
-          
-          {/* CTA Buttons with Enhanced Effects */}
-          <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16 animate-fade-in-up" style={{animationDelay: '0.6s'}}>
-            <Link href="/aura" className="group px-10 py-5 bg-gradient-to-r from-[#5E4E06] via-[#8B7A1A] to-[#5E4E06] text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-              <span className="flex items-center gap-3 text-lg relative z-10">
-                Explore Products
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+      {/* Hero Section - Full Background Image, Glassmorphism Overlay, Animated Title with Floating Panel and Letter Reveal */}
+      <section className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
+        {/* Background Image */}
+        <img
+          src="/images/deserttomountains-4-scaled-1.webp"
+          alt="Desert to Mountains Hero"
+          className="absolute inset-0 w-full h-full object-cover object-center z-0"
+          style={{ filter: 'brightness(0.7) saturate(1.1)' }}
+        />
+        {/* Dark Overlay for Readability */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/20 to-transparent z-10" />
+        {/* Glassmorphism Overlay with Animated Title */}
+        <div className="relative z-20 flex flex-col items-center justify-center w-full px-2 sm:px-4">
+          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl sm:rounded-3xl shadow-2xl px-4 py-8 sm:px-8 sm:py-16 md:px-20 md:py-24 max-w-[95vw] sm:max-w-xl md:max-w-2xl mx-auto flex flex-col items-center animate-panel-float" style={{boxShadow: '0 8px 48px 0 rgba(90, 80, 30, 0.18)'}}>
+            <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-6xl font-extrabold text-white text-center tracking-tight mb-2 leading-tight sm:leading-tight">
+              <AnimatedTitle text="Think Aura" />
+              <br />
+              <span style={{ whiteSpace: 'nowrap' }}>
+                <AnimatedTitle text="Think better Home" className="text-[#E6C866]" />
               </span>
-            </Link>
-            <Link href="/about" className="px-10 py-5 border-2 border-[#B8A94A] text-[#5E4E06] font-bold rounded-xl hover:border-[#5E4E06] hover:text-[#5E4E06] transition-all duration-300 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] hover:shadow-lg">
-              <span className="text-lg">Learn Our Story</span>
-            </Link>
-          </div>
-          
-          {/* Stats with Enhanced Design */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto animate-fade-in-up" style={{animationDelay: '0.8s'}}>
-            <div className="text-center p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm">
-              <div className="text-4xl font-black bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-clip-text text-transparent mb-3">500+</div>
-              <div className="text-[#2A2418]/80 font-medium">Happy Homes</div>
-            </div>
-            <div className="text-center p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm">
-              <div className="text-4xl font-black bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-clip-text text-transparent mb-3">100%</div>
-              <div className="text-[#2A2418]/80 font-medium">Natural Ingredients</div>
-            </div>
-            <div className="text-center p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm">
-              <div className="text-4xl font-black bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-clip-text text-transparent mb-3">5000+</div>
-              <div className="text-[#2A2418]/80 font-medium">Years of Tradition</div>
-            </div>
+            </h1>
           </div>
         </div>
+        {/* Animations */}
+        <style jsx global>{`
+          @keyframes fade-slide-up {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes panel-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-16px); }
+          }
+          .animate-panel-float {
+            animation: panel-float 5s ease-in-out infinite;
+          }
+          @keyframes letter-reveal {
+            0% { opacity: 0; transform: translateY(30px) scale(0.9) skewY(8deg); filter: blur(4px); }
+            60% { opacity: 1; transform: translateY(-4px) scale(1.04) skewY(-2deg); filter: blur(0.5px); }
+            100% { opacity: 1; transform: translateY(0) scale(1) skewY(0deg); filter: blur(0); }
+          }
+          .animate-letter-reveal {
+            animation-name: letter-reveal;
+            animation-timing-function: cubic-bezier(0.4,0,0.2,1);
+          }
+          @media (max-width: 640px) {
+            .backdrop-blur-xl {
+              padding-left: 1rem !important;
+              padding-right: 1rem !important;
+              padding-top: 2rem !important;
+              padding-bottom: 2rem !important;
+              border-radius: 1rem !important;
+            }
+            h1 {
+              font-size: 1.6rem !important;
+              line-height: 2.2rem !important;
+            }
+          }
+        `}</style>
       </section>
 
       {/* Benefits Section - Enhanced with Dynamic Background */}
@@ -143,15 +152,19 @@ export default function HomeClient() {
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-6">Why Choose Natural?</h2>
+            <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-6">Why Choose Aura?</h2>
             <p className="text-2xl text-[#2A2418]/70 max-w-4xl mx-auto font-light">
               Experience the transformative power of nature's finest ingredients
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {benefits.map((benefit, index) => (
-              <div key={index} className="group text-center p-10 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 border border-[#E8E4D8] backdrop-blur-sm relative overflow-hidden">
+          
+          {/* Benefits Cards Grid - Centered and Responsive */}
+          <div className="mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 justify-items-center max-w-4xl">
+            {benefits
+              .filter((benefit) => benefit.title !== "Ancient Wisdom")
+              .map((benefit, index) => (
+                <div key={index} className="group text-center p-10 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 border border-[#E8E4D8] backdrop-blur-sm relative overflow-hidden w-full max-w-xs">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06]/5 to-[#8B7A1A]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="w-20 h-20 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg group-hover:shadow-[#5E4E06]/25 transition-all duration-300 relative z-10 group-hover:scale-110">
                   <benefit.icon className="w-10 h-10 text-white group-hover:rotate-12 transition-transform duration-300" />
@@ -173,7 +186,7 @@ export default function HomeClient() {
           <div className="absolute bottom-20 left-1/3 w-5 h-5 bg-[#E6C866]/25 rounded-full animate-bounce" style={{animationDelay: '2.5s'}}></div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 relative z-10">
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-8">Our Premium Collection</h2>
             <p className="text-2xl text-[#2A2418]/70 max-w-4xl mx-auto font-light">
@@ -181,20 +194,20 @@ export default function HomeClient() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-10 lg:gap-16">
             {/* Aura Product - Enhanced */}
-            <div className="group relative">
+            <div className="group relative w-full max-w-xl mx-auto lg:mx-0">
               <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
               
-              <div className="relative bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl p-10 shadow-2xl hover:shadow-3xl transition-all duration-500 border border-[#E8E4D8] overflow-hidden backdrop-blur-sm">
+              <div className="relative bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl p-6 sm:p-8 md:p-10 shadow-2xl hover:shadow-3xl transition-all duration-500 border border-[#E8E4D8] overflow-hidden backdrop-blur-sm">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#5E4E06]/10 to-[#8B7A1A]/10 rounded-full -translate-y-16 translate-x-16 animate-pulse"></div>
                 
                 <div className="relative z-10">
-                  <div className="flex items-start gap-8 mb-10">
+                  <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-10">
                     <div className="w-24 h-24 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-300">
                       <Shield className="w-12 h-12 text-white group-hover:rotate-12 transition-transform duration-300" />
                     </div>
-                    <div>
+                    <div className="text-center sm:text-left">
                       <h3 className="text-4xl font-black text-[#2A2418] mb-3">Aura</h3>
                       <p className="text-[#5E4E06] font-bold text-xl">Natural Wall Plaster</p>
                       <p className="text-[#2A2418]/60 text-lg mt-2">Breathable • Toxin-Free • Beautiful</p>
@@ -204,52 +217,52 @@ export default function HomeClient() {
                   <div className="mb-10">
                     <div className="relative overflow-hidden rounded-2xl shadow-2xl">
                       <img
-                        src="https://picsum.photos/500/300?random=2"
+                        src="/images/aura.webp"
                         alt="Aura Natural Wall Plaster"
-                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                        className="w-full h-48 sm:h-56 md:h-64 object-cover group-hover:scale-110 transition-transform duration-700 rounded-xl"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#2A2418]/20 to-transparent"></div>
                     </div>
                   </div>
                   
-                  <p className="text-[#2A2418]/70 text-xl mb-10 leading-relaxed font-light">
+                  <p className="text-[#2A2418]/70 text-base sm:text-lg md:text-xl mb-10 leading-relaxed font-light">
                     Revolutionary gypsum and cow dung-based plaster that naturally regulates air quality 
                     while creating stunning, healthy surfaces inspired by ancient Indian wisdom.
                   </p>
                   
                   <div className="grid grid-cols-1 gap-4 mb-10">
-                    <div className="flex items-center gap-4 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
                       <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-[#2A2418] font-bold text-lg">100% Natural Ingredients</h4>
-                        <p className="text-[#2A2418]/60 text-sm">Pure gypsum and organic cow dung</p>
+                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">100% Natural Ingredients</h4>
+                        <p className="text-[#2A2418]/60 text-xs sm:text-sm">Pure gypsum and organic cow dung</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
                       <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-[#2A2418] font-bold text-lg">Breathable & Healthy</h4>
-                        <p className="text-[#2A2418]/60 text-sm">Naturally regulates indoor air quality</p>
+                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Breathable & Healthy</h4>
+                        <p className="text-[#2A2418]/60 text-xs sm:text-sm">Naturally regulates indoor air quality</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
                       <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-[#2A2418] font-bold text-lg">Zero Toxins</h4>
-                        <p className="text-[#2A2418]/60 text-sm">Completely safe for your family</p>
+                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Zero Toxins</h4>
+                        <p className="text-[#2A2418]/60 text-xs sm:text-sm">Completely safe for your family</p>
                       </div>
                     </div>
                   </div>
                   
-                  <Link href="/aura" className="block w-full py-5 bg-gradient-to-r from-[#5E4E06] via-[#8B7A1A] to-[#5E4E06] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 text-center text-xl relative overflow-hidden group/btn">
+                  <Link href="/aura" className="block w-full py-4 sm:py-5 bg-gradient-to-r from-[#5E4E06] via-[#8B7A1A] to-[#5E4E06] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 text-center text-lg sm:text-xl relative overflow-hidden group/btn">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
                     <span className="relative z-10">Explore Aura Collection</span>
                   </Link>
@@ -258,18 +271,18 @@ export default function HomeClient() {
             </div>
             
             {/* Dhunee Product - Enhanced */}
-            <div className="group relative">
+            <div className="group relative w-full max-w-xl mx-auto lg:mx-0">
               <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
               
-              <div className="relative bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl p-10 shadow-2xl hover:shadow-3xl transition-all duration-500 border border-[#E8E4D8] overflow-hidden backdrop-blur-sm">
+              <div className="relative bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl p-6 sm:p-8 md:p-10 shadow-2xl hover:shadow-3xl transition-all duration-500 border border-[#E8E4D8] overflow-hidden backdrop-blur-sm">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#5E4E06]/10 to-[#8B7A1A]/10 rounded-full -translate-y-16 translate-x-16 animate-pulse" style={{animationDelay: '1s'}}></div>
                 
                 <div className="relative z-10">
-                  <div className="flex items-start gap-8 mb-10">
+                  <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-10">
                     <div className="w-24 h-24 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-300">
                       <Sparkles className="w-12 h-12 text-white group-hover:rotate-12 transition-transform duration-300" />
                     </div>
-                    <div>
+                    <div className="text-center sm:text-left">
                       <h3 className="text-4xl font-black text-[#2A2418] mb-3">Dhunee</h3>
                       <p className="text-[#5E4E06] font-bold text-xl">Organic Incense</p>
                       <p className="text-[#2A2418]/60 text-lg mt-2">Pure • Natural • Himalayan</p>
@@ -279,52 +292,52 @@ export default function HomeClient() {
                   <div className="mb-10">
                     <div className="relative overflow-hidden rounded-2xl shadow-2xl">
                       <img
-                        src="https://picsum.photos/500/300?random=3"
+                        src="/images/dhunee.webp"
                         alt="Dhunee Organic Incense"
-                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                        className="w-full h-48 sm:h-56 md:h-64 object-cover group-hover:scale-110 transition-transform duration-700 rounded-xl"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#2A2418]/20 to-transparent"></div>
                     </div>
                   </div>
                   
-                  <p className="text-[#2A2418]/70 text-xl mb-10 leading-relaxed font-light">
+                  <p className="text-[#2A2418]/70 text-base sm:text-lg md:text-xl mb-10 leading-relaxed font-light">
                     Premium incense crafted from Himalayan herbs, desi cow dung, and pure ghee, 
                     based on ancient Vedic traditions for purification and peaceful ambiance.
                   </p>
                   
                   <div className="grid grid-cols-1 gap-4 mb-10">
-                    <div className="flex items-center gap-4 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
                       <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-[#2A2418] font-bold text-lg">Himalayan Herbs</h4>
-                        <p className="text-[#2A2418]/60 text-sm">Pure herbs from pristine mountains</p>
+                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Himalayan Herbs</h4>
+                        <p className="text-[#2A2418]/60 text-xs sm:text-sm">Pure herbs from pristine mountains</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
                       <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-[#2A2418] font-bold text-lg">Purifying Properties</h4>
-                        <p className="text-[#2A2418]/60 text-sm">Naturally cleanses your space</p>
+                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Purifying Properties</h4>
+                        <p className="text-[#2A2418]/60 text-xs sm:text-sm">Naturally cleanses your space</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
                       <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-[#2A2418] font-bold text-lg">Peaceful Ambiance</h4>
-                        <p className="text-[#2A2418]/60 text-sm">Creates a calming atmosphere</p>
+                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Peaceful Ambiance</h4>
+                        <p className="text-[#2A2418]/60 text-xs sm:text-sm">Creates a calming atmosphere</p>
                       </div>
                     </div>
                   </div>
 
-                  <Link href="/dhunee" className="block w-full py-5 bg-gradient-to-r from-[#5E4E06] via-[#8B7A1A] to-[#5E4E06] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 text-center text-xl relative overflow-hidden group/btn">
+                  <Link href="/dhunee" className="block w-full py-4 sm:py-5 bg-gradient-to-r from-[#5E4E06] via-[#8B7A1A] to-[#5E4E06] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 text-center text-lg sm:text-xl relative overflow-hidden group/btn">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
                     <span className="relative z-10">Discover Dhunee Collection</span>
                   </Link>
@@ -386,7 +399,7 @@ export default function HomeClient() {
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%235E4E06' fill-opacity='0.1'%3E%3Cpath d='M20 20c0-11.046-8.954-20-20-20v40c11.046 0 20-8.954 20-20zm0 0c0 11.046 8.954 20 20 20V0c-11.046 0-20 8.954-20 20z'/%3E%3C/g%3E%3C/svg%3E")`
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%235E4E06' fill-opacity='0.1'%3E%3Cpath d='M20 20c0-11.046-8.954-20-20-20v40c11.046 0 20-8.954 20-20zm0 0c0 11.046 8.954 20 20 20V0c-11.046 0-20 8.954-20 20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
           }}></div>
         </div>
 
@@ -396,8 +409,8 @@ export default function HomeClient() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-2xl opacity-20 animate-pulse"></div>
                 <img
-                  src="https://picsum.photos/600/500?random=8"
-                  alt="Traditional Craftsmanship"
+                  src="/images/dtm_1.webp"
+                  alt="From Desert to Mountains"
                   className="relative w-full h-[500px] object-cover rounded-3xl shadow-2xl hover:scale-105 transition-transform duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#2A2418]/30 to-transparent rounded-3xl"></div>

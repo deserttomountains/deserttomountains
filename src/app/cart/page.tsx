@@ -5,25 +5,8 @@ import Footer from '@/components/Footer';
 import { ShoppingCart, Trash2, ArrowRight, CheckCircle, Lock, Truck, Shield, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const placeholderCart = [
-  {
-    id: 1,
-    name: 'Aura Wall Plaster 25kg',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-    price: 400,
-    quantity: 2,
-    subtitle: 'Natural Gypsum & Cow Dung',
-  },
-  {
-    id: 2,
-    name: 'Sample Pack (6 Colors)',
-    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80',
-    price: 2799,
-    quantity: 1,
-    subtitle: 'Choose your favorite shades',
-  },
-];
+import { useCart } from '@/components/CartContext';
+import { useToast } from '@/components/ToastContext';
 
 const ESTIMATED_DELIVERY = '3-5 business days';
 const VALID_CODE = 'AURA10';
@@ -43,37 +26,40 @@ function EmptyCartSVG() {
 
 export default function CartPage() {
   const router = useRouter();
-  const [cart, setCart] = useState(placeholderCart);
+  const { cart, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { showToast } = useToast();
   const [discountCode, setDiscountCode] = useState('');
   const [appliedCode, setAppliedCode] = useState('');
   const [discountFeedback, setDiscountFeedback] = useState('');
-  const [quantityMap, setQuantityMap] = useState(() => Object.fromEntries(cart.map(item => [item.id, item.quantity])));
+  const quantityMap = Object.fromEntries(cart.map(item => [item.id, item.quantity]));
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * quantityMap[item.id], 0);
   const discount = appliedCode === VALID_CODE ? DISCOUNT_AMOUNT : 0;
-  const shipping = subtotal - discount > 2000 ? 0 : 199;
-  const taxableAmount = subtotal - discount + shipping;
-  const tax = Math.round(taxableAmount * 0.18);
+  const shipping = cart.length === 0 ? 0 : 199;
+  const taxableAmount = cart.length === 0 ? 0 : subtotal - discount + shipping;
+  const tax = cart.length === 0 ? 0 : Math.round(taxableAmount * 0.18);
   const total = taxableAmount + tax;
 
   const handleRemove = (id: number) => {
-    setCart(cart.filter(item => item.id !== id));
-    setQuantityMap(q => { const copy = { ...q }; delete copy[id]; return copy; });
+    removeFromCart(id);
+    showToast('Removed from cart', 'info');
   };
 
   const handleQuantity = (id: number, delta: number) => {
-    setQuantityMap(q => {
-      const newQty = Math.max(1, (q[id] || 1) + delta);
-      return { ...q, [id]: newQty };
-    });
+    const current = quantityMap[id] || 1;
+    const newQty = Math.max(1, current + delta);
+    updateQuantity(id, newQty);
+    showToast('Quantity updated', 'info');
   };
 
   const handleApplyCode = () => {
     if (discountCode.trim().toUpperCase() === VALID_CODE) {
       setAppliedCode(VALID_CODE);
       setDiscountFeedback('Discount applied!');
+      showToast('Discount applied!', 'success');
     } else {
       setDiscountFeedback('Invalid code');
+      showToast('Invalid code', 'error');
     }
   };
 
@@ -84,8 +70,8 @@ export default function CartPage() {
   };
 
   const handleClearCart = () => {
-    setCart([]);
-    setQuantityMap({});
+    clearCart();
+    showToast('Cart cleared', 'info');
   };
 
   return (
@@ -172,6 +158,17 @@ export default function CartPage() {
                           <div className="min-w-0 flex-1">
                             <div className="font-bold text-[#5E4E06] text-sm md:text-base truncate">{item.name}</div>
                             <div className="text-[#8B7A1A] text-xs md:text-sm">{item.subtitle}</div>
+                            {item.shades && item.shades.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                {item.shades.map((shade, idx) => (
+                                  <div key={shade.shadeId} className="flex items-center gap-2 text-xs md:text-sm">
+                                    <span className="inline-block w-4 h-4 rounded-full border border-[#D4AF37]" style={{ backgroundColor: shade.shadeHex }}></span>
+                                    <span className="font-medium">{shade.shadeName}</span>
+                                    <span className="text-[#5E4E06]">x{shade.quantity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-3 md:px-4 py-4">
@@ -189,7 +186,7 @@ export default function CartPage() {
                               value={quantityMap[item.id]}
                               onChange={e => {
                                 const val = Math.max(1, parseInt(e.target.value) || 1);
-                                setQuantityMap(q => ({ ...q, [item.id]: val }));
+                                handleQuantity(item.id, val - (quantityMap[item.id] || 1));
                               }}
                               className="w-12 md:w-16 text-center font-bold text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg px-1 md:px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#8B7A1A] transition text-sm"
                             />
@@ -280,7 +277,13 @@ export default function CartPage() {
               )}
               <div className="flex justify-between">
                 <span className="text-[#8B7A1A]">Shipping</span>
-                <span className="font-bold text-[#5E4E06]">{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
+                <span className="font-bold text-[#5E4E06]">
+                  {shipping === 0 ? (
+                    <span>₹0</span>
+                  ) : (
+                    <span>₹{shipping} <span className="text-xs text-[#8B7A1A]">(Based on weight & distance)</span></span>
+                  )}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#8B7A1A]">G.S.T (18%)</span>
@@ -303,9 +306,6 @@ export default function CartPage() {
             </button>
 
             <div className="flex flex-col gap-3 mt-4">
-              <div className="flex items-center gap-2 text-[#8B7A1A] font-semibold text-sm md:text-base">
-                <Truck className="w-4 h-4 md:w-5 md:h-5" /> Free Shipping over ₹2000
-              </div>
               <div className="flex items-center gap-2 text-[#5E4E06] font-semibold text-sm md:text-base">
                 <Shield className="w-4 h-4 md:w-5 md:h-5" /> Eco-Friendly Packaging
               </div>

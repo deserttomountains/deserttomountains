@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import { ShoppingCart, MapPin, CreditCard, ArrowLeft, Lock, Shield, CheckCircle, Smartphone, Building2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ToastContext';
 
 type PaymentMethod = 'upi' | 'card' | 'netbanking' | 'cod';
 
@@ -26,6 +27,7 @@ export default function PaymentPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('card');
   const [isProcessing, setIsProcessing] = useState(false);
+  const { showToast } = useToast();
 
   // Payment form states
   const [cardDetails, setCardDetails] = useState({
@@ -148,7 +150,7 @@ export default function PaymentPage() {
       
     } catch (error) {
       console.error('Error placing order:', error);
-      alert('There was an error placing your order. Please try again.');
+      showToast('Payment failed. Please try again.', 'error');
     } finally {
       setIsProcessing(false);
     }

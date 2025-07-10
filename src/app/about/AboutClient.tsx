@@ -89,8 +89,8 @@ export default function AboutClient() {
             <div className="relative animate-fade-in-up">
               <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06]/20 to-[#8B7A1A]/20 rounded-3xl blur-2xl opacity-20"></div>
               <img
-                src="https://picsum.photos/600/500?random=8"
-                alt="Traditional Craftsmanship"
+                src="/images/about_page_img.jpg"
+                alt="About Desert to Mountains"
                 className="relative w-full h-64 sm:h-80 md:h-96 object-cover rounded-3xl shadow-2xl"
               />
             </div>

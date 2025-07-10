@@ -6,6 +6,7 @@ import { CheckCircle, Package, Truck, Clock, MapPin, Phone, Mail, ArrowRight, Ho
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/components/ToastContext';
 
 interface OrderDetails {
   orderId: string;
@@ -22,6 +23,7 @@ function OrderConfirmationContent() {
   const searchParams = useSearchParams();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     // Get order details from localStorage or URL params
@@ -54,6 +56,9 @@ function OrderConfirmationContent() {
         items: cart
       });
 
+      // Show order placed toast
+      showToast('Order placed successfully!', 'success');
+
       // Clear cart and checkout data after successful order
       localStorage.removeItem('cart');
       localStorage.removeItem('checkoutData');
@@ -63,7 +68,7 @@ function OrderConfirmationContent() {
     }
     
     setIsLoading(false);
-  }, [searchParams, router]);
+  }, [searchParams, router, showToast]);
 
   const generateOrderId = () => {
     return 'DTM' + Date.now().toString().slice(-8) + Math.random().toString(36).substr(2, 4).toUpperCase();
