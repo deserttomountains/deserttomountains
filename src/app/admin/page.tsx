@@ -4,13 +4,14 @@ import { User, Settings, LogOut, Bell, Menu, LayoutDashboard, BarChart3, Users, 
 import MockChatCRM from './MockChatCRM';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { AuthService, auth, Lead, UserProfile, Order } from '@/lib/firebase';
+import { AuthService, auth, db, Lead, UserProfile, Order } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Fuse from 'fuse.js';
 import CustomerDetailsDrawer from '@/components/CustomerDetailsDrawer';
 import React from 'react';
 import { useToast } from '@/components/ToastContext';
 import { AdminRouteGuard } from '@/components/RouteGuard';
+import app from '@/lib/firebase';
 
 function AdminDashboardContent() {
   const [activeTab, setActiveTab] = useState('overview');

@@ -30,6 +30,7 @@ export interface CashfreeOrderResponse {
     notifyUrl: string;
     paymentMethods: string;
   };
+  paymentSessionId?: string; // For Drop-in JS
 }
 
 export interface CashfreePaymentStatus {
@@ -144,6 +145,7 @@ class CashfreeService {
       orderId: data.order_id,
       orderStatus: data.order_status,
       paymentSessionId: data.payment_session_id, // For Drop-in JS
+      paymentUrl: data.payment_link || '', // Add paymentUrl, fallback to empty string
       orderAmount: data.order_amount,
       orderCurrency: data.order_currency,
       orderNote: data.order_note,

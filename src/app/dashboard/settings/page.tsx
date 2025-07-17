@@ -2,7 +2,7 @@
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { useState, useEffect } from 'react';
 import { getAuth, updateProfile, updateEmail, sendPasswordResetEmail, deleteUser } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import app from '@/lib/firebase';
 import { AuthService } from '@/lib/firebase';
 import DashboardLayout from '../DashboardLayout';
 import { User as UserIcon, Trash2, Loader2, Save, AlertCircle } from 'lucide-react';
@@ -145,6 +145,8 @@ export default function AccountSettingsPage() {
         const firestoreProfile = await AuthService.getUserProfile(user.uid);
         const updatedProfile = {
           ...firestoreProfile,
+          uid: user.uid, // Ensure uid is always a string
+          role: (firestoreProfile?.role ?? 'customer') as 'customer' | 'admin', // Always a valid UserRole
           firstName: name.split(' ')[0] || '',
           lastName: name.split(' ').slice(1).join(' '),
           phone: phone,
@@ -157,6 +159,7 @@ export default function AccountSettingsPage() {
             country
           },
           updatedAt: new Date(),
+          createdAt: firestoreProfile?.createdAt ?? new Date(), // Ensure createdAt is always a Date
         };
         
         await AuthService.updateUserProfile(user.uid, updatedProfile);

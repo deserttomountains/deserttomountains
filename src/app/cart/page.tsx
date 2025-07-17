@@ -35,7 +35,7 @@ export default function CartPage() {
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * quantityMap[item.id], 0);
   const discount = appliedCode === VALID_CODE ? DISCOUNT_AMOUNT : 0;
-  const shipping = cart.length === 0 ? 0 : null; // Placeholder, will be calculated at next step
+  const shipping = cart.length === 0 ? 0 : 0; // Placeholder, will be calculated at next step
   const taxableAmount = cart.length === 0 ? 0 : subtotal - discount + shipping;
   const tax = cart.length === 0 ? 0 : Math.round(taxableAmount * 0.18);
   const total = taxableAmount + tax;

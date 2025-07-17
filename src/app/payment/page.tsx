@@ -87,7 +87,7 @@ export default function PaymentPage() {
   const [selectedGateway, setSelectedGateway] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { showToast } = useToast();
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -131,15 +131,14 @@ export default function PaymentPage() {
         customerId: user.uid,
         customerName: checkoutData.shippingAddress?.name || user.displayName || 'Guest User',
         customerEmail: checkoutData.shippingAddress?.email || user.email || 'guest@example.com',
-        customerPhone: checkoutData.shippingAddress?.phone || user.phone || '',
+        customerPhone: checkoutData.shippingAddress?.phone || userProfile?.phone || '',
         items: cart.map(item => ({
-          productId: item.id,
+          productId: String(item.id),
           productName: item.name,
-          productType: (item.type === 'aura' ? 'aura' : 'dhunee') as 'aura' | 'dhunee',
+          productType: 'aura' as 'aura', // Explicitly type as 'aura' to match OrderItem
           quantity: item.quantity || 1,
           unitPrice: item.price,
           totalPrice: (item.quantity || 1) * item.price,
-          variant: item.variant,
           shades: item.shades?.map((s: any) => s.shadeName) || []
         })),
         totalAmount: subtotal,

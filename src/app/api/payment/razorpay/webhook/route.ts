@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
             transactionId: razorpay_payment_id,
             paymentMode: 'razorpay',
             paymentMessage: status,
-            paymentTime: new Date(),
-            lastUpdated: new Date(),
+            paymentTime: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
           });
         }
       } catch (error) {

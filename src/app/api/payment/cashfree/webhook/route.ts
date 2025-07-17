@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
             paymentMode: paymentMode,
             paymentMessage: txMsg,
             paymentTime: txTime,
-            lastUpdated: new Date()
+            lastUpdated: new Date().toISOString()
           });
           console.log(`Order ${orderId} updated with payment status: ${txStatus}`);
         } else {

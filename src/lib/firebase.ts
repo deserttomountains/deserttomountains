@@ -73,6 +73,7 @@ export type UserRole = 'customer' | 'admin';
 
 export interface Address {
   street?: string;
+  addressLine2?: string;
   city?: string;
   state?: string;
   pincode?: string;
@@ -146,6 +147,11 @@ export interface Order {
   actualDelivery?: Date;
   trackingNumber?: string;
   notes?: string;
+  transactionId?: string;
+  paymentMode?: string;
+  paymentMessage?: string;
+  paymentTime?: string;
+  lastUpdated?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -440,7 +446,8 @@ export class AuthService {
       const querySnapshot = await getDocs(collection(db, 'users'));
       const allUsers = querySnapshot.docs.map(doc => ({
         uid: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        role: (doc.data().role ?? 'customer') as 'customer' | 'admin', // Ensure role is always present
       }));
       const allCustomers = allUsers.filter(user => user.role === 'customer') as UserProfile[];
       return { customers: allCustomers, lastDoc: null };
@@ -651,6 +658,23 @@ export class AuthService {
     } catch (error) {
       console.error('Error updating order status:', error);
       throw new Error('Failed to update order status');
+    }
+  }
+
+  // Update order fields
+  static async updateOrder(orderId: string, updatedData: Partial<Order>): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'orders', orderId), {
+        ...updatedData,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating order:', error);
+      throw new Error('Failed to update order');
     }
   }
 
