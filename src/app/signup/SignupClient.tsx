@@ -11,8 +11,10 @@ import styles from '../login/PhoneInputCustom.module.css';
 import { RecaptchaVerifier } from 'firebase/auth';
 import { AuthService, auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function SignupClient() {
+  const { user, role, loading, redirectBasedOnRole } = useAuth();
   const [signupMethod, setSignupMethod] = useState<'email' | 'phone'>('email');
   const [formData, setFormData] = useState({
     firstName: '',
@@ -36,8 +38,25 @@ export default function SignupClient() {
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const router = useRouter();
 
+  // Redirect logged-in users to their appropriate dashboard
   useEffect(() => {
-    if (!recaptchaVerifierRef.current && typeof window !== 'undefined') {
+    if (!loading && user) {
+      // Use setTimeout to ensure the redirect happens after the current render cycle
+      const timer = setTimeout(() => {
+        if (role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user, role, loading, router]);
+
+  useEffect(() => {
+    // Only initialize reCAPTCHA if user is not logged in and we're not loading
+    if (!loading && !user && !recaptchaVerifierRef.current && typeof window !== 'undefined') {
       recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container-signup', {
         size: 'invisible',
         callback: () => {},
@@ -52,7 +71,7 @@ export default function SignupClient() {
         recaptchaVerifierRef.current = null;
       }
     };
-  }, []);
+  }, [loading, user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -108,20 +127,7 @@ export default function SignupClient() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const redirectBasedOnRole = async (uid: string) => {
-    try {
-      const role = await AuthService.getUserRole(uid);
-      if (role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
-    } catch (error) {
-      console.error('Error getting user role:', error);
-      // Default to customer dashboard on error
-      router.push('/dashboard');
-    }
-  };
+
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,9 +213,23 @@ export default function SignupClient() {
     "Personalized wellness recommendations"
   ];
 
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
+      </div>
+    );
+  }
+
+  // Don't render signup form if user is already authenticated
+  if (user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] relative overflow-hidden">
-      <div id="recaptcha-container-signup" ref={recaptchaRef}></div>
+      {!loading && !user && <div id="recaptcha-container-signup" ref={recaptchaRef}></div>}
       <Navigation />
       <div className="pt-24 pb-16 px-6 relative z-10">
         <div className="max-w-2xl mx-auto">

@@ -26,7 +26,7 @@ interface UniversalAddressFormProps {
 }
 
 // Comprehensive list of countries
-const COUNTRIES = [
+export const COUNTRIES = [
   { code: 'AF', name: 'Afghanistan' },
   { code: 'AL', name: 'Albania' },
   { code: 'DZ', name: 'Algeria' },
@@ -500,84 +500,81 @@ const UniversalAddressForm: React.FC<UniversalAddressFormProps> = ({
               <Building className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B7A1A]" />
             </div>
           </div>
-
-          {/* City, State, Postal Code */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-[#8B7A1A] mb-3">
-                {getStateLabel(address.country)} {required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-              <input
-                type="text"
-                value={address.state}
-                onChange={(e) => onChange('state', e.target.value)}
-                className={`w-full px-4 py-4 rounded-2xl border-2 transition-all duration-300
-                  focus:outline-none focus:ring-4 focus:ring-offset-0
-                  ${errors.state 
-                    ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
-                    : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A]'
-                  }
-                  hover:shadow-xl cursor-text bg-white/90 backdrop-blur-sm
-                  placeholder:text-[#8B7A1A] placeholder:font-medium text-[#5E4E06] font-medium text-base
-                `}
-                placeholder={getStateLabel(address.country)}
-              />
-              {errors.state && (
-                <p className="mt-2 text-sm text-red-500">{errors.state}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-[#8B7A1A] mb-3">
-                City {required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-              <input
-                type="text"
-                value={address.city}
-                onChange={(e) => onChange('city', e.target.value)}
-                className={`w-full px-4 py-4 rounded-2xl border-2 transition-all duration-300
-                  focus:outline-none focus:ring-4 focus:ring-offset-0
-                  ${errors.city 
-                    ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
-                    : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A]'
-                  }
-                  hover:shadow-xl cursor-text bg-white/90 backdrop-blur-sm
-                  placeholder:text-[#8B7A1A] placeholder:font-medium text-[#5E4E06] font-medium text-base
-                `}
-                placeholder="City"
-              />
-              {errors.city && (
-                <p className="mt-2 text-sm text-red-500">{errors.city}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-[#8B7A1A] mb-3">
-                {getPostalCodeLabel(address.country)} {required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={address.postalCode}
-                  onChange={(e) => onChange('postalCode', e.target.value)}
-                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border-2 transition-all duration-300
-                    focus:outline-none focus:ring-4 focus:ring-offset-0
-                    ${errors.postalCode 
-                      ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
-                      : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A]'
-                    }
-                    hover:shadow-xl cursor-text bg-white/90 backdrop-blur-sm
-                    placeholder:text-[#8B7A1A] placeholder:font-medium text-[#5E4E06] font-medium text-base
-                  `}
-                  placeholder={getPostalCodeLabel(address.country)}
-                />
-                <Hash className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B7A1A]" />
-              </div>
-              {errors.postalCode && (
-                <p className="mt-2 text-sm text-red-500">{errors.postalCode}</p>
-              )}
-            </div>
+        </div>
+      </div>
+      {/* State, City, Postal Code: full width row below both columns */}
+      <div className="mt-8 flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <label className="block text-sm font-semibold text-[#8B7A1A] mb-3">
+            {getStateLabel(address.country)} {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          <input
+            type="text"
+            value={address.state}
+            onChange={(e) => onChange('state', e.target.value)}
+            className={`w-full px-4 py-4 rounded-2xl border-2 transition-all duration-300
+              focus:outline-none focus:ring-4 focus:ring-offset-0
+              ${errors.state 
+                ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
+                : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A]'
+              }
+              hover:shadow-xl cursor-text bg-white/90 backdrop-blur-sm
+              placeholder:text-[#8B7A1A] placeholder:font-medium text-[#5E4E06] font-medium text-base
+            `}
+            placeholder={getStateLabel(address.country)}
+          />
+          {errors.state && (
+            <p className="mt-2 text-sm text-red-500">{errors.state}</p>
+          )}
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-semibold text-[#8B7A1A] mb-3">
+            City {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          <input
+            type="text"
+            value={address.city}
+            onChange={(e) => onChange('city', e.target.value)}
+            className={`w-full px-4 py-4 rounded-2xl border-2 transition-all duration-300
+              focus:outline-none focus:ring-4 focus:ring-offset-0
+              ${errors.city 
+                ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
+                : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A]'
+              }
+              hover:shadow-xl cursor-text bg-white/90 backdrop-blur-sm
+              placeholder:text-[#8B7A1A] placeholder:font-medium text-[#5E4E06] font-medium text-base
+            `}
+            placeholder="City"
+          />
+          {errors.city && (
+            <p className="mt-2 text-sm text-red-500">{errors.city}</p>
+          )}
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-semibold text-[#8B7A1A] mb-3">
+            {getPostalCodeLabel(address.country)} {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={address.postalCode}
+              onChange={(e) => onChange('postalCode', e.target.value)}
+              className={`w-full pl-12 pr-4 py-4 rounded-2xl border-2 transition-all duration-300
+                focus:outline-none focus:ring-4 focus:ring-offset-0
+                ${errors.postalCode 
+                  ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
+                  : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A]'
+                }
+                hover:shadow-xl cursor-text bg-white/90 backdrop-blur-sm
+                placeholder:text-[#8B7A1A] placeholder:font-medium text-[#5E4E06] font-medium text-base
+              `}
+              placeholder={getPostalCodeLabel(address.country)}
+            />
+            <Hash className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B7A1A]" />
           </div>
+          {errors.postalCode && (
+            <p className="mt-2 text-sm text-red-500">{errors.postalCode}</p>
+          )}
         </div>
       </div>
     </div>

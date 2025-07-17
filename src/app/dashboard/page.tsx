@@ -25,34 +25,35 @@ import {
 } from 'lucide-react';
 import { AuthService, auth, UserProfile } from '@/lib/firebase';
 import DashboardLayout from './DashboardLayout';
+import { CustomerRouteGuard } from '@/components/RouteGuard';
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        try {
-          const profile = await AuthService.getUserProfile(user.uid);
+    const loadUserData = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const profile = await AuthService.getUserProfile(currentUser.uid);
           setUserProfile(profile);
           
           // Load recent orders from localStorage
           const orders = JSON.parse(localStorage.getItem('orders') || '[]');
           setRecentOrders(orders.slice(0, 3)); // Show last 3 orders
-        } catch (error) {
-          console.error('Error loading user profile:', error);
         }
-      } else {
-        router.push('/login');
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, [router]);
+    loadUserData();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -266,5 +267,13 @@ export default function DashboardPage() {
     </div>
       </main>
     </DashboardLayout>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <CustomerRouteGuard>
+      <DashboardPageContent />
+    </CustomerRouteGuard>
   );
 } 

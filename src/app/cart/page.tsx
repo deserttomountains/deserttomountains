@@ -35,7 +35,7 @@ export default function CartPage() {
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * quantityMap[item.id], 0);
   const discount = appliedCode === VALID_CODE ? DISCOUNT_AMOUNT : 0;
-  const shipping = cart.length === 0 ? 0 : 199;
+  const shipping = cart.length === 0 ? 0 : null; // Placeholder, will be calculated at next step
   const taxableAmount = cart.length === 0 ? 0 : subtotal - discount + shipping;
   const tax = cart.length === 0 ? 0 : Math.round(taxableAmount * 0.18);
   const total = taxableAmount + tax;
@@ -76,27 +76,12 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#F5F2E8] via-[#F8F6F0] to-[#E6DCC0] font-sans relative overflow-hidden">
-      {/* Floating Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-[#D4AF37]/20 to-[#8B7A1A]/20 rounded-full blur-xl animate-float-slow"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-[#E6C866]/30 to-[#B8A94A]/30 rounded-full blur-lg animate-float"></div>
-        <div className="absolute bottom-40 left-1/4 w-20 h-20 bg-gradient-to-br from-[#F5F2E8]/40 to-[#E6DCC0]/40 rounded-full blur-md animate-float-slow"></div>
-        <div className="absolute top-1/2 right-1/3 w-16 h-16 bg-gradient-to-br from-[#D4AF37]/25 to-[#8B7A1A]/25 rounded-full blur-lg animate-float"></div>
-      </div>
+      
+
 
       <Navigation />
       
-      {/* Progress Bar */}
-      <div className="w-full bg-white/90 backdrop-blur-sm border-b border-[#D4AF37] py-4 px-2 md:px-0 flex items-center justify-center gap-4 md:gap-8 sticky top-0 z-20 shadow-sm">
-        <div className="flex items-center gap-2 text-sm md:text-base">
-          <span className="font-bold text-[#5E4E06] flex items-center gap-1"><ShoppingCart className="w-4 h-4 md:w-5 md:h-5" /> Cart</span>
-          <span className="w-6 md:w-8 h-1 bg-[#8B7A1A] rounded-full mx-1 md:mx-2" />
-          <span className="font-semibold text-[#8B7A1A]">Address</span>
-          <span className="w-6 md:w-8 h-1 bg-[#8B7A1A] rounded-full mx-1 md:mx-2" />
-          <span className="font-semibold text-[#8B7A1A]">Payment</span>
-        </div>
-        <a href="/aura" className="ml-auto text-[#5E4E06] font-semibold hover:underline hidden md:inline hover:text-[#3D3204] transition-colors">Continue Shopping</a>
-      </div>
+
 
       <main className="flex-1 flex flex-col items-center py-8 px-4 md:px-0 relative z-10">
         <div className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-6 lg:gap-8 min-h-[70vh]">
@@ -264,7 +249,7 @@ export default function CartPage() {
               <ShoppingCart className="w-6 h-6 md:w-7 md:h-7 text-[#5E4E06]" /> Order Summary
             </h2>
             
-            <div className="flex flex-col gap-3 text-base md:text-lg">
+            <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-[#8B7A1A]">Subtotal</span>
                 <span className="font-bold text-[#5E4E06]">₹{subtotal}</span>
@@ -277,13 +262,7 @@ export default function CartPage() {
               )}
               <div className="flex justify-between">
                 <span className="text-[#8B7A1A]">Shipping</span>
-                <span className="font-bold text-[#5E4E06]">
-                  {shipping === 0 ? (
-                    <span>₹0</span>
-                  ) : (
-                    <span>₹{shipping} <span className="text-xs text-[#8B7A1A]">(Based on weight & distance)</span></span>
-                  )}
-                </span>
+                <span className="font-bold text-[#5E4E06]">--</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#8B7A1A]">G.S.T (18%)</span>
@@ -324,27 +303,13 @@ export default function CartPage() {
       
       <Footer />
       
-      <style jsx global>{`
+      <style jsx>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(30px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
-        }
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-15px) rotate(90deg); }
-        }
         .animate-fade-in {
           animation: fade-in 0.8s cubic-bezier(0.4,0,0.2,1);
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-        .animate-float-slow {
-          animation: float-slow 8s ease-in-out infinite;
         }
       `}</style>
     </div>

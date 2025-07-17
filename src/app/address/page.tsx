@@ -8,11 +8,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import addressService from '@/services/addressService';
 import { useToast } from '@/components/ToastContext';
+import { AuthService } from '@/lib/firebase';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { useCart } from '@/components/CartContext';
 
 export default function AddressPage() {
   const router = useRouter();
   const { showToast } = useToast();
-  const [shippingAddress, setShippingAddress] = useState({
+  const { user, userProfile, loading } = useAuth();
+  const emptyAddress = {
     fullName: '',
     phone: '',
     email: '',
@@ -22,24 +26,50 @@ export default function AddressPage() {
     postalCode: '',
     addressLine1: '',
     addressLine2: ''
-  });
-  const [billingAddress, setBillingAddress] = useState({
-    fullName: '',
-    phone: '',
-    email: '',
-    country: '',
-    state: '',
-    city: '',
-    postalCode: '',
-    addressLine1: '',
-    addressLine2: ''
-  });
+  };
+  const [shippingAddress, setShippingAddress] = useState(emptyAddress);
+  const [billingAddress, setBillingAddress] = useState(emptyAddress);
   const [sameAsShipping, setSameAsShipping] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
+  const [saveAddress, setSaveAddress] = useState(true);
   
   // Form validation errors
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // Require login and prefill address from profile
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.replace('/login?redirect=/address');
+      return;
+    }
+    if (userProfile && userProfile.address) {
+      // Map Firestore address fields to local form fields
+      const profileAddr = userProfile.address;
+      const safeAddress = {
+        fullName: userProfile.firstName && userProfile.lastName ? `${userProfile.firstName} ${userProfile.lastName}` : userProfile.firstName || userProfile.lastName || '',
+        phone: userProfile.phone || '',
+        email: userProfile.email || '',
+        country: profileAddr.country || '',
+        state: profileAddr.state || '',
+        city: profileAddr.city || '',
+        postalCode: profileAddr.pincode || '',
+        addressLine1: profileAddr.street || '',
+        addressLine2: profileAddr.addressLine2 || '',
+      };
+      setShippingAddress(safeAddress);
+      setBillingAddress(safeAddress);
+    }
+  }, [user, userProfile, loading, router]);
+
+  const { cart } = useCart();
+
+  // Calculate order summary
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  const shipping = '--'; // Placeholder, will be calculated after address
+  const tax = Math.round(subtotal * 0.18);
+  const total = subtotal + (typeof shipping === 'number' ? shipping : 0) + tax;
 
   const handleShippingChange = (field: string, value: string) => {
     setShippingAddress(prev => ({ ...prev, [field]: value }));
@@ -70,13 +100,24 @@ export default function AddressPage() {
   const handleContinue = async () => {
     setIsSubmitting(true);
     try {
+      // Require login before proceeding
+      if (!user) {
+        showToast('Please login to continue checkout.', 'error');
+        router.push('/login?redirect=/address');
+        return;
+      }
       // Validate required fields
-      const requiredFields = ['fullName', 'phone', 'email', 'address', 'city', 'state', 'pincode'];
-      const shippingValid = requiredFields.every(field => shippingAddress[field as keyof typeof shippingAddress].trim());
-      const billingValid = sameAsShipping || requiredFields.every(field => billingAddress[field as keyof typeof billingAddress].trim());
+      // Map required fields to actual state keys
+      const requiredFields = ['fullName', 'phone', 'email', 'addressLine1', 'city', 'state', 'postalCode'];
+      const shippingValid = requiredFields.every(field => (shippingAddress[field as keyof typeof shippingAddress] || '').trim());
+      const billingValid = sameAsShipping || requiredFields.every(field => (billingAddress[field as keyof typeof billingAddress] || '').trim());
       if (!shippingValid || !billingValid) {
         alert('Please fill in all required fields');
         return;
+      }
+      // Save address to profile if checked
+      if (saveAddress) {
+        await AuthService.saveUserAddress(user.uid, shippingAddress);
       }
       // Store addresses in localStorage
       const checkoutData = {
@@ -113,74 +154,13 @@ export default function AddressPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#F5F2E8] via-[#F8F6F0] to-[#E6DCC0] font-sans relative overflow-hidden">
-      {/* Enhanced Floating Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-40 h-40 bg-gradient-to-br from-[#D4AF37]/15 to-[#8B7A1A]/15 rounded-full blur-2xl animate-float-slow"></div>
-        <div className="absolute top-40 right-20 w-32 h-32 bg-gradient-to-br from-[#E6C866]/20 to-[#B8A94A]/20 rounded-full blur-xl animate-float"></div>
-        <div className="absolute bottom-40 left-1/4 w-24 h-24 bg-gradient-to-br from-[#F5F2E8]/30 to-[#E6DCC0]/30 rounded-full blur-lg animate-float-slow"></div>
-        <div className="absolute top-1/2 right-1/3 w-20 h-20 bg-gradient-to-br from-[#D4AF37]/20 to-[#8B7A1A]/20 rounded-full blur-xl animate-float"></div>
-        <div className="absolute bottom-20 right-10 w-16 h-16 bg-gradient-to-br from-[#E6C866]/25 to-[#B8A94A]/25 rounded-full blur-md animate-float-slow"></div>
-      </div>
-
       <Navigation />
-      
-      {/* Enhanced Progress Bar */}
-      <div className="w-full bg-white/95 backdrop-blur-sm border-b border-[#D4AF37] py-8 px-4 md:px-0 sticky top-0 z-20 shadow-lg">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-6 md:gap-12">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#5E4E06] text-white flex items-center justify-center text-sm font-bold shadow-lg">
-                  <ShoppingCart className="w-5 h-5" />
-                </div>
-                <span className="font-semibold text-[#8B7A1A] text-base md:text-lg">Cart</span>
-              </div>
-              <div className="w-12 md:w-20 h-1.5 bg-[#8B7A1A] rounded-full shadow-sm"></div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#5E4E06] text-white flex items-center justify-center text-sm font-bold shadow-lg">
-                  <MapPin className="w-5 h-5" />
-                </div>
-                <span className="font-bold text-[#5E4E06] text-base md:text-lg">Address</span>
-              </div>
-              <div className="w-12 md:w-20 h-1.5 bg-[#8B7A1A] rounded-full shadow-sm"></div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#8B7A1A] text-white flex items-center justify-center text-sm font-bold shadow-lg">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <span className="font-semibold text-[#8B7A1A] text-base md:text-lg">Payment</span>
-              </div>
-            </div>
-            <button 
-              onClick={() => router.push('/cart')} 
-              className="flex items-center gap-2 text-[#5E4E06] font-semibold hover:text-[#3D3204] transition-colors cursor-pointer text-base md:text-lg hover:scale-105"
-            >
-              <ArrowLeft className="w-5 h-5" /> Back to Cart
-            </button>
-          </div>
-          
-          {/* Enhanced Progress Indicator */}
-          <div className="w-full bg-[#F5F2E8] rounded-full h-3 shadow-inner">
-            <div 
-              className="bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] h-3 rounded-full transition-all duration-700 shadow-lg"
-              style={{ width: `${getCompletionPercentage()}%` }}
-            ></div>
-          </div>
-          <div className="flex items-center justify-between mt-3">
-            <p className="text-sm text-[#8B7A1A] font-medium">
-              {getCompletionPercentage()}% Complete
-            </p>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#5E4E06] animate-pulse"></div>
-              <span className="text-sm text-[#8B7A1A] font-medium">Step 2 of 3</span>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       <main className="flex-1 py-12 px-4 md:px-0 relative z-10">
         <div className="max-w-7xl mx-auto">
           {/* Enhanced Header Section */}
-          <div className="text-center mb-12 animate-fade-in">
+          <div className="text-center mb-12 animate-fade-in pt-32 md:pt-36">
             <div className="inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm rounded-full px-8 py-4 mb-6 shadow-xl">
               <MapPin className="w-7 h-7 text-[#5E4E06]" />
               <span className="text-[#5E4E06] font-bold text-lg">Delivery Information</span>
@@ -205,6 +185,19 @@ export default function AddressPage() {
                 required={true}
                 errors={errors}
               />
+              <div className="flex items-center gap-3 mt-4">
+                <input
+                  type="checkbox"
+                  id="saveAddress"
+                  checked={saveAddress}
+                  onChange={e => setSaveAddress(e.target.checked)}
+                  className="w-5 h-5 accent-[#D4AF37] border-2 border-[#D4AF37] rounded-lg focus:ring-2 focus:ring-[#8B7A1A] transition-all duration-200 shadow-sm"
+                  style={{ minWidth: 20, minHeight: 20 }}
+                />
+                <label htmlFor="saveAddress" className="text-[#5E4E06] text-base font-semibold cursor-pointer select-none">
+                  Save this address for future orders
+                </label>
+              </div>
 
               {/* Enhanced Billing Address Section */}
               <div className="bg-gradient-to-br from-white/95 to-[#F8F6F0]/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-8 md:p-10 animate-fade-in relative overflow-hidden">
@@ -295,26 +288,44 @@ export default function AddressPage() {
                   <ShoppingCart className="w-6 h-6" />
                   Order Summary
                 </h3>
-                
                 <div className="space-y-4 text-base">
-                  <div className="flex justify-between items-center py-3 border-b border-[#D4AF37]/30">
-                    <span className="text-[#8B7A1A]">Items (2)</span>
-                    <span className="font-bold text-[#5E4E06]">₹3,199</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#D4AF37]/30">
-                    <span className="text-[#8B7A1A]">Shipping</span>
-                    <span className="font-bold text-green-600">Free</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#D4AF37]/30">
-                    <span className="text-[#8B7A1A]">Tax (18%)</span>
-                    <span className="font-bold text-[#5E4E06]">₹576</span>
-                  </div>
-                  <div className="pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-[#5E4E06] text-lg">Total</span>
-                      <span className="font-bold text-[#5E4E06] text-xl">₹3,775</span>
-                    </div>
-                  </div>
+                  {cart.length === 0 ? (
+                    <div className="text-[#8B7A1A] text-center py-8">Your cart is empty.</div>
+                  ) : (
+                    <>
+                      {cart.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center py-2 border-b border-[#D4AF37]/20">
+                          <div className="flex items-center gap-3">
+                            <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded-lg border border-[#D4AF37]" />
+                            <div>
+                              <div className="font-semibold text-[#5E4E06] text-sm">{item.name}</div>
+                              <div className="text-xs text-[#8B7A1A]">{item.subtitle}</div>
+                              {item.quantity && <div className="text-xs text-[#8B7A1A]">Qty: {item.quantity}</div>}
+                            </div>
+                          </div>
+                          <div className="font-bold text-[#5E4E06]">₹{(item.price * (item.quantity || 1)).toLocaleString()}</div>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center py-3 border-b border-[#D4AF37]/30 mt-2">
+                        <span className="text-[#8B7A1A]">Subtotal</span>
+                        <span className="font-bold text-[#5E4E06]">₹{subtotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-b border-[#D4AF37]/30">
+                        <span className="text-[#8B7A1A]">Shipping</span>
+                        <span className="font-bold text-[#5E4E06]">{shipping}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-b border-[#D4AF37]/30">
+                        <span className="text-[#8B7A1A]">Tax (18%)</span>
+                        <span className="font-bold text-[#5E4E06]">₹{tax.toLocaleString()}</span>
+                      </div>
+                      <div className="pt-4">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-[#5E4E06] text-lg">Total</span>
+                          <span className="font-bold text-[#5E4E06] text-xl">₹{total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -324,15 +335,10 @@ export default function AddressPage() {
                   <Truck className="w-6 h-6" />
                   Delivery Info
                 </h3>
-                
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 text-[#8B7A1A]">
                     <div className="w-3 h-3 rounded-full bg-[#5E4E06]"></div>
-                    <span className="text-base">Free shipping over ₹2,000</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[#8B7A1A]">
-                    <div className="w-3 h-3 rounded-full bg-[#5E4E06]"></div>
-                    <span className="text-base">3-5 business days</span>
+                    <span className="text-base">5-7 business days</span>
                   </div>
                   <div className="flex items-center gap-3 text-[#8B7A1A]">
                     <div className="w-3 h-3 rounded-full bg-[#5E4E06]"></div>
@@ -432,22 +438,8 @@ export default function AddressPage() {
           from { opacity: 0; transform: translateY(30px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
-        }
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-15px) rotate(90deg); }
-        }
         .animate-fade-in {
           animation: fade-in 0.8s cubic-bezier(0.4,0,0.2,1);
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-        .animate-float-slow {
-          animation: float-slow 8s ease-in-out infinite;
         }
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;

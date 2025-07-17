@@ -11,7 +11,11 @@ import {
   AuthError,
   Auth,
   createUserWithEmailAndPassword,
-  User
+  User,
+  sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -67,6 +71,14 @@ export { auth, db, storage };
 // User role types
 export type UserRole = 'customer' | 'admin';
 
+export interface Address {
+  street?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -74,6 +86,7 @@ export interface UserProfile {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  address?: Address;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,6 +106,62 @@ export interface Lead {
   createdBy: string; // Admin UID who created the lead
 }
 
+// Deal interface
+export interface Deal {
+  id?: string;
+  title: string;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone: string;
+  product: string;
+  amount: number;
+  stage: 'lead_generation' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+  probability: number; // 0-100
+  expectedCloseDate: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string; // Admin UID who created the deal
+}
+
+// Order interface
+export interface Order {
+  id?: string;
+  orderId: string;
+  customerId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  items: OrderItem[];
+  totalAmount: number;
+  tax: number;
+  shipping: number;
+  finalAmount: number;
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  paymentMethod: string;
+  paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
+  shippingAddress: Address;
+  orderDate: Date;
+  estimatedDelivery?: Date;
+  actualDelivery?: Date;
+  trackingNumber?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Order Item interface
+export interface OrderItem {
+  productId: string;
+  productName: string;
+  productType: 'aura' | 'dhunee';
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  variant?: string;
+  shades?: string[];
+}
+
 // Configure provider
 googleProvider.setCustomParameters({
   prompt: 'select_account'
@@ -107,7 +176,7 @@ export class AuthService {
   }
 
   // Create user profile in Firestore
-  static async createUserProfile(user: User, additionalData?: { firstName?: string; lastName?: string; phone?: string }): Promise<void> {
+  static async createUserProfile(user: User, additionalData?: { firstName?: string; lastName?: string; phone?: string; address?: Address }): Promise<void> {
     if (!this.isFirebaseConfigured()) {
       throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
     }
@@ -120,6 +189,7 @@ export class AuthService {
         firstName: additionalData?.firstName || '',
         lastName: additionalData?.lastName || '',
         phone: additionalData?.phone || '',
+        address: additionalData?.address || {},
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -201,6 +271,22 @@ export class AuthService {
     } catch (error) {
       console.error('Error updating user role:', error);
       throw new Error('Failed to update user role');
+    }
+  }
+
+  // Save or update user address in Firestore profile
+  static async saveUserAddress(uid: string, address: Address): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+    try {
+      await setDoc(doc(db, 'users', uid), {
+        address,
+        updatedAt: new Date()
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error saving user address:', error);
+      throw new Error('Failed to save user address');
     }
   }
 
@@ -342,63 +428,25 @@ export class AuthService {
     }
   }
 
-  // Fetch all customers
-  static async getCustomers(): Promise<UserProfile[]> {
+  // Fetch all customers (no pagination)
+  static async getCustomersPaginated(): Promise<{ customers: UserProfile[]; lastDoc: null; }> {
+    console.log('getCustomersPaginated called (no pagination)');
     if (!this.isFirebaseConfigured()) {
-      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+      console.log('Firebase not configured, returning empty result');
+      return { customers: [], lastDoc: null };
     }
     try {
-      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
-      const customersQuery = query(
-        collection(db, 'users'),
-        where('role', '==', 'customer'),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(customersQuery);
-      return querySnapshot.docs.map(doc => ({
+      const { getDocs, collection } = await import('firebase/firestore');
+      const querySnapshot = await getDocs(collection(db, 'users'));
+      const allUsers = querySnapshot.docs.map(doc => ({
         uid: doc.id,
         ...doc.data()
-      })) as UserProfile[];
+      }));
+      const allCustomers = allUsers.filter(user => user.role === 'customer') as UserProfile[];
+      return { customers: allCustomers, lastDoc: null };
     } catch (error) {
       console.error('Error getting customers:', error);
-      throw new Error('Failed to get customers');
-    }
-  }
-
-  // Paginated fetch for customers
-  static async getCustomersPaginated(pageSize: number, startAfterDoc?: any): Promise<{ customers: UserProfile[]; lastDoc: any; }> {
-    if (!this.isFirebaseConfigured()) {
-      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
-    }
-    try {
-      const { getDocs, query, collection, where, orderBy, limit, startAfter } = await import('firebase/firestore');
-      let customersQuery;
-      if (startAfterDoc) {
-        customersQuery = query(
-          collection(db, 'users'),
-          where('role', '==', 'customer'),
-          orderBy('createdAt', 'desc'),
-          startAfter(startAfterDoc),
-          limit(pageSize)
-        );
-      } else {
-        customersQuery = query(
-          collection(db, 'users'),
-          where('role', '==', 'customer'),
-          orderBy('createdAt', 'desc'),
-          limit(pageSize)
-        );
-      }
-      const querySnapshot = await getDocs(customersQuery);
-      const customers = querySnapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data()
-      })) as UserProfile[];
-      const lastDoc = querySnapshot.docs.length > 0 ? querySnapshot.docs[querySnapshot.docs.length - 1] : null;
-      return { customers, lastDoc };
-    } catch (error) {
-      console.error('Error getting paginated customers:', error);
-      throw new Error('Failed to get paginated customers');
+      return { customers: [], lastDoc: null };
     }
   }
 
@@ -413,6 +461,263 @@ export class AuthService {
     } catch (error) {
       console.error('Error deleting user:', error);
       throw new Error('Failed to delete user');
+    }
+  }
+
+  // Delete user profile (alias for user's own account deletion)
+  static async deleteUserProfile(uid: string): Promise<void> {
+    return this.deleteUser(uid);
+  }
+
+  // Create deal
+  static async createDeal(dealData: Omit<Deal, 'id' | 'createdAt' | 'updatedAt'>, createdBy: string): Promise<string> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { addDoc, collection } = await import('firebase/firestore');
+      const dealRef = await addDoc(collection(db, 'deals'), {
+        ...dealData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy
+      });
+      return dealRef.id;
+    } catch (error) {
+      console.error('Error creating deal:', error);
+      throw new Error('Failed to create deal');
+    }
+  }
+
+  // Get all deals
+  static async getDeals(): Promise<Deal[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, orderBy } = await import('firebase/firestore');
+      const dealsQuery = query(
+        collection(db, 'deals'),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(dealsQuery);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Deal[];
+    } catch (error) {
+      console.error('Error getting deals:', error);
+      throw new Error('Failed to get deals');
+    }
+  }
+
+  // Update deal
+  static async updateDeal(dealId: string, updatedData: Partial<Deal>): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'deals', dealId), {
+        ...updatedData,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating deal:', error);
+      throw new Error('Failed to update deal');
+    }
+  }
+
+  // Delete deal
+  static async deleteDeal(dealId: string): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'deals', dealId));
+    } catch (error) {
+      console.error('Error deleting deal:', error);
+      throw new Error('Failed to delete deal');
+    }
+  }
+
+  // Create order
+  static async createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    // Remove undefined fields recursively
+    function removeUndefined(obj: any): any {
+      if (Array.isArray(obj)) {
+        return obj.map(removeUndefined);
+      } else if (obj && typeof obj === 'object') {
+        return Object.entries(obj)
+          .filter(([_, v]) => v !== undefined)
+          .reduce((acc, [k, v]) => ({ ...acc, [k]: removeUndefined(v) }), {});
+      }
+      return obj;
+    }
+
+    try {
+      const { addDoc, collection } = await import('firebase/firestore');
+      const cleanOrderData = removeUndefined(orderData);
+      const orderRef = await addDoc(collection(db, 'orders'), {
+        ...cleanOrderData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      return orderRef.id;
+    } catch (error) {
+      console.error('Error creating order:', error);
+      throw new Error('Failed to create order');
+    }
+  }
+
+  // Get all orders
+  static async getOrders(): Promise<Order[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, orderBy } = await import('firebase/firestore');
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(ordersQuery);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+    } catch (error) {
+      console.error('Error getting orders:', error);
+      throw new Error('Failed to get orders');
+    }
+  }
+
+  // Get orders by status
+  static async getOrdersByStatus(status: Order['status']): Promise<Order[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        where('status', '==', status),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(ordersQuery);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+    } catch (error) {
+      console.error('Error getting orders by status:', error);
+      throw new Error('Failed to get orders by status');
+    }
+  }
+
+  // Update order status
+  static async updateOrderStatus(orderId: string, status: Order['status'], notes?: string): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      const updateData: any = {
+        status,
+        updatedAt: new Date()
+      };
+      
+      if (status === 'delivered') {
+        updateData.actualDelivery = new Date();
+      }
+      
+      if (notes) {
+        updateData.notes = notes;
+      }
+      
+      await updateDoc(doc(db, 'orders', orderId), updateData);
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      throw new Error('Failed to update order status');
+    }
+  }
+
+  // Get order by ID
+  static async getOrderById(orderId: string): Promise<Order | null> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDoc, doc } = await import('firebase/firestore');
+      const orderDoc = await getDoc(doc(db, 'orders', orderId));
+      if (orderDoc.exists()) {
+        return { id: orderDoc.id, ...orderDoc.data() } as Order;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting order by ID:', error);
+      throw new Error('Failed to get order');
+    }
+  }
+
+  // Get orders for a specific customer
+  static async getCustomerOrders(customerId: string): Promise<Order[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        where('customerId', '==', customerId),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(ordersQuery);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+    } catch (error) {
+      console.error('Error getting customer orders:', error);
+      throw new Error('Failed to get customer orders');
+    }
+  }
+
+  // Send password reset email
+  static async sendPasswordResetEmail(email: string): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      throw this.handleAuthError(error as AuthError);
+    }
+  }
+
+  // Set auth persistence based on rememberMe
+  static async setPersistence(rememberMe: boolean): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+    try {
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+    } catch (error) {
+      throw this.handleAuthError(error as AuthError);
     }
   }
 

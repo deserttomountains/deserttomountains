@@ -10,9 +10,11 @@ import { RecaptchaVerifier } from 'firebase/auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import styles from './PhoneInputCustom.module.css';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function LoginClient() {
+  const { user, role, loading, redirectBasedOnRole } = useAuth();
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [formData, setFormData] = useState({
     email: '',
@@ -30,6 +32,24 @@ export default function LoginClient() {
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
+
+  // Redirect logged-in users to their appropriate dashboard or redirect param
+  useEffect(() => {
+    if (!loading && user) {
+      const timer = setTimeout(() => {
+        if (redirectTo) {
+          router.push(redirectTo);
+        } else if (role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [user, role, loading, router, redirectTo]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -75,8 +95,8 @@ export default function LoginClient() {
     e.preventDefault();
     if (validateForm()) {
       setIsSubmitting(true);
-      
       try {
+        await AuthService.setPersistence(formData.rememberMe);
         const userCredential = await AuthService.signInWithEmail(formData.email, formData.password);
         await redirectBasedOnRole(userCredential.user.uid);
       } catch (error) {
@@ -91,8 +111,8 @@ export default function LoginClient() {
     e.preventDefault();
     if (validateForm()) {
       setIsSubmitting(true);
-      
       try {
+        await AuthService.setPersistence(formData.rememberMe);
         const result = await AuthService.signInWithPhone(formData.phone, recaptchaVerifierRef.current!);
         setConfirmationResult(result);
         setPhoneVerificationSent(true);
@@ -152,20 +172,7 @@ export default function LoginClient() {
     }
   };
 
-  const redirectBasedOnRole = async (uid: string) => {
-    try {
-      const role = await AuthService.getUserRole(uid);
-      if (role === 'admin') {
-        router.push('/admin');
-      } else {
-      router.push('/dashboard');
-      }
-    } catch (error) {
-      console.error('Error getting user role:', error);
-      // Default to customer dashboard on error
-      router.push('/dashboard');
-    }
-  };
+
 
   const resendVerificationCode = async () => {
     setIsSubmitting(true);
@@ -180,7 +187,8 @@ export default function LoginClient() {
   };
 
   useEffect(() => {
-    if (!recaptchaVerifierRef.current && typeof window !== 'undefined') {
+    // Only initialize reCAPTCHA if user is not logged in and we're not loading
+    if (!loading && !user && !recaptchaVerifierRef.current && typeof window !== 'undefined') {
       recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
         callback: () => {},
@@ -196,11 +204,25 @@ export default function LoginClient() {
         recaptchaVerifierRef.current = null;
       }
     };
-  }, []);
+  }, [loading, user]);
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
+      </div>
+    );
+  }
+
+  // Don't render login form if user is already authenticated
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] relative overflow-hidden">
-      <div id="recaptcha-container" ref={recaptchaRef}></div>
+      {!loading && !user && <div id="recaptcha-container" ref={recaptchaRef}></div>}
       {/* Floating Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-[#D4AF37]/20 to-[#8B7A1A]/20 rounded-full blur-3xl animate-pulse"></div>
@@ -372,7 +394,7 @@ export default function LoginClient() {
                       </div>
                       <span className="ml-3 text-[#8B7A1A] font-semibold">Remember me</span>
                     </label>
-                    <Link href="#" className="text-[#5E4E06] hover:text-[#8B7A1A] font-bold transition-colors">
+                    <Link href="/login/forgot-password" className="text-[#5E4E06] hover:text-[#8B7A1A] font-bold transition-colors">
                       Forgot password?
                     </Link>
                   </div>
