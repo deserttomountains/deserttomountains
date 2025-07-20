@@ -144,8 +144,8 @@ interface InstagramMessage {
   to: string;
   body: string;
   timestamp: Date;
-  type: 'text' | 'image' | 'video' | 'story_reply' | 'reaction';
-  status: 'sent' | 'delivered' | 'read';
+  type: 'text' | 'image' | 'video' | 'story_reply' | 'reaction' | 'document' | 'audio';
+  status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   isFromMe: boolean;
   mediaUrl?: string;
   reaction?: string;
@@ -164,157 +164,6 @@ interface InstagramChat {
   isVerified: boolean;
   isStoryActive: boolean;
 }
-
-// Enhanced Instagram mock data with more realistic content
-const INSTAGRAM_MOCK_CHATS: InstagramChat[] = [
-  {
-    id: 'insta1',
-    name: 'Sarah Johnson',
-    username: 'sarah.johnson',
-    avatar: '',
-    status: 'online',
-    lastMessage: 'Love your latest post! The colors are amazing ✨',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 5),
-    unreadCount: 2,
-    isVerified: true,
-    isStoryActive: true,
-    messages: [
-      {
-        id: 'm1',
-        from: 'sarah.johnson',
-        to: 'business',
-        body: 'Hi! I saw your post about the new collection',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        type: 'text',
-        status: 'read',
-        isFromMe: false
-      },
-      {
-        id: 'm2',
-        from: 'business',
-        to: 'sarah.johnson',
-        body: 'Thank you! We just launched our spring collection 🌸',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.5),
-        type: 'text',
-        status: 'read',
-        isFromMe: true
-      },
-      {
-        id: 'm3',
-        from: 'sarah.johnson',
-        to: 'business',
-        body: 'Love your latest post! The colors are amazing ✨',
-        timestamp: new Date(Date.now() - 1000 * 60 * 5),
-        type: 'text',
-        status: 'delivered',
-        isFromMe: false
-      }
-    ]
-  },
-  {
-    id: 'insta2',
-    name: 'Mike Chen',
-    username: 'mike.chen.art',
-    avatar: '',
-    status: 'offline',
-    lastMessage: 'Can you send me the catalog?',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 30),
-    unreadCount: 0,
-    isVerified: false,
-    isStoryActive: false,
-    messages: [
-      {
-        id: 'm1',
-        from: 'mike.chen.art',
-        to: 'business',
-        body: 'Hi there! I\'m interested in your products',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
-        type: 'text',
-        status: 'read',
-        isFromMe: false
-      },
-      {
-        id: 'm2',
-        from: 'business',
-        to: 'mike.chen.art',
-        body: 'Hello! Thanks for reaching out. What specific products are you looking for?',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2.5),
-        type: 'text',
-        status: 'read',
-        isFromMe: true
-      },
-      {
-        id: 'm3',
-        from: 'mike.chen.art',
-        to: 'business',
-        body: 'Can you send me the catalog?',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        type: 'text',
-        status: 'read',
-        isFromMe: false
-      }
-    ]
-  },
-  {
-    id: 'insta3',
-    name: 'Emma Rodriguez',
-    username: 'emma.rodriguez',
-    avatar: '',
-    status: 'away',
-    lastMessage: '❤️',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 15),
-    unreadCount: 1,
-    isVerified: true,
-    isStoryActive: true,
-    messages: [
-      {
-        id: 'm1',
-        from: 'business',
-        to: 'emma.rodriguez',
-        body: 'Thank you for your order! It will be shipped tomorrow 📦',
-        timestamp: new Date(Date.now() - 1000 * 60 * 20),
-        type: 'text',
-        status: 'read',
-        isFromMe: true
-      },
-      {
-        id: 'm2',
-        from: 'emma.rodriguez',
-        to: 'business',
-        body: '❤️',
-        timestamp: new Date(Date.now() - 1000 * 60 * 15),
-        type: 'reaction',
-        status: 'delivered',
-        isFromMe: false,
-        reaction: '❤️'
-      }
-    ]
-  },
-  {
-    id: 'insta4',
-    name: 'David Kim',
-    username: 'david.kim.design',
-    avatar: '',
-    status: 'online',
-    lastMessage: 'Do you have this in blue?',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 45),
-    unreadCount: 0,
-    isVerified: false,
-    isStoryActive: false,
-    messages: [
-      {
-        id: 'm1',
-        from: 'david.kim.design',
-        to: 'business',
-        body: 'Do you have this in blue?',
-        timestamp: new Date(Date.now() - 1000 * 60 * 45),
-        type: 'text',
-        status: 'read',
-        isFromMe: false
-      }
-    ]
-  }
-];
 
 // Message Status Component
 const MessageStatus = ({ status }: { status: string }) => {
@@ -445,14 +294,21 @@ function MockChatCRM() {
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   // 2. Add platform state and Instagram integration
   const [platform, setPlatform] = useState<'whatsapp' | 'instagram'>('whatsapp');
-  const [instaChats, setInstaChats] = useState<InstagramChat[]>(INSTAGRAM_MOCK_CHATS);
-  const [selectedInstaChatId, setSelectedInstaChatId] = useState<string | null>(INSTAGRAM_MOCK_CHATS[0].id);
+  const [instaChats, setInstaChats] = useState<InstagramChat[]>([]); // Start with empty array
+  const [selectedInstaChatId, setSelectedInstaChatId] = useState<string | null>(null); // Start as null
   
   // Instagram authentication state
   const [instagramConnected, setInstagramConnected] = useState(false);
   const [instagramUser, setInstagramUser] = useState<InstagramUser | null>(null);
   const [instagramLoading, setInstagramLoading] = useState(false);
   const [instagramError, setInstagramError] = useState<string | null>(null);
+  
+  // Instagram real-time messaging state
+  const [instagramSocket, setInstagramSocket] = useState<any>(null);
+  const [instagramSocketConnected, setInstagramSocketConnected] = useState(false);
+  const [instagramSocketError, setInstagramSocketError] = useState<string | null>(null);
+  const [isTypingInsta, setIsTypingInsta] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
   const selectedChat = chats.find((c) => c.id === selectedChatId) || chats[0];
 
@@ -466,6 +322,7 @@ function MockChatCRM() {
     loadChats();
     checkConnectionStatus();
     checkInstagramAuth();
+    setupInstagramSocket();
   }, []);
 
   // Check Instagram authentication status
@@ -514,6 +371,13 @@ function MockChatCRM() {
     setInstagramConnected(false);
     setInstagramUser(null);
     setInstagramError(null);
+    
+    // Disconnect WebSocket
+    if (instagramSocket) {
+      instagramSocket.disconnect();
+      setInstagramSocket(null);
+      setInstagramSocketConnected(false);
+    }
   };
 
   // Handle Instagram authentication success
@@ -536,6 +400,9 @@ function MockChatCRM() {
       // Load user profile
       loadInstagramUser();
       
+      // Setup WebSocket connection
+      setupInstagramSocket();
+      
       // Clear URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -547,6 +414,221 @@ function MockChatCRM() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  // Setup Instagram WebSocket connection
+  const setupInstagramSocket = () => {
+    try {
+      const accessToken = localStorage.getItem('instagram_access_token');
+      const userId = localStorage.getItem('instagram_user_id');
+      
+      if (!accessToken || !userId) {
+        console.log('No Instagram credentials found for WebSocket');
+        return;
+      }
+
+      // Initialize Socket.IO client
+      const { io } = require('socket.io-client');
+      const socket = io(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/instagram`, {
+        transports: ['websocket', 'polling'],
+        autoConnect: true,
+      });
+
+      // Connection events
+      socket.on('connect', () => {
+        console.log('Instagram WebSocket connected');
+        setInstagramSocketConnected(true);
+        setInstagramSocketError(null);
+        
+        // Authenticate with the server
+        socket.emit('authenticate', {
+          accessToken,
+          userId,
+          pageId: null // Will be set when user connects Instagram Business account
+        });
+      });
+
+      socket.on('authenticated', (data: any) => {
+        console.log('Instagram WebSocket authenticated:', data);
+        setInstagramSocketConnected(true);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Instagram WebSocket disconnected');
+        setInstagramSocketConnected(false);
+      });
+
+      socket.on('error', (error: any) => {
+        console.error('Instagram WebSocket error:', error);
+        setInstagramSocketError(error.message || 'WebSocket connection error');
+      });
+
+      // Message events
+      socket.on('new_message', (message: any) => {
+        console.log('New Instagram message received:', message);
+        handleNewInstagramMessage(message);
+      });
+
+      socket.on('message_sent', (data: any) => {
+        console.log('Instagram message sent:', data);
+        handleInstagramMessageSent(data);
+      });
+
+      socket.on('message_delivered', (data: any) => {
+        console.log('Instagram message delivered:', data);
+        handleInstagramMessageDelivered(data);
+      });
+
+      socket.on('message_read', (data: any) => {
+        console.log('Instagram message read:', data);
+        handleInstagramMessageRead(data);
+      });
+
+      socket.on('typing_start', (data: any) => {
+        console.log('Instagram typing started:', data);
+        setTypingUsers(prev => new Set(prev).add(data.recipientId));
+      });
+
+      socket.on('typing_stop', (data: any) => {
+        console.log('Instagram typing stopped:', data);
+        setTypingUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(data.recipientId);
+          return newSet;
+        });
+      });
+
+      socket.on('postback_received', (data: any) => {
+        console.log('Instagram postback received:', data);
+        handleInstagramPostback(data);
+      });
+
+      socket.on('reaction_received', (data: any) => {
+        console.log('Instagram reaction received:', data);
+        handleInstagramReaction(data);
+      });
+
+      setInstagramSocket(socket);
+
+    } catch (error) {
+      console.error('Error setting up Instagram WebSocket:', error);
+      setInstagramSocketError('Failed to setup WebSocket connection');
+    }
+  };
+
+  // Handle new Instagram message
+  const handleNewInstagramMessage = (message: any) => {
+    const newMessage: InstagramMessage = {
+      id: message.id,
+      from: message.from,
+      to: message.to,
+      body: message.text || message.body || '',
+      timestamp: new Date(message.timestamp),
+      type: message.type || 'text',
+      status: 'delivered',
+      isFromMe: false,
+      mediaUrl: message.media_url,
+    };
+
+    setInstaChats(prevChats => prevChats.map(chat => {
+      if (chat.id === message.from || chat.username === message.from) {
+        return {
+          ...chat,
+          messages: [...chat.messages, newMessage],
+          lastMessage: newMessage.body,
+          lastMessageTime: newMessage.timestamp,
+          unreadCount: chat.unreadCount + 1,
+        };
+      }
+      return chat;
+    }));
+
+    scrollToBottom();
+  };
+
+  // Handle Instagram message sent
+  const handleInstagramMessageSent = (data: any) => {
+    setInstaChats(prevChats => prevChats.map(chat => ({
+      ...chat,
+      messages: chat.messages.map(msg => 
+        msg.id === data.messageId ? { ...msg, status: 'sent' } : msg
+      )
+    })));
+  };
+
+  // Handle Instagram message delivered
+  const handleInstagramMessageDelivered = (data: any) => {
+    setInstaChats(prevChats => prevChats.map(chat => ({
+      ...chat,
+      messages: chat.messages.map(msg => 
+        data.messageIds.includes(msg.id) ? { ...msg, status: 'delivered' } : msg
+      )
+    })));
+  };
+
+  // Handle Instagram message read
+  const handleInstagramMessageRead = (data: any) => {
+    setInstaChats(prevChats => prevChats.map(chat => ({
+      ...chat,
+      messages: chat.messages.map(msg => 
+        msg.id === data.messageId ? { ...msg, status: 'read' } : msg
+      )
+    })));
+  };
+
+  // Handle Instagram postback
+  const handleInstagramPostback = (data: any) => {
+    const postbackMessage: InstagramMessage = {
+      id: data.id,
+      from: data.from,
+      to: data.to,
+      body: `Quick reply: ${data.payload}`,
+      timestamp: new Date(data.timestamp),
+      type: 'text',
+      status: 'delivered',
+      isFromMe: false,
+    };
+
+    setInstaChats(prevChats => prevChats.map(chat => {
+      if (chat.id === data.from || chat.username === data.from) {
+        return {
+          ...chat,
+          messages: [...chat.messages, postbackMessage],
+          lastMessage: postbackMessage.body,
+          lastMessageTime: postbackMessage.timestamp,
+          unreadCount: chat.unreadCount + 1,
+        };
+      }
+      return chat;
+    }));
+  };
+
+  // Handle Instagram reaction
+  const handleInstagramReaction = (data: any) => {
+    const reactionMessage: InstagramMessage = {
+      id: data.id,
+      from: data.from,
+      to: data.to,
+      body: '',
+      timestamp: new Date(data.timestamp),
+      type: 'reaction',
+      status: 'delivered',
+      isFromMe: false,
+      reaction: data.emoji,
+    };
+
+    setInstaChats(prevChats => prevChats.map(chat => {
+      if (chat.id === data.from || chat.username === data.from) {
+        return {
+          ...chat,
+          messages: [...chat.messages, reactionMessage],
+          lastMessage: `Reacted with ${data.emoji}`,
+          lastMessageTime: reactionMessage.timestamp,
+          unreadCount: chat.unreadCount + 1,
+        };
+      }
+      return chat;
+    }));
+  };
 
   const loadChats = async () => {
     try {
@@ -848,94 +930,205 @@ function MockChatCRM() {
     if (!isMobile) setShowChatListMobile(true);
   }, [isMobile]);
 
-  // Enhanced handleSendInsta for Instagram mock chat
-  function handleSendInsta(chat: InstagramChat) {
+  // Enhanced handleSendInsta for Instagram real-time messaging
+  async function handleSendInsta(chat: InstagramChat) {
     if (!input.trim() || !chat) return;
     
-    const newMessage: InstagramMessage = {
+    const messageText = input.trim();
+    setInput('');
+    setShowEmojiPicker(false);
+    
+    // Create temporary message for immediate UI feedback
+    const tempMessage: InstagramMessage = {
       id: Date.now().toString(),
       from: 'business',
       to: chat.username,
-      body: input,
+      body: messageText,
       timestamp: new Date(),
       type: 'text',
-      status: 'sent',
+      status: 'sending',
       isFromMe: true
     };
     
-    // Update chat with new message
+    // Add message to UI immediately
     setInstaChats(prevChats => prevChats.map(c =>
       c.id === chat.id
         ? {
             ...c,
-            messages: [...c.messages, newMessage],
-            lastMessage: input,
+            messages: [...c.messages, tempMessage],
+            lastMessage: messageText,
             lastMessageTime: new Date(),
             unreadCount: 0
           }
         : c
     ));
     
-    setInput('');
-    setShowEmojiPicker(false);
+    scrollToBottom();
     
-    // Simulate message status changes
-    setTimeout(() => {
-      setInstaChats(prevChats => prevChats.map(c =>
-        c.id === chat.id
-          ? {
-              ...c,
-              messages: c.messages.map(msg =>
-                msg.id === newMessage.id
-                  ? { ...msg, status: 'delivered' }
-                  : msg
-              )
-            }
-          : c
-      ));
-    }, 1000);
-    
-    setTimeout(() => {
-      setInstaChats(prevChats => prevChats.map(c =>
-        c.id === chat.id
-          ? {
-              ...c,
-              messages: c.messages.map(msg =>
-                msg.id === newMessage.id
-                  ? { ...msg, status: 'read' }
-                  : msg
-              )
-            }
-          : c
-      ));
-    }, 2000);
-    
-    // Simulate typing indicator and auto-reply for demo
-    setTimeout(() => {
-      const autoReply: InstagramMessage = {
-        id: (Date.now() + 1).toString(),
-        from: chat.username,
-        to: 'business',
-        body: 'Thanks for your message! I\'ll get back to you soon 😊',
-        timestamp: new Date(),
-        type: 'text',
-        status: 'delivered',
-        isFromMe: false
-      };
+    // Send message via WebSocket if connected
+    if (instagramSocket && instagramSocketConnected) {
+      try {
+        // Send typing indicator
+        instagramSocket.emit('typing_start', { recipientId: chat.id });
+        
+        // Send message
+        instagramSocket.emit('send_message', {
+          recipientId: chat.id,
+          message: messageText,
+          messageType: 'text'
+        });
+        
+        // Stop typing indicator after a delay
+        setTimeout(() => {
+          instagramSocket.emit('typing_stop', { recipientId: chat.id });
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Error sending Instagram message:', error);
+        // Update message status to failed
+        setInstaChats(prevChats => prevChats.map(c =>
+          c.id === chat.id
+            ? {
+                ...c,
+                messages: c.messages.map(msg =>
+                  msg.id === tempMessage.id
+                    ? { ...msg, status: 'failed' }
+                    : msg
+                )
+              }
+            : c
+        ));
+      }
+    } else {
+      // Fallback to mock behavior if WebSocket not connected
+      console.log('WebSocket not connected, using mock behavior');
       
+      // Update message status to sent
       setInstaChats(prevChats => prevChats.map(c =>
         c.id === chat.id
           ? {
               ...c,
-              messages: [...c.messages, autoReply],
-              lastMessage: autoReply.body,
-              lastMessageTime: new Date(),
-              unreadCount: 1
+              messages: c.messages.map(msg =>
+                msg.id === tempMessage.id
+                  ? { ...msg, status: 'sent' }
+                  : msg
+              )
             }
           : c
       ));
-    }, 3000);
+      
+      // Simulate message status changes
+      setTimeout(() => {
+        setInstaChats(prevChats => prevChats.map(c =>
+          c.id === chat.id
+            ? {
+                ...c,
+                messages: c.messages.map(msg =>
+                  msg.id === tempMessage.id
+                    ? { ...msg, status: 'delivered' }
+                    : msg
+                )
+              }
+            : c
+        ));
+      }, 1000);
+      
+      setTimeout(() => {
+        setInstaChats(prevChats => prevChats.map(c =>
+          c.id === chat.id
+            ? {
+                ...c,
+                messages: c.messages.map(msg =>
+                  msg.id === tempMessage.id
+                    ? { ...msg, status: 'read' }
+                    : msg
+                )
+              }
+            : c
+        ));
+      }, 2000);
+      
+      // Simulate auto-reply for demo
+      setTimeout(() => {
+        const autoReply: InstagramMessage = {
+          id: (Date.now() + 1).toString(),
+          from: chat.username,
+          to: 'business',
+          body: 'Thanks for your message! I\'ll get back to you soon 😊',
+          timestamp: new Date(),
+          type: 'text',
+          status: 'delivered',
+          isFromMe: false
+        };
+        
+        setInstaChats(prevChats => prevChats.map(c =>
+          c.id === chat.id
+            ? {
+                ...c,
+                messages: [...c.messages, autoReply],
+                lastMessage: autoReply.body,
+                lastMessageTime: new Date(),
+                unreadCount: 1
+              }
+            : c
+        ));
+        
+        scrollToBottom();
+      }, 3000);
+    }
   }
+
+  // Remove mock data and load real Instagram DMs
+  useEffect(() => {
+    if (platform === 'instagram' && instagramConnected) {
+      const fetchInstagramChats = async () => {
+        try {
+          setInstagramLoading(true);
+          // Fetch real Instagram conversations
+          const conversations = await instagramService.getDirectMessages();
+          // Map to InstagramChat UI structure
+          const chats = conversations.map((conv) => {
+            const user = conv.participants.find((p) => p.id !== instagramService['userId']) || conv.participants[0];
+            return {
+              id: conv.id,
+              name: user?.full_name || user?.username || 'Unknown',
+              username: user?.username || '',
+              avatar: user?.profile_picture_url || '',
+              status: 'online' as const, // Real status not available from API
+              lastMessage: conv.last_message?.text || '',
+              lastMessageTime: conv.updated_time ? new Date(conv.updated_time) : new Date(),
+              unreadCount: conv.unread_count || 0,
+              messages: (conv.messages || []).map((msg) => ({
+                id: msg.id,
+                from: msg.from?.username || '',
+                to: msg.to?.username || '',
+                body: msg.text || '',
+                timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+                type: msg.type || 'text',
+                status: (msg.status as 'sending' | 'sent' | 'delivered' | 'read' | 'failed') || 'delivered',
+                isFromMe: msg.from?.id === instagramService['userId'],
+                mediaUrl: msg.media_url,
+                reaction: msg.reaction,
+              })),
+              isVerified: user?.is_verified || false,
+              isStoryActive: false, // Not available from API
+            };
+          });
+          setInstaChats(chats);
+          if (chats.length > 0) {
+            setSelectedInstaChatId(chats[0].id);
+          }
+        } catch (error) {
+          setInstagramError('Failed to load Instagram chats');
+          setInstaChats([]);
+        } finally {
+          setInstagramLoading(false);
+        }
+      };
+      fetchInstagramChats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platform, instagramConnected]);
 
   return (
     <div className="space-y-4">

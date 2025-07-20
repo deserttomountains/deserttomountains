@@ -1,10 +1,10 @@
 "use client";
 
-import { User, Settings, LogOut, Bell, Menu, LayoutDashboard, BarChart3, Users, ShoppingCart, TrendingUp, DollarSign, Calendar, MessageSquare, Phone, UserPlus, Target, Activity, Plus, ArrowUpRight, MoreVertical, FileText, X, Edit, Trash2, Eye as EyeIcon, Search, ArrowLeft, ArrowRight, Mountain, Truck, Package, CheckCircle, Clock, AlertCircle, Star, Filter, SortAsc, SortDesc, CalendarDays, CheckSquare, Square, Tag, UserCheck, Flag } from 'lucide-react';
+import { User, Settings, LogOut, Bell, Menu, LayoutDashboard, BarChart3, Users, ShoppingCart, TrendingUp, DollarSign, Calendar, MessageSquare, Phone, UserPlus, Target, Activity, Plus, ArrowUpRight, MoreVertical, FileText, X, Edit, Trash2, Eye as EyeIcon, Search, ArrowLeft, ArrowRight, Mountain, Truck, Package, CheckCircle, Clock, AlertCircle, Star, Filter, SortAsc, SortDesc, CalendarDays, CheckSquare, Square, Tag, UserCheck, Flag, LayoutGrid, List, Database, Repeat } from 'lucide-react';
 import MockChatCRM from './MockChatCRM';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { AuthService, auth, db, Lead, UserProfile, Order } from '@/lib/firebase';
+import { AuthService, auth, db, Lead, UserProfile, Order, Task } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Fuse from 'fuse.js';
 import CustomerDetailsDrawer from '@/components/CustomerDetailsDrawer';
@@ -12,6 +12,18 @@ import React from 'react';
 import { useToast } from '@/components/ToastContext';
 import { AdminRouteGuard } from '@/components/RouteGuard';
 import app from '@/lib/firebase';
+import { collection, getDocs, Timestamp } from 'firebase/firestore';
+
+// Helper for date formatting (DD/MM/YY HH:MM 24-hour)
+function formatShortDateTime(date: Date) {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const d = pad(date.getDate());
+  const m = pad(date.getMonth() + 1);
+  const y = date.getFullYear().toString().slice(-2);
+  const hh = pad(date.getHours());
+  const mm = pad(date.getMinutes());
+  return `${d}/${m}/${y} ${hh}:${mm}`;
+}
 
 function AdminDashboardContent() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -47,39 +59,45 @@ function AdminDashboardContent() {
   const [newStatus, setNewStatus] = useState<Order['status']>('confirmed');
   const [statusUpdateNotes, setStatusUpdateNotes] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [franchiseSubmissions, setFranchiseSubmissions] = useState<any[]>([]);
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+  const [submissionsError, setSubmissionsError] = useState<string | null>(null);
+  const [contactSubmissions, setContactSubmissions] = useState<any[]>([]);
+  const [isLoadingContact, setIsLoadingContact] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [activeFormTab, setActiveFormTab] = useState<'franchise' | 'contact'>('franchise');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<any | null>(null);
+
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (modalOpen) {
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.body.classList.remove('overflow-hidden');
+    }
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [modalOpen]);
 
   // Task Management State
-  interface Task {
-    id: string;
-    title: string;
-    description: string;
-    status: 'pending' | 'in_progress' | 'completed' | 'overdue';
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    category: 'follow_up' | 'meeting' | 'delivery' | 'marketing' | 'support' | 'other';
-    assignedTo: string;
-    dueDate: Date;
-    createdAt: Date;
-    completedAt?: Date;
-    tags: string[];
-    notes: string;
-    relatedTo?: {
-      type: 'lead' | 'order' | 'customer';
-      id: string;
-      name: string;
-    };
-  }
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskView, setTaskView] = useState<'list' | 'kanban' | 'calendar'>('kanban');
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'overdue'>('all');
   const [taskPriorityFilter, setTaskPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'urgent'>('all');
   const [taskCategoryFilter, setTaskCategoryFilter] = useState<'all' | 'follow_up' | 'meeting' | 'delivery' | 'marketing' | 'support' | 'other'>('all');
-  const [taskSortBy, setTaskSortBy] = useState<'dueDate' | 'priority' | 'createdAt' | 'title'>('dueDate');
+  const [taskDateFilter, setTaskDateFilter] = useState<'all' | 'today' | 'tomorrow' | 'this_week' | 'next_week' | 'overdue'>('all');
+  const [taskSortBy, setTaskSortBy] = useState<'dueDate' | 'priority' | 'createdAt' | 'title' | 'category'>('dueDate');
   const [taskSortOrder, setTaskSortOrder] = useState<'asc' | 'desc'>('asc');
   const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  const [showTaskAnalytics, setShowTaskAnalytics] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
   const [taskForm, setTaskForm] = useState({
     title: '',
@@ -87,13 +105,17 @@ function AdminDashboardContent() {
     status: 'pending' as Task['status'],
     priority: 'medium' as Task['priority'],
     category: 'follow_up' as Task['category'],
-    assignedTo: '',
     dueDate: '',
+    estimatedTime: '',
     tags: '',
     notes: '',
     relatedToType: '' as 'lead' | 'order' | 'customer' | '',
     relatedToId: '',
-    relatedToName: ''
+    relatedToName: '',
+    isRecurring: false,
+    recurringType: 'weekly' as 'daily' | 'weekly' | 'monthly' | 'yearly',
+    recurringInterval: 1,
+    recurringEndDate: ''
   });
 
   // Sales pagination state
@@ -228,6 +250,7 @@ function AdminDashboardContent() {
     { name: 'Sales', id: 'sales', icon: Target },
     { name: 'Messages', id: 'messages', icon: MessageSquare },
     { name: 'Tasks', id: 'tasks', icon: Calendar },
+    { name: 'Form Submissions', id: 'formSubmissions', icon: FileText },
   ];
 
   // Helper to check if a date is within a range
@@ -287,12 +310,14 @@ function AdminDashboardContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [fetchedLeads, fetchedOrders] = await Promise.all([
+        const [fetchedLeads, fetchedOrders, fetchedTasks] = await Promise.all([
           AuthService.getLeads(),
-          AuthService.getOrders()
+          AuthService.getOrders(),
+          AuthService.getTasks()
         ]);
         setLeads(fetchedLeads);
         setOrders(fetchedOrders);
+        setTasks(fetchedTasks);
         // Fetch admin profile
         const currentUser = auth.currentUser;
         if (currentUser) {
@@ -494,18 +519,97 @@ function AdminDashboardContent() {
     return { total, pending, inProgress, completed, overdue };
   };
 
+  const getTaskAnalytics = () => {
+    const stats = getTaskStats();
+    const now = new Date();
+    const thisWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thisMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    const completedThisWeek = tasks.filter(t => 
+      t.status === 'completed' && t.completedAt && new Date(t.completedAt) >= thisWeek
+    ).length;
+    
+    const completedThisMonth = tasks.filter(t => 
+      t.status === 'completed' && t.completedAt && new Date(t.completedAt) >= thisMonth
+    ).length;
+    
+    const totalEstimatedTime = tasks
+      .filter(t => t.estimatedTime)
+      .reduce((sum, t) => sum + (t.estimatedTime || 0), 0);
+    
+    const totalActualTime = tasks
+      .filter(t => t.actualTime)
+      .reduce((sum, t) => sum + (t.actualTime || 0), 0);
+    
+    const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+    const overdueRate = stats.total > 0 ? Math.round((stats.overdue / stats.total) * 100) : 0;
+    
+    const categoryStats = ['follow_up', 'meeting', 'delivery', 'marketing', 'support', 'other'].map(cat => ({
+      category: cat,
+      count: tasks.filter(t => t.category === cat).length,
+      completed: tasks.filter(t => t.category === cat && t.status === 'completed').length
+    }));
+    
+    const priorityStats = ['urgent', 'high', 'medium', 'low'].map(priority => ({
+      priority,
+      count: tasks.filter(t => t.priority === priority).length,
+      completed: tasks.filter(t => t.priority === priority && t.status === 'completed').length
+    }));
+    
+    return {
+      ...stats,
+      completedThisWeek,
+      completedThisMonth,
+      totalEstimatedTime,
+      totalActualTime,
+      completionRate,
+      overdueRate,
+      categoryStats,
+      priorityStats
+    };
+  };
+
   const getFilteredAndSortedTasks = () => {
     let filtered = tasks.filter(task => {
       if (taskFilter !== 'all' && task.status !== taskFilter) return false;
       if (taskPriorityFilter !== 'all' && task.priority !== taskPriorityFilter) return false;
       if (taskCategoryFilter !== 'all' && task.category !== taskCategoryFilter) return false;
       
+      // Date filtering
+      if (taskDateFilter !== 'all') {
+        const now = new Date();
+        const taskDate = new Date(task.dueDate);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        const thisWeekStart = new Date(today.getTime() - today.getDay() * 24 * 60 * 60 * 1000);
+        const thisWeekEnd = new Date(thisWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+        const nextWeekStart = new Date(thisWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const nextWeekEnd = new Date(nextWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+        
+        switch (taskDateFilter) {
+          case 'today':
+            if (taskDate < today || taskDate >= tomorrow) return false;
+            break;
+          case 'tomorrow':
+            if (taskDate < tomorrow || taskDate >= new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)) return false;
+            break;
+          case 'this_week':
+            if (taskDate < thisWeekStart || taskDate > thisWeekEnd) return false;
+            break;
+          case 'next_week':
+            if (taskDate < nextWeekStart || taskDate > nextWeekEnd) return false;
+            break;
+          case 'overdue':
+            if (task.status === 'completed' || taskDate >= now) return false;
+            break;
+        }
+      }
+      
       if (taskSearchQuery) {
         const query = taskSearchQuery.toLowerCase();
         const matches = 
           task.title.toLowerCase().includes(query) ||
           task.description.toLowerCase().includes(query) ||
-          task.assignedTo.toLowerCase().includes(query) ||
           task.tags.some(tag => tag.toLowerCase().includes(query));
         if (!matches) return false;
       }
@@ -598,6 +702,450 @@ function AdminDashboardContent() {
     return task.status !== 'completed' && dueDate < now;
   };
 
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+
+  const getDaysUntilDue = (dueDate: Date) => {
+    const now = new Date();
+    const due = new Date(dueDate);
+    const diffTime = due.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getDueDateColor = (task: Task) => {
+    if (task.status === 'completed') return 'text-green-600';
+    if (isTaskOverdue(task)) return 'text-red-600';
+    
+    const daysUntilDue = getDaysUntilDue(task.dueDate);
+    if (daysUntilDue <= 0) return 'text-red-600';
+    if (daysUntilDue <= 1) return 'text-orange-600';
+    if (daysUntilDue <= 3) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
+  const getKanbanColumns = () => {
+    const columns = [
+      { id: 'pending', title: 'To Do', color: 'bg-gray-100', tasks: [] as Task[] },
+      { id: 'in_progress', title: 'In Progress', color: 'bg-blue-100', tasks: [] as Task[] },
+      { id: 'completed', title: 'Done', color: 'bg-green-100', tasks: [] as Task[] },
+      { id: 'overdue', title: 'Overdue', color: 'bg-red-100', tasks: [] as Task[] }
+    ];
+
+    const filteredTasks = getFilteredAndSortedTasks();
+    
+    filteredTasks.forEach(task => {
+      const status = isTaskOverdue(task) ? 'overdue' : task.status;
+      const column = columns.find(col => col.id === status);
+      if (column) {
+        column.tasks.push(task);
+      }
+    });
+
+    return columns;
+  };
+
+  // TaskCard Component
+  const TaskCard = ({ task }: { task: Task }) => (
+    <div
+      className={`bg-white border rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-200 ${
+        isTaskOverdue(task) ? 'border-red-200 bg-red-50' : 'border-[#D4AF37]'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2 sm:mb-3">
+            <div className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium border ${getCategoryColor(task.category)}`}>
+              <div className="flex items-center gap-0.5 sm:gap-1">
+                {getCategoryIcon(task.category)}
+                <span className="hidden sm:inline">{task.category.replace('_', ' ')}</span>
+              </div>
+            </div>
+            <div className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
+              {task.priority}
+            </div>
+            {task.recurring && (
+              <div className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                <Repeat className="w-3 h-3" />
+              </div>
+            )}
+          </div>
+          
+          <h3 className="font-semibold text-[#5E4E06] mb-1 sm:mb-2 text-sm">{task.title}</h3>
+          <p className="text-xs text-[#8B7A1A] mb-2 sm:mb-3 line-clamp-2">{task.description}</p>
+          
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-[#8B7A1A] mb-2 sm:mb-3">
+            <div className={`flex items-center gap-1 ${getDueDateColor(task)}`}>
+              <CalendarDays className="w-3 h-3" />
+              {getDaysUntilDue(task.dueDate) === 0 ? 'Today' : 
+               getDaysUntilDue(task.dueDate) < 0 ? `${Math.abs(getDaysUntilDue(task.dueDate))} days overdue` :
+               `${getDaysUntilDue(task.dueDate)} days left`}
+            </div>
+            {task.estimatedTime && (
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatTime(task.estimatedTime)}
+              </div>
+            )}
+            {task.relatedTo && (
+              <div className="flex items-center gap-1 hidden sm:flex">
+                <Tag className="w-3 h-3" />
+                {task.relatedTo.type}: {task.relatedTo.name}
+              </div>
+            )}
+          </div>
+          
+          {task.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
+              {task.tags.slice(0, 2).map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-[#F5F2E8] text-[#8B7A1A] rounded-full text-xs"
+                >
+                  {tag}
+                </span>
+              ))}
+              {task.tags.length > 2 && (
+                <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                  +{task.tags.length - 2}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {task.notes && (
+            <p className="text-xs text-[#8B7A1A] italic line-clamp-1">"{task.notes}"</p>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-1 ml-2 sm:ml-3">
+          {task.status !== 'completed' && task.id && (
+            <button
+              onClick={() => handleToggleTaskStatus(task.id!, 'completed')}
+              className="p-1 sm:p-1.5 hover:bg-green-100 rounded-lg transition-colors"
+              title="Mark as completed"
+            >
+              <CheckSquare className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+            </button>
+          )}
+          <button
+            onClick={() => openEditTaskModal(task)}
+            className="p-1 sm:p-1.5 hover:bg-[#F5F2E8] rounded-lg transition-colors"
+            title="Edit task"
+          >
+            <Edit className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B7A1A]" />
+          </button>
+          {task.id && (
+            <button
+              onClick={() => handleDeleteTask(task.id!)}
+              className="p-1 sm:p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+              title="Delete task"
+            >
+              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // EmptyTaskState Component
+  const EmptyTaskState = () => (
+    <div className="text-center py-8 sm:py-12">
+      <Calendar className="w-12 h-12 sm:w-16 sm:h-16 text-[#D4AF37] mx-auto mb-3 sm:mb-4" />
+      <h3 className="text-base sm:text-lg font-semibold text-[#5E4E06] mb-2">No tasks found</h3>
+      <p className="text-sm sm:text-base text-[#8B7A1A] mb-3 sm:mb-4">Create your first task to get started</p>
+      <button
+        onClick={() => setShowAddTaskModal(true)}
+        className="px-3 sm:px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 text-sm sm:text-base"
+      >
+        Add First Task
+      </button>
+    </div>
+  );
+
+  // CalendarView Component
+  const CalendarView = ({ 
+    tasks, 
+    selectedDate, 
+    onDateSelect, 
+    onTaskClick 
+  }: { 
+    tasks: Task[]; 
+    selectedDate: Date | null; 
+    onDateSelect: (date: Date | null) => void; 
+    onTaskClick: (task: Task) => void; 
+  }) => {
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    
+    const getDaysInMonth = (date: Date) => {
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - firstDay.getDay());
+      
+      const days = [];
+      const currentDate = new Date(startDate);
+      
+      while (currentDate <= lastDay || currentDate.getDay() !== 0) {
+        days.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      return days;
+    };
+
+    const getTasksForDate = (date: Date) => {
+      return tasks.filter(task => {
+        const taskDate = new Date(task.dueDate);
+        return taskDate.getDate() === date.getDate() &&
+               taskDate.getMonth() === date.getMonth() &&
+               taskDate.getFullYear() === date.getFullYear();
+      });
+    };
+
+    const isToday = (date: Date) => {
+      const today = new Date();
+      return date.getDate() === today.getDate() &&
+             date.getMonth() === today.getMonth() &&
+             date.getFullYear() === today.getFullYear();
+    };
+
+    const isSelected = (date: Date) => {
+      return selectedDate && 
+             date.getDate() === selectedDate.getDate() &&
+             date.getMonth() === selectedDate.getMonth() &&
+             date.getFullYear() === selectedDate.getFullYear();
+    };
+
+    const isCurrentMonth = (date: Date) => {
+      return date.getMonth() === currentMonth.getMonth() &&
+             date.getFullYear() === currentMonth.getFullYear();
+    };
+
+    const getMonthName = (date: Date) => {
+      return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    };
+
+    const navigateMonth = (direction: 'prev' | 'next') => {
+      setCurrentMonth(prev => {
+        const newMonth = new Date(prev);
+        if (direction === 'prev') {
+          newMonth.setMonth(newMonth.getMonth() - 1);
+        } else {
+          newMonth.setMonth(newMonth.getMonth() + 1);
+        }
+        return newMonth;
+      });
+    };
+
+    const days = getDaysInMonth(currentMonth);
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    return (
+      <div className="space-y-6">
+        {/* Calendar Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+          <div className="flex items-center justify-between sm:justify-start space-x-2 sm:space-x-4">
+            <button
+              onClick={() => navigateMonth('prev')}
+              className="p-1.5 sm:p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B7A1A]" />
+            </button>
+            <h3 className="text-lg sm:text-xl font-bold text-[#5E4E06]">
+              {getMonthName(currentMonth)}
+            </h3>
+            <button
+              onClick={() => navigateMonth('next')}
+              className="p-1.5 sm:p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors"
+            >
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B7A1A]" />
+            </button>
+          </div>
+          <button
+            onClick={() => setCurrentMonth(new Date())}
+            className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F5F2E8] text-[#5E4E06] rounded-lg hover:bg-[#E6DCC0] transition-colors text-xs sm:text-sm font-medium"
+          >
+            Today
+          </button>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="bg-white rounded-xl border border-[#D4AF37] overflow-hidden">
+          {/* Week Days Header */}
+          <div className="grid grid-cols-7 bg-[#F5F2E8] border-b border-[#D4AF37]">
+            {weekDays.map((day) => (
+              <div key={day} className="p-2 sm:p-3 text-center">
+                <span className="text-xs sm:text-sm font-semibold text-[#5E4E06]">{day}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Days */}
+          <div className="grid grid-cols-7">
+            {days.map((date, index) => {
+              const dayTasks = getTasksForDate(date);
+              const hasOverdueTasks = dayTasks.some(task => isTaskOverdue(task));
+              const hasUrgentTasks = dayTasks.some(task => task.priority === 'urgent');
+              const hasHighPriorityTasks = dayTasks.some(task => task.priority === 'high');
+              
+              return (
+                <div
+                  key={index}
+                  onClick={() => onDateSelect(date)}
+                  className={`
+                    min-h-[80px] sm:min-h-[100px] md:min-h-[120px] p-1 sm:p-2 border-r border-b border-gray-200 cursor-pointer transition-all duration-200
+                    ${isToday(date) ? 'bg-[#F5F2E8]' : ''}
+                    ${isSelected(date) ? 'ring-2 ring-[#D4AF37] bg-[#F5F2E8]' : ''}
+                    ${!isCurrentMonth(date) ? 'bg-gray-50 text-gray-400' : 'hover:bg-[#F5F2E8]'}
+                  `}
+                >
+                  {/* Date Number */}
+                  <div className="flex items-center justify-between mb-1 sm:mb-2">
+                    <span className={`
+                      text-xs sm:text-sm font-medium
+                      ${isToday(date) ? 'bg-[#D4AF37] text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center' : ''}
+                      ${!isCurrentMonth(date) ? 'text-gray-400' : 'text-[#5E4E06]'}
+                    `}>
+                      {date.getDate()}
+                    </span>
+                    
+                    {/* Priority Indicators */}
+                    <div className="flex space-x-0.5 sm:space-x-1">
+                      {hasUrgentTasks && (
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full"></div>
+                      )}
+                      {hasHighPriorityTasks && !hasUrgentTasks && (
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full"></div>
+                      )}
+                      {hasOverdueTasks && (
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-600 rounded-full animate-pulse"></div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Task Indicators */}
+                  <div className="space-y-0.5 sm:space-y-1">
+                    {dayTasks.slice(0, 2).map((task, taskIndex) => (
+                      <div
+                        key={task.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTaskClick(task);
+                        }}
+                        className={`
+                          p-0.5 sm:p-1 rounded text-xs cursor-pointer transition-all duration-200 hover:scale-105
+                          ${task.status === 'completed' ? 'bg-green-100 text-green-800 line-through' : ''}
+                          ${isTaskOverdue(task) ? 'bg-red-100 text-red-800' : ''}
+                          ${task.priority === 'urgent' ? 'bg-red-50 text-red-700 border border-red-200' : ''}
+                          ${task.priority === 'high' ? 'bg-orange-50 text-orange-700 border border-orange-200' : ''}
+                          ${task.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' : ''}
+                          ${task.priority === 'low' ? 'bg-green-50 text-green-700 border border-green-200' : ''}
+                        `}
+                        title={`${task.title} - ${task.priority} priority`}
+                      >
+                        <div className="flex items-center gap-0.5 sm:gap-1">
+                          <span className="hidden sm:inline">{getCategoryIcon(task.category)}</span>
+                          <span className="truncate text-xs">{task.title}</span>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {dayTasks.length > 2 && (
+                      <div className="text-xs text-[#8B7A1A] text-center">
+                        +{dayTasks.length - 2} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Calendar Legend */}
+        <div className="bg-[#F5F2E8] rounded-xl p-3 sm:p-4">
+          <h4 className="text-xs sm:text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Legend</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
+              <span className="text-[#8B7A1A] text-xs">Urgent</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-orange-500 rounded-full"></div>
+              <span className="text-[#8B7A1A] text-xs">High Priority</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-600 rounded-full animate-pulse"></div>
+              <span className="text-[#8B7A1A] text-xs">Overdue</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
+              <span className="text-[#8B7A1A] text-xs">Completed</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Selected Date Tasks */}
+        {selectedDate && (
+          <div className="bg-white rounded-xl border border-[#D4AF37] p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h4 className="text-base sm:text-lg font-semibold text-[#5E4E06]">
+                Tasks for {selectedDate.toLocaleDateString('en-US', { 
+                  weekday: 'short', 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </h4>
+              <button
+                onClick={() => onDateSelect(null)}
+                className="text-[#8B7A1A] hover:text-[#5E4E06] transition-colors p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {getTasksForDate(selectedDate).length === 0 ? (
+              <div className="text-center py-4 sm:py-6">
+                <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-[#D4AF37] mx-auto mb-2" />
+                <p className="text-[#8B7A1A] text-xs sm:text-sm">No tasks scheduled for this date</p>
+                <button
+                                      onClick={() => {
+                      setTaskForm(prev => ({
+                        ...prev,
+                        dueDate: selectedDate.toISOString().split('T')[0]
+                      }));
+                      setShowAddTaskModal(true);
+                      setShowEditTaskModal(false);
+                    }}
+                  className="mt-2 px-2 sm:px-3 py-1 bg-[#D4AF37] text-white rounded-lg text-xs hover:bg-[#8B7A1A] transition-colors"
+                >
+                  Add Task
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {getTasksForDate(selectedDate).map((task) => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const handleTaskInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setTaskForm(prev => ({ ...prev, [name]: value }));
@@ -608,23 +1156,60 @@ function AdminDashboardContent() {
     setIsSubmittingTask(true);
     
     try {
-      const newTask: Task = {
-        id: Date.now().toString(),
+      const newTaskData: any = {
         title: taskForm.title,
         description: taskForm.description,
         status: taskForm.status,
         priority: taskForm.priority,
         category: taskForm.category,
-        assignedTo: taskForm.assignedTo,
         dueDate: new Date(taskForm.dueDate),
-        createdAt: new Date(),
         tags: taskForm.tags ? taskForm.tags.split(',').map(tag => tag.trim()) : [],
-        notes: taskForm.notes,
-        relatedTo: taskForm.relatedToType && taskForm.relatedToId ? {
+        notes: taskForm.notes
+      };
+
+      // Only add estimatedTime if it has a value
+      if (taskForm.estimatedTime) {
+        newTaskData.estimatedTime = parseInt(taskForm.estimatedTime);
+      }
+
+      // Only add relatedTo if all required fields are present
+      if (taskForm.relatedToType && taskForm.relatedToId && taskForm.relatedToName) {
+        newTaskData.relatedTo = {
           type: taskForm.relatedToType as 'lead' | 'order' | 'customer',
           id: taskForm.relatedToId,
           name: taskForm.relatedToName
-        } : undefined
+        };
+      }
+
+      // Only add recurring if it's enabled and has valid data
+      if (taskForm.isRecurring) {
+        newTaskData.recurring = {
+          type: taskForm.recurringType,
+          interval: taskForm.recurringInterval
+        };
+        
+        // Only add endDate if it has a value
+        if (taskForm.recurringEndDate) {
+          newTaskData.recurring.endDate = new Date(taskForm.recurringEndDate);
+        }
+      }
+
+      // Check if user is authenticated
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+
+      // Create task in Firebase
+      const taskId = await AuthService.createTask(newTaskData, currentUser.uid);
+      
+      // Add the new task to local state with the Firebase ID
+      const newTask: Task = {
+        id: taskId,
+        ...newTaskData,
+        createdAt: new Date(),
+        createdBy: currentUser.uid,
+        updatedAt: new Date()
       };
 
       setTasks(prev => [...prev, newTask]);
@@ -634,15 +1219,20 @@ function AdminDashboardContent() {
         status: 'pending',
         priority: 'medium',
         category: 'follow_up',
-        assignedTo: '',
         dueDate: '',
+        estimatedTime: '',
         tags: '',
         notes: '',
         relatedToType: '',
         relatedToId: '',
-        relatedToName: ''
+        relatedToName: '',
+        isRecurring: false,
+        recurringType: 'weekly',
+        recurringInterval: 1,
+        recurringEndDate: ''
       });
       setShowAddTaskModal(false);
+      setShowEditTaskModal(false);
       showToast('Task created successfully!', 'success');
     } catch (error) {
       console.error('Error creating task:', error);
@@ -659,27 +1249,70 @@ function AdminDashboardContent() {
     setIsSubmittingTask(true);
     
     try {
-      const updatedTask: Task = {
-        ...selectedTask,
+      const updatedTaskData: any = {
         title: taskForm.title,
         description: taskForm.description,
         status: taskForm.status,
         priority: taskForm.priority,
         category: taskForm.category,
-        assignedTo: taskForm.assignedTo,
         dueDate: new Date(taskForm.dueDate),
         tags: taskForm.tags ? taskForm.tags.split(',').map(tag => tag.trim()) : [],
-        notes: taskForm.notes,
-        relatedTo: taskForm.relatedToType && taskForm.relatedToId ? {
+        notes: taskForm.notes
+      };
+
+      // Only add estimatedTime if it has a value
+      if (taskForm.estimatedTime) {
+        updatedTaskData.estimatedTime = parseInt(taskForm.estimatedTime);
+      }
+
+      // Only add relatedTo if all required fields are present
+      if (taskForm.relatedToType && taskForm.relatedToId && taskForm.relatedToName) {
+        updatedTaskData.relatedTo = {
           type: taskForm.relatedToType as 'lead' | 'order' | 'customer',
           id: taskForm.relatedToId,
           name: taskForm.relatedToName
-        } : undefined,
-        completedAt: taskForm.status === 'completed' ? new Date() : selectedTask.completedAt
+        };
+      }
+
+      // Only add recurring if it's enabled and has valid data
+      if (taskForm.isRecurring) {
+        updatedTaskData.recurring = {
+          type: taskForm.recurringType,
+          interval: taskForm.recurringInterval
+        };
+        
+        // Only add endDate if it has a value
+        if (taskForm.recurringEndDate) {
+          updatedTaskData.recurring.endDate = new Date(taskForm.recurringEndDate);
+        }
+      }
+
+      // Handle completedAt
+      if (taskForm.status === 'completed') {
+        updatedTaskData.completedAt = new Date();
+      } else if (selectedTask.completedAt) {
+        updatedTaskData.completedAt = selectedTask.completedAt;
+      }
+
+      // Check if user is authenticated
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+
+      // Update task in Firebase
+      await AuthService.updateTask(selectedTask.id!, updatedTaskData);
+      
+      // Update local state
+      const updatedTask: Task = {
+        ...selectedTask,
+        ...updatedTaskData,
+        updatedAt: new Date()
       };
 
       setTasks(prev => prev.map(task => task.id === selectedTask.id ? updatedTask : task));
       setShowEditTaskModal(false);
+      setShowAddTaskModal(false);
       setSelectedTask(null);
       showToast('Task updated successfully!', 'success');
     } catch (error) {
@@ -692,6 +1325,10 @@ function AdminDashboardContent() {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
+      // Delete task from Firebase
+      await AuthService.deleteTask(taskId);
+      
+      // Remove from local state
       setTasks(prev => prev.filter(task => task.id !== taskId));
       showToast('Task deleted successfully!', 'success');
     } catch (error) {
@@ -702,12 +1339,17 @@ function AdminDashboardContent() {
 
   const handleToggleTaskStatus = async (taskId: string, newStatus: Task['status']) => {
     try {
+      // Update task status in Firebase
+      await AuthService.updateTaskStatus(taskId, newStatus);
+      
+      // Update local state
       setTasks(prev => prev.map(task => 
         task.id === taskId 
           ? { 
               ...task, 
               status: newStatus,
-              completedAt: newStatus === 'completed' ? new Date() : task.completedAt
+              completedAt: newStatus === 'completed' ? new Date() : task.completedAt,
+              updatedAt: new Date()
             }
           : task
       ));
@@ -726,105 +1368,22 @@ function AdminDashboardContent() {
       status: task.status,
       priority: task.priority,
       category: task.category,
-      assignedTo: task.assignedTo,
       dueDate: new Date(task.dueDate).toISOString().split('T')[0],
+      estimatedTime: task.estimatedTime?.toString() || '',
       tags: task.tags.join(', '),
       notes: task.notes,
       relatedToType: task.relatedTo?.type || '',
       relatedToId: task.relatedTo?.id || '',
-      relatedToName: task.relatedTo?.name || ''
+      relatedToName: task.relatedTo?.name || '',
+      isRecurring: !!task.recurring,
+      recurringType: task.recurring?.type || 'weekly',
+      recurringInterval: task.recurring?.interval || 1,
+      recurringEndDate: task.recurring?.endDate ? new Date(task.recurring.endDate).toISOString().split('T')[0] : ''
     });
     setShowEditTaskModal(true);
   };
 
-  const createTestTasks = async () => {
-    const testTasks: Task[] = [
-      {
-        id: '1',
-        title: 'Follow up with Rahul Sharma',
-        description: 'Call to discuss the Aura Wall Putty order and delivery timeline',
-        status: 'pending',
-        priority: 'high',
-        category: 'follow_up',
-        assignedTo: 'Sales Team',
-        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        tags: ['customer', 'follow-up', 'sales'],
-        notes: 'Customer showed interest in bulk order',
-        relatedTo: { type: 'order', id: 'DTM001', name: 'Rahul Sharma' }
-      },
-      {
-        id: '2',
-        title: 'Prepare marketing campaign for Diwali',
-        description: 'Create promotional materials and social media content for Diwali season',
-        status: 'in_progress',
-        priority: 'urgent',
-        category: 'marketing',
-        assignedTo: 'Marketing Team',
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        tags: ['marketing', 'diwali', 'campaign'],
-        notes: 'Focus on Aura Wall Putty and Dhunee Incense products'
-      },
-      {
-        id: '3',
-        title: 'Schedule delivery for Mumbai orders',
-        description: 'Coordinate with logistics team for pending deliveries in Mumbai area',
-        status: 'pending',
-        priority: 'medium',
-        category: 'delivery',
-        assignedTo: 'Logistics Team',
-        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        tags: ['delivery', 'mumbai', 'logistics'],
-        notes: '5 orders pending delivery in Mumbai'
-      },
-      {
-        id: '4',
-        title: 'Customer support call - Anjali Desai',
-        description: 'Address customer complaint about delayed delivery',
-        status: 'completed',
-        priority: 'high',
-        category: 'support',
-        assignedTo: 'Support Team',
-        dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        tags: ['support', 'complaint', 'resolved'],
-        notes: 'Issue resolved - delivery rescheduled for tomorrow',
-        relatedTo: { type: 'customer', id: 'cust001', name: 'Anjali Desai' }
-      },
-      {
-        id: '5',
-        title: 'Team meeting - Weekly review',
-        description: 'Weekly team meeting to review progress and plan next week',
-        status: 'pending',
-        priority: 'medium',
-        category: 'meeting',
-        assignedTo: 'All Teams',
-        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        tags: ['meeting', 'weekly', 'review'],
-        notes: 'Agenda: Sales review, marketing updates, delivery status'
-      },
-      {
-        id: '6',
-        title: 'Update product catalog',
-        description: 'Add new product variants and update pricing information',
-        status: 'overdue',
-        priority: 'high',
-        category: 'other',
-        assignedTo: 'Admin Team',
-        dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        tags: ['catalog', 'products', 'pricing'],
-        notes: 'New Aura Wall Putty variants need to be added'
-      }
-    ];
 
-    setTasks(testTasks);
-    showToast('Test tasks created successfully!', 'success');
-  };
 
   // Test function to create sample orders (for demonstration)
   const createTestOrders = async () => {
@@ -1118,6 +1677,34 @@ function AdminDashboardContent() {
     }
   };
 
+  useEffect(() => {
+    if (activeTab === 'formSubmissions') {
+      setIsLoadingSubmissions(true);
+      setSubmissionsError(null);
+      getDocs(collection(db, 'franchiseApplications'))
+        .then((querySnapshot) => {
+          const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setFranchiseSubmissions(data);
+        })
+        .catch((err) => {
+          setSubmissionsError('Failed to fetch franchise submissions.');
+        })
+        .finally(() => setIsLoadingSubmissions(false));
+
+      setIsLoadingContact(true);
+      setContactError(null);
+      getDocs(collection(db, 'contactFormSubmissions'))
+        .then((querySnapshot) => {
+          const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setContactSubmissions(data);
+        })
+        .catch((err) => {
+          setContactError('Failed to fetch contact form submissions.');
+        })
+        .finally(() => setIsLoadingContact(false));
+    }
+  }, [activeTab]);
+
   if (isLoading) {
   return (
       <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex items-center justify-center">
@@ -1129,79 +1716,80 @@ function AdminDashboardContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0]">
       {/* Topbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#D4AF37] shadow-sm h-16 flex items-center px-4 sm:px-6">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#D4AF37] shadow-sm h-14 sm:h-16 flex items-center px-3 sm:px-4 md:px-6">
         {/* Mobile Menu Button */}
         <button 
           onClick={() => setSidebarOpen(true)}
-          className="md:hidden p-2 rounded-lg bg-[#F5F2E8] text-[#8B7A1A] hover:bg-[#D4AF37] hover:text-white transition-colors mr-3"
+          className="md:hidden p-2 rounded-lg bg-[#F5F2E8] text-[#8B7A1A] hover:bg-[#D4AF37] hover:text-white transition-colors mr-2 sm:mr-3"
         >
           <Menu className="w-5 h-5" />
         </button>
         
-        <Link href="/" className="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#D4AF37] hover:text-white transition-colors duration-200 mr-4">
-                <ArrowLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Back</span>
+        <Link href="/" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-medium text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#D4AF37] hover:text-white transition-colors duration-200 mr-2 sm:mr-4">
+          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="hidden sm:inline text-xs sm:text-sm">Back</span>
               </Link>
         
-        <div className="flex items-center gap-2 sm:gap-3 flex-1">
-          <Mountain className="w-6 h-6 sm:w-8 sm:h-8 text-[#D4AF37]" />
-          <h1 className="text-lg sm:text-2xl font-bold text-[#5E4E06]">Admin</h1>
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-1">
+          <Mountain className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-[#D4AF37]" />
+          <h1 className="text-base sm:text-lg md:text-2xl font-bold text-[#5E4E06]">Admin</h1>
               </div>
               
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
           <span className="hidden md:flex items-center gap-2 text-[#8B7A1A] font-medium">
             <div className="w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center text-white font-semibold text-sm">
               {userProfile?.firstName?.[0]?.toUpperCase() || 'A'}
             </div>
             {userProfile?.firstName || 'Admin'}
           </span>
-          <button onClick={handleLogout} className="p-2 rounded-lg bg-[#F5F2E8] text-[#8B7A1A] hover:bg-[#D4AF37] hover:text-white transition-colors" title="Logout">
+          <button onClick={handleLogout} className="p-1.5 sm:p-2 rounded-lg bg-[#F5F2E8] text-[#8B7A1A] hover:bg-[#D4AF37] hover:text-white transition-colors" title="Logout">
             <LogOut className="w-4 h-4" />
               </button>
                 </div>
       </nav>
+
       {/* Fixed layout below header */}
-      <div className="fixed top-16 left-0 w-full h-[calc(100vh-4rem)] flex">
+      <div className="fixed top-14 sm:top-16 left-0 w-full h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] flex">
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setSidebarOpen(false)}></div>
         )}
         
         {/* Sidebar */}
-        <aside className={`fixed md:static z-40 left-0 top-16 w-80 md:w-60 h-[calc(100vh-4rem)] bg-gradient-to-br from-[#FFFBE6] to-[#F5F2E8] border-r-2 border-[#D4AF37] shadow-2xl flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+        <aside className={`fixed md:static z-40 left-0 top-14 sm:top-16 w-72 sm:w-80 md:w-60 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] bg-gradient-to-br from-[#FFFBE6] to-[#F5F2E8] border-r-2 border-[#D4AF37] shadow-2xl flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
           {/* Mobile Header */}
-          <div className="md:hidden flex items-center justify-between p-4 border-b border-[#D4AF37]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] flex items-center justify-center shadow-lg border-2 border-white">
-                <User className="w-5 h-5 text-white" />
+          <div className="md:hidden flex items-center justify-between p-3 sm:p-4 border-b border-[#D4AF37]">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] flex items-center justify-center shadow-lg border-2 border-white">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <div className="font-bold text-[#5E4E06] text-sm">{userProfile?.firstName || 'Admin'}</div>
+                <div className="font-bold text-[#5E4E06] text-xs sm:text-sm">{userProfile?.firstName || 'Admin'}</div>
                 <div className="text-[#8B7A1A] text-xs">{userProfile?.email || 'admin@email.com'}</div>
               </div>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-[#8B7A1A]" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B7A1A]" />
             </button>
           </div>
           
           {/* Desktop Profile Section */}
-          <div className="hidden md:flex flex-col items-center pt-8">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] flex items-center justify-center shadow-lg border-4 border-white mb-4">
-              <User className="w-10 h-10 text-white" />
+          <div className="hidden md:flex flex-col items-center pt-6 sm:pt-8">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] flex items-center justify-center shadow-lg border-4 border-white mb-3 sm:mb-4">
+              <User className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
-            <div className="text-center mb-8">
-              <div className="font-black text-lg text-[#5E4E06]">{userProfile?.firstName || 'Admin'}</div>
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="font-black text-base sm:text-lg text-[#5E4E06]">{userProfile?.firstName || 'Admin'}</div>
               <div className="text-[#8B7A1A] text-xs mb-2">{userProfile?.email || 'admin@email.com'}</div>
             </div>
           </div>
           
           {/* Navigation */}
-          <nav className="flex-1 w-full px-4 md:px-4">
-            <ul className="space-y-2">
+          <nav className="flex-1 w-full px-3 sm:px-4">
+            <ul className="space-y-1 sm:space-y-2">
               {navigation.map((item) => (
                 <li key={item.id}>
                   <button
@@ -1209,9 +1797,9 @@ function AdminDashboardContent() {
                       setActiveTab(item.id);
                       setSidebarOpen(false); // Close sidebar on mobile after selection
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 md:py-3 rounded-xl font-bold transition-all text-base md:text-lg cursor-pointer ${activeTab === item.id ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}
+                    className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-bold transition-all text-sm sm:text-base md:text-lg cursor-pointer ${activeTab === item.id ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}
                   >
-                    <item.icon className="w-5 h-5" /> 
+                    <item.icon className="w-4 h-4 sm:w-5 sm:h-5" /> 
                     <span className="flex-1 text-left">{item.name}</span>
                   </button>
                 </li>
@@ -1222,9 +1810,9 @@ function AdminDashboardContent() {
                     handleLogout();
                     setSidebarOpen(false); // Close sidebar on mobile
                   }} 
-                  className="w-full flex items-center gap-3 px-4 py-3 md:py-3 rounded-xl font-bold transition-all text-base md:text-lg text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06] cursor-pointer"
+                  className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-bold transition-all text-sm sm:text-base md:text-lg text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06] cursor-pointer"
                 >
-                  <LogOut className="w-5 h-5" /> 
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" /> 
                   <span className="flex-1 text-left">Logout</span>
                 </button>
               </li>
@@ -1232,13 +1820,13 @@ function AdminDashboardContent() {
           </nav>
           
           {/* Footer */}
-          <div className="p-4 md:px-4 md:mb-6">
+          <div className="p-3 sm:p-4 md:px-4 md:mb-6">
             <div className="text-xs text-[#8B7A1A] text-center">Desert to Mountains &copy; {new Date().getFullYear()}</div>
           </div>
         </aside>
         
         {/* Main Content */}
-        <main className="flex-1 w-full h-full overflow-y-auto relative z-10 bg-transparent p-3 sm:p-4 md:p-8">
+        <main className="flex-1 w-full h-full overflow-y-auto relative z-10 bg-transparent p-2 sm:p-3 md:p-4 lg:p-8">
         {activeTab === 'overview' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             {/* Welcome Section */}
@@ -1574,9 +2162,12 @@ function AdminDashboardContent() {
                         <thead className="bg-[#F5F2E8] border-b border-[#E6DCC0]">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider">Customer</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider">Email</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider">Phone</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider">Joined</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider hidden sm:table-cell">Email</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider hidden md:table-cell">Phone</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider hidden lg:table-cell">City</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider hidden lg:table-cell">State</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider hidden xl:table-cell">Message</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-right text-xs font-semibold text-[#8B7A1A] uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
@@ -1600,8 +2191,11 @@ function AdminDashboardContent() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-[#5E4E06]">{customer.email}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-[#5E4E06]">{customer.phone || '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-[#5E4E06] hidden sm:table-cell">{customer.email}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-[#5E4E06] hidden md:table-cell">{customer.phone || '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-[#5E4E06] text-sm hidden lg:table-cell">{customer.address?.city || '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-[#5E4E06] text-sm hidden lg:table-cell">{customer.address?.state || '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-[#5E4E06] text-sm hidden xl:table-cell">{customer.role}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-[#5E4E06] text-sm">{formatDate(customer.createdAt)}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-right">
                                 <button 
@@ -1944,72 +2538,101 @@ function AdminDashboardContent() {
 
         {activeTab === 'tasks' && (
           <div className="space-y-6">
-            {/* Task Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+            {/* Enhanced Task Stats with Analytics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-700">Total Tasks</p>
+                    <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Total</p>
                     <p className="text-2xl font-bold text-blue-900">{getTaskStats().total}</p>
+                    <p className="text-xs text-blue-600">Tasks</p>
                   </div>
-                  <Calendar className="w-8 h-8 text-blue-600" />
+                  <div className="p-2 bg-blue-200 rounded-xl">
+                    <Calendar className="w-6 h-6 text-blue-700" />
                 </div>
               </div>
-              <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl p-4 border border-yellow-200">
+              </div>
+              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-4 border border-yellow-200 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-yellow-700">Pending</p>
+                    <p className="text-xs font-medium text-yellow-700 uppercase tracking-wide">Pending</p>
                     <p className="text-2xl font-bold text-yellow-900">{getTaskStats().pending}</p>
+                    <p className="text-xs text-yellow-600">To Do</p>
                   </div>
-                  <Clock className="w-8 h-8 text-yellow-600" />
+                  <div className="p-2 bg-yellow-200 rounded-xl">
+                    <Clock className="w-6 h-6 text-yellow-700" />
                 </div>
               </div>
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+              </div>
+              <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-4 border border-indigo-200 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-700">In Progress</p>
-                    <p className="text-2xl font-bold text-blue-900">{getTaskStats().inProgress}</p>
+                    <p className="text-xs font-medium text-indigo-700 uppercase tracking-wide">In Progress</p>
+                    <p className="text-2xl font-bold text-indigo-900">{getTaskStats().inProgress}</p>
+                    <p className="text-xs text-indigo-600">Active</p>
                   </div>
-                  <Activity className="w-8 h-8 text-blue-600" />
+                  <div className="p-2 bg-indigo-200 rounded-xl">
+                    <Activity className="w-6 h-6 text-indigo-700" />
                 </div>
               </div>
-              <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+              </div>
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 border border-green-200 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-700">Completed</p>
+                    <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Completed</p>
                     <p className="text-2xl font-bold text-green-900">{getTaskStats().completed}</p>
+                    <p className="text-xs text-green-600">Done</p>
                   </div>
-                  <CheckCircle className="w-8 h-8 text-green-600" />
+                  <div className="p-2 bg-green-200 rounded-xl">
+                    <CheckCircle className="w-6 h-6 text-green-700" />
                 </div>
               </div>
-              <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
+              </div>
+              <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-4 border border-red-200 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-red-700">Overdue</p>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Overdue</p>
                     <p className="text-2xl font-bold text-red-900">{getTaskStats().overdue}</p>
+                    <p className="text-xs text-red-600">Late</p>
                   </div>
-                  <AlertCircle className="w-8 h-8 text-red-600" />
+                  <div className="p-2 bg-red-200 rounded-xl">
+                    <AlertCircle className="w-6 h-6 text-red-700" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border border-purple-200 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-purple-700 uppercase tracking-wide">Completion</p>
+                    <p className="text-2xl font-bold text-purple-900">{getTaskAnalytics().completionRate}%</p>
+                    <p className="text-xs text-purple-600">Rate</p>
+                  </div>
+                  <div className="p-2 bg-purple-200 rounded-xl">
+                    <TrendingUp className="w-6 h-6 text-purple-700" />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Task Controls */}
-            <div className="bg-white rounded-xl border border-[#D4AF37] p-6 shadow-sm">
+            {/* Task Controls with View Toggle */}
+            <div className="bg-white rounded-2xl border border-[#D4AF37] p-6 shadow-lg">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-[#5E4E06] mb-2">Task Management</h2>
-                  <p className="text-[#8B7A1A]">Manage and track all your business tasks</p>
+                  <h2 className="text-2xl font-bold text-[#5E4E06] mb-2">Task Management</h2>
+                  <p className="text-[#8B7A1A]">Organize, track, and complete your business tasks efficiently</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={createTestTasks}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                    onClick={() => setShowTaskAnalytics(true)}
+                    className="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-200 text-sm font-medium flex items-center gap-2 shadow-sm"
                   >
-                    Create Test Tasks
+                    <BarChart3 className="w-4 h-4" />
+                    Analytics
                   </button>
+
                   <button
                     onClick={() => setShowAddTaskModal(true)}
-                    className="px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg hover:scale-105 transition-all duration-200 text-sm font-medium flex items-center gap-2"
+                    className="px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 text-sm font-medium flex items-center gap-2 shadow-lg"
                   >
                     <Plus className="w-4 h-4" />
                     Add Task
@@ -2017,8 +2640,47 @@ function AdminDashboardContent() {
                 </div>
               </div>
 
-              {/* Filters and Search */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {/* View Toggle */}
+              <div className="flex justify-center mb-6">
+                <div className="bg-gray-100 rounded-xl p-1 flex">
+                  <button
+                    onClick={() => setTaskView('kanban')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                      taskView === 'kanban' 
+                        ? 'bg-white text-[#5E4E06] shadow-sm' 
+                        : 'text-gray-600 hover:text-[#5E4E06]'
+                    }`}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                    Kanban
+                  </button>
+                  <button
+                    onClick={() => setTaskView('list')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                      taskView === 'list' 
+                        ? 'bg-white text-[#5E4E06] shadow-sm' 
+                        : 'text-gray-600 hover:text-[#5E4E06]'
+                    }`}
+                  >
+                    <List className="w-4 h-4" />
+                    List
+                  </button>
+                  <button
+                    onClick={() => setTaskView('calendar')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                      taskView === 'calendar' 
+                        ? 'bg-white text-[#5E4E06] shadow-sm' 
+                        : 'text-gray-600 hover:text-[#5E4E06]'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Calendar
+                  </button>
+                </div>
+              </div>
+
+              {/* Enhanced Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-[#5E4E06] mb-2">Search</label>
                   <div className="relative">
@@ -2028,7 +2690,7 @@ function AdminDashboardContent() {
                       placeholder="Search tasks..."
                       value={taskSearchQuery}
                       onChange={(e) => setTaskSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-[#D4AF37] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
+                      className="w-full pl-10 pr-4 py-2 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
                     />
                   </div>
                 </div>
@@ -2037,7 +2699,7 @@ function AdminDashboardContent() {
                   <select
                     value={taskFilter}
                     onChange={(e) => setTaskFilter(e.target.value as any)}
-                    className="w-full px-4 py-2 border border-[#D4AF37] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
+                    className="w-full px-4 py-2 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
                   >
                     <option value="all">All Status</option>
                     <option value="pending">Pending</option>
@@ -2051,7 +2713,7 @@ function AdminDashboardContent() {
                   <select
                     value={taskPriorityFilter}
                     onChange={(e) => setTaskPriorityFilter(e.target.value as any)}
-                    className="w-full px-4 py-2 border border-[#D4AF37] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
+                    className="w-full px-4 py-2 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
                   >
                     <option value="all">All Priorities</option>
                     <option value="urgent">Urgent</option>
@@ -2065,7 +2727,7 @@ function AdminDashboardContent() {
                   <select
                     value={taskCategoryFilter}
                     onChange={(e) => setTaskCategoryFilter(e.target.value as any)}
-                    className="w-full px-4 py-2 border border-[#D4AF37] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
+                    className="w-full px-4 py-2 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
                   >
                     <option value="all">All Categories</option>
                     <option value="follow_up">Follow Up</option>
@@ -2076,147 +2738,250 @@ function AdminDashboardContent() {
                     <option value="other">Other</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5E4E06] mb-2">Date Range</label>
+                  <select
+                    value={taskDateFilter}
+                    onChange={(e) => setTaskDateFilter(e.target.value as any)}
+                    className="w-full px-4 py-2 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
+                  >
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="tomorrow">Tomorrow</option>
+                    <option value="this_week">This Week</option>
+                    <option value="next_week">Next Week</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
               </div>
-
-              {/* Sort Controls */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-[#5E4E06]">Sort by:</label>
+                <div>
+                  <label className="block text-sm font-medium text-[#5E4E06] mb-2">Sort By</label>
                   <select
                     value={taskSortBy}
                     onChange={(e) => setTaskSortBy(e.target.value as any)}
-                    className="px-3 py-1 border border-[#D4AF37] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
+                    className="w-full px-4 py-2 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
                   >
                     <option value="dueDate">Due Date</option>
                     <option value="priority">Priority</option>
                     <option value="createdAt">Created Date</option>
                     <option value="title">Title</option>
+                    <option value="category">Category</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Task Count and Sort Order */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="text-sm text-[#8B7A1A] bg-[#F5F2E8] px-3 py-2 rounded-lg">
+                  <span className="font-medium">{getFilteredAndSortedTasks().length}</span> tasks found
+                </div>
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setTaskSortOrder(taskSortOrder === 'asc' ? 'desc' : 'asc')}
                     className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors"
+                    title={`Sort ${taskSortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
                   >
                     {taskSortOrder === 'asc' ? <SortAsc className="w-4 h-4 text-[#8B7A1A]" /> : <SortDesc className="w-4 h-4 text-[#8B7A1A]" />}
                   </button>
                 </div>
-                <div className="text-sm text-[#8B7A1A]">
-                  {getFilteredAndSortedTasks().length} tasks found
                 </div>
-              </div>
 
-              {/* Task List */}
+              {/* Task Views */}
+              {taskView === 'kanban' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {getKanbanColumns().map((column) => (
+                    <div key={column.id} className="space-y-4">
+                      <div className={`${column.color} rounded-xl p-4 border`}>
+                        <h3 className="font-semibold text-gray-800 mb-2">{column.title}</h3>
+                        <p className="text-sm text-gray-600">{column.tasks.length} tasks</p>
+              </div>
+                      <div className="space-y-3">
+                        {column.tasks.map((task) => (
+                          <TaskCard key={task.id} task={task} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {taskView === 'list' && (
               <div className="space-y-4">
                 {getFilteredAndSortedTasks().length === 0 ? (
-                  <div className="text-center py-12">
-                    <Calendar className="w-16 h-16 text-[#D4AF37] mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-[#5E4E06] mb-2">No tasks found</h3>
-                    <p className="text-[#8B7A1A] mb-4">Create your first task to get started</p>
-                    <button
-                      onClick={() => setShowAddTaskModal(true)}
-                      className="px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg hover:scale-105 transition-all duration-200"
-                    >
-                      Add First Task
-                    </button>
-                  </div>
+                    <EmptyTaskState />
                 ) : (
                   getFilteredAndSortedTasks().map((task) => (
-                    <div
-                      key={task.id}
-                      className={`bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 ${
-                        isTaskOverdue(task) ? 'border-red-200 bg-red-50' : 'border-[#D4AF37]'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(task.category)}`}>
-                              <div className="flex items-center gap-1">
-                                {getCategoryIcon(task.category)}
-                                {task.category.replace('_', ' ')}
-                              </div>
-                            </div>
-                            <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </div>
-                            <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(task.status)}`}>
-                              {task.status.replace('_', ' ')}
-                            </div>
-                            {isTaskOverdue(task) && (
-                              <div className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                                Overdue
-                              </div>
+                      <TaskCard key={task.id} task={task} />
+                    ))
                             )}
                           </div>
-                          
-                          <h3 className="font-semibold text-[#5E4E06] mb-1">{task.title}</h3>
-                          <p className="text-sm text-[#8B7A1A] mb-3">{task.description}</p>
-                          
-                          <div className="flex flex-wrap items-center gap-4 text-xs text-[#8B7A1A] mb-3">
-                            <div className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              {task.assignedTo}
+              )}
+
+              {taskView === 'calendar' && (
+                <div className="bg-white rounded-xl border border-[#D4AF37] p-6">
+                  <CalendarView 
+                    tasks={getFilteredAndSortedTasks()}
+                    selectedDate={selectedDate}
+                    onDateSelect={setSelectedDate}
+                    onTaskClick={(task) => {
+                      setSelectedTask(task);
+                      openEditTaskModal(task);
+                    }}
+                  />
                             </div>
-                            <div className="flex items-center gap-1">
-                              <CalendarDays className="w-3 h-3" />
-                              Due: {new Date(task.dueDate).toLocaleDateString()}
+              )}
                             </div>
-                            {task.relatedTo && (
-                              <div className="flex items-center gap-1">
-                                <Tag className="w-3 h-3" />
-                                {task.relatedTo.type}: {task.relatedTo.name}
                               </div>
                             )}
-                          </div>
-                          
-                          {task.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {task.tags.map((tag, index) => (
-                                <span
-                                  key={index}
-                                  className="px-2 py-1 bg-[#F5F2E8] text-[#8B7A1A] rounded-full text-xs"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
+
+        {/* Form Submissions Tab Content */}
+        {activeTab === 'formSubmissions' && (
+          <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-2xl p-0 sm:p-2 md:p-6 max-w-7xl xl:max-w-full mx-auto mt-4 relative min-h-screen overflow-hidden">
+            <div className="flex justify-center gap-4 mb-8 mt-4">
+              <button
+                className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 shadow-sm border text-base sm:text-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866] ${activeFormTab === 'franchise' ? 'bg-[#E6C866] text-[#5E4E06] border-[#E6C866] scale-105' : 'bg-white text-gray-500 border-gray-200 hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}
+                onClick={() => setActiveFormTab('franchise')}
+              >
+                Franchise Applications
+              </button>
+              <button
+                className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 shadow-sm border text-base sm:text-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866] ${activeFormTab === 'contact' ? 'bg-[#E6C866] text-[#5E4E06] border-[#E6C866] scale-105' : 'bg-white text-gray-500 border-gray-200 hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}
+                onClick={() => setActiveFormTab('contact')}
+              >
+                Contact Us Submissions
+              </button>
+            </div>
+            {activeFormTab === 'franchise' && (
+              <>
+                <h2 className="text-2xl font-extrabold mb-6 text-[#5E4E06] text-center tracking-tight">Franchise Form Submissions</h2>
+                {isLoadingSubmissions ? (
+                  <div>Loading...</div>
+                ) : submissionsError ? (
+                  <div className="text-red-600">{submissionsError}</div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl shadow-lg bg-white">
+                    <table className="min-w-full text-sm sm:text-base">
+                      <thead className="sticky top-0 z-10 bg-[#F5F2E8] border-b border-[#E6C866]">
+                        <tr>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left">Name</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden sm:table-cell">Email</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden md:table-cell">Phone</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden lg:table-cell">City</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden lg:table-cell">State</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden xl:table-cell">Message</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left">Date</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {franchiseSubmissions.length === 0 ? (
+                          <tr><td colSpan={8} className="text-center py-8 text-gray-400">No submissions found.</td></tr>
+                        ) : franchiseSubmissions.map((sub, idx) => (
+                          <tr key={sub.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#F8F6F0] hover:bg-[#F5F2E8]'}>
+                            <td className="px-4 py-3 font-medium">{sub.name}</td>
+                            <td className="px-4 py-3 hidden sm:table-cell">{sub.email}</td>
+                            <td className="px-4 py-3 hidden md:table-cell">{sub.phone}</td>
+                            <td className="px-4 py-3 hidden lg:table-cell">{sub.city}</td>
+                            <td className="px-4 py-3 hidden lg:table-cell">{sub.state}</td>
+                            <td className="px-4 py-3 max-w-xs truncate hidden xl:table-cell" title={sub.message}>{sub.message}</td>
+                            <td className="px-4 py-3">{sub.createdAt && (sub.createdAt.seconds ? formatShortDateTime(new Date(sub.createdAt.seconds * 1000)) : formatShortDateTime(new Date(sub.createdAt)))}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                className="px-3 py-1 rounded-full bg-[#E6C866] text-[#5E4E06] font-semibold shadow hover:bg-[#F5F2E8] transition text-xs sm:text-sm cursor-pointer"
+                                onClick={() => { setModalData({ ...sub, type: 'franchise' }); setModalOpen(true); }}
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                             </div>
                           )}
-                          
-                          {task.notes && (
-                            <p className="text-sm text-[#8B7A1A] italic">"{task.notes}"</p>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 ml-4">
-                          {task.status !== 'completed' && (
+              </>
+            )}
+            {activeFormTab === 'contact' && (
+              <>
+                <h2 className="text-2xl font-extrabold mb-6 text-[#5E4E06] text-center tracking-tight">Contact Form Submissions</h2>
+                {isLoadingContact ? (
+                  <div>Loading...</div>
+                ) : contactError ? (
+                  <div className="text-red-600">{contactError}</div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl shadow-lg bg-white">
+                    <table className="min-w-full text-sm sm:text-base">
+                      <thead className="sticky top-0 z-10 bg-[#F5F2E8] border-b border-[#E6C866]">
+                        <tr>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left">Name</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden sm:table-cell">Email</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden md:table-cell">Phone</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden lg:table-cell">Subject</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left hidden xl:table-cell">Message</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left">Date</th>
+                          <th className="px-4 py-3 font-bold text-[#5E4E06] text-left">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contactSubmissions.length === 0 ? (
+                          <tr><td colSpan={7} className="text-center py-8 text-gray-400">No submissions found.</td></tr>
+                        ) : contactSubmissions.map((sub, idx) => (
+                          <tr key={sub.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#F8F6F0] hover:bg-[#F5F2E8]'}>
+                            <td className="px-4 py-3 font-medium">{sub.name}</td>
+                            <td className="px-4 py-3 hidden sm:table-cell">{sub.email}</td>
+                            <td className="px-4 py-3 hidden md:table-cell">{sub.phone}</td>
+                            <td className="px-4 py-3 hidden lg:table-cell">{sub.subject}</td>
+                            <td className="px-4 py-3 max-w-xs truncate hidden xl:table-cell" title={sub.message}>{sub.message}</td>
+                            <td className="px-4 py-3">{sub.createdAt && (sub.createdAt.seconds ? formatShortDateTime(new Date(sub.createdAt.seconds * 1000)) : formatShortDateTime(new Date(sub.createdAt)))}</td>
+                            <td className="px-4 py-3">
                             <button
-                              onClick={() => handleToggleTaskStatus(task.id, 'completed')}
-                              className="p-2 hover:bg-green-100 rounded-lg transition-colors"
-                              title="Mark as completed"
+                                className="px-3 py-1 rounded-full bg-[#E6C866] text-[#5E4E06] font-semibold shadow hover:bg-[#F5F2E8] transition text-xs sm:text-sm cursor-pointer"
+                                onClick={() => { setModalData({ ...sub, type: 'contact' }); setModalOpen(true); }}
                             >
-                              <CheckSquare className="w-4 h-4 text-green-600" />
+                                View
                             </button>
-                          )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+            {/* Modal for full message */}
+            {modalOpen && modalData && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 relative animate-fade-in-up">
                           <button
-                            onClick={() => openEditTaskModal(task)}
-                            className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors"
-                            title="Edit task"
-                          >
-                            <Edit className="w-4 h-4 text-[#8B7A1A]" />
+                    className="absolute top-3 right-3 text-gray-400 hover:text-[#5E4E06] text-2xl font-bold cursor-pointer"
+                    onClick={() => setModalOpen(false)}
+                    aria-label="Close"
+                  >
+                    &times;
                           </button>
-                          <button
-                            onClick={() => handleDeleteTask(task.id)}
-                            className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                            title="Delete task"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
+                  <h3 className="text-xl font-bold mb-4 text-[#5E4E06]">{modalData.type === 'franchise' ? 'Franchise Application' : 'Contact Us Submission'}</h3>
+                  <div className="space-y-2 text-[#2A2418]">
+                    <div><span className="font-semibold">Name:</span> {modalData.name}</div>
+                    <div><span className="font-semibold">Email:</span> {modalData.email}</div>
+                    <div><span className="font-semibold">Phone:</span> {modalData.phone}</div>
+                    {modalData.type === 'franchise' && <>
+                      <div><span className="font-semibold">City:</span> {modalData.city}</div>
+                      <div><span className="font-semibold">State:</span> {modalData.state}</div>
+                    </>}
+                    {modalData.type === 'contact' && <>
+                      <div><span className="font-semibold">Subject:</span> {modalData.subject}</div>
+                    </>}
+                    <div><span className="font-semibold">Date:</span> {modalData.createdAt && (modalData.createdAt.seconds ? formatShortDateTime(new Date(modalData.createdAt.seconds * 1000)) : formatShortDateTime(new Date(modalData.createdAt)))}</div>
+                    <div className="pt-4">
+                      <span className="font-semibold">Message:</span>
+                      <div className="mt-2 p-3 bg-[#F8F6F0] rounded-lg text-[#5E4E06] whitespace-pre-line break-words max-h-72 overflow-y-auto border border-[#E6C866]">
+                        {modalData.message}
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
               </div>
             </div>
+            )}
           </div>
         )}
         </main>
@@ -2484,23 +3249,34 @@ function AdminDashboardContent() {
         </div>
       )}
 
-      {/* Add Task Modal */}
-      {showAddTaskModal && (
+      {/* Unified Task Modal */}
+      {(showAddTaskModal || showEditTaskModal) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
           <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl sm:rounded-2xl flex items-center justify-center">
+                  {showEditTaskModal ? (
+                    <Edit className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  ) : (
                   <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06]">Add New Task</h3>
-                  <p className="text-xs sm:text-sm text-[#8B7A1A]">Create a new task for your team</p>
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06]">
+                    {showEditTaskModal ? 'Edit Task' : 'Add New Task'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#8B7A1A]">
+                    {showEditTaskModal ? 'Update task information' : 'Create a new task for your team'}
+                  </p>
                 </div>
               </div>
               <button 
-                onClick={() => setShowAddTaskModal(false)}
+                onClick={() => {
+                  setShowAddTaskModal(false);
+                  setShowEditTaskModal(false);
+                }}
                 className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200"
               >
                 <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
@@ -2508,7 +3284,7 @@ function AdminDashboardContent() {
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSubmitTask} className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+            <form onSubmit={showEditTaskModal ? handleUpdateTask : handleSubmitTask} className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
               {/* Basic Information */}
               <div>
                 <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
@@ -2597,18 +3373,6 @@ function AdminDashboardContent() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Assigned To *</label>
-                    <input
-                      type="text"
-                      name="assignedTo"
-                      value={taskForm.assignedTo}
-                      onChange={handleTaskInputChange}
-                      required
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
-                      placeholder="e.g., Sales Team, John Doe"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Due Date *</label>
                     <input
                       type="date"
@@ -2617,6 +3381,18 @@ function AdminDashboardContent() {
                       onChange={handleTaskInputChange}
                       required
                       className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Estimated Time (minutes)</label>
+                    <input
+                      type="number"
+                      name="estimatedTime"
+                      value={taskForm.estimatedTime}
+                      onChange={handleTaskInputChange}
+                      min="1"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
+                      placeholder="e.g., 30, 60, 120"
                     />
                   </div>
                 </div>
@@ -2654,11 +3430,74 @@ function AdminDashboardContent() {
                 </div>
               </div>
 
+              {/* Recurring Task Settings */}
+              <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                  <Repeat className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Recurring Task (Optional)
+                </h4>
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      name="isRecurring"
+                      checked={taskForm.isRecurring}
+                      onChange={(e) => setTaskForm(prev => ({ ...prev, isRecurring: e.target.checked }))}
+                      className="w-4 h-4 text-[#D4AF37] border-[#D4AF37] rounded focus:ring-[#D4AF37]"
+                    />
+                    <label className="text-sm font-medium text-[#5E4E06]">Make this a recurring task</label>
+                  </div>
+                  
+                  {taskForm.isRecurring && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pl-7">
+                      <div>
+                        <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Repeat Every</label>
+                        <input
+                          type="number"
+                          name="recurringInterval"
+                          value={taskForm.recurringInterval}
+                          onChange={handleTaskInputChange}
+                          min="1"
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Period</label>
+                        <select
+                          name="recurringType"
+                          value={taskForm.recurringType}
+                          onChange={handleTaskInputChange}
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
+                        >
+                          <option value="daily">Day(s)</option>
+                          <option value="weekly">Week(s)</option>
+                          <option value="monthly">Month(s)</option>
+                          <option value="yearly">Year(s)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">End Date (Optional)</label>
+                        <input
+                          type="date"
+                          name="recurringEndDate"
+                          value={taskForm.recurringEndDate}
+                          onChange={handleTaskInputChange}
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Modal Footer */}
               <div className="flex items-center justify-end space-x-4 pt-8 border-t border-[#D4AF37]">
                 <button
                   type="button"
-                  onClick={() => setShowAddTaskModal(false)}
+                  onClick={() => {
+                    setShowAddTaskModal(false);
+                    setShowEditTaskModal(false);
+                  }}
                   className="px-6 py-3 text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-xl transition-colors duration-200 font-medium"
                   disabled={isSubmittingTask}
                 >
@@ -2672,12 +3511,21 @@ function AdminDashboardContent() {
                   {isSubmittingTask ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Creating...</span>
+                      <span>{showEditTaskModal ? 'Updating...' : 'Creating...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      {showEditTaskModal ? (
+                        <>
+                          <Edit className="w-4 h-4" />
+                          <span>Update Task</span>
                     </>
                   ) : (
                     <>
                       <Plus className="w-4 h-4" />
                       <span>Create Task</span>
+                        </>
+                      )}
                     </>
                   )}
                 </button>
@@ -2687,23 +3535,25 @@ function AdminDashboardContent() {
         </div>
       )}
 
-      {/* Edit Task Modal */}
-      {showEditTaskModal && selectedTask && (
+
+
+      {/* Task Analytics Modal */}
+      {showTaskAnalytics && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
               <div className="flex items-center space-x-3 sm:space-x-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl sm:rounded-2xl flex items-center justify-center">
-                  <Edit className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06]">Edit Task</h3>
-                  <p className="text-xs sm:text-sm text-[#8B7A1A]">Update task information</p>
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06]">Task Analytics</h3>
+                  <p className="text-xs sm:text-sm text-[#8B7A1A]">Comprehensive insights into your task performance</p>
                 </div>
               </div>
               <button 
-                onClick={() => setShowEditTaskModal(false)}
+                onClick={() => setShowTaskAnalytics(false)}
                 className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200"
               >
                 <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
@@ -2711,182 +3561,158 @@ function AdminDashboardContent() {
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleUpdateTask} className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
-              {/* Basic Information */}
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+              {/* Key Metrics */}
               <div>
                 <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
-                  Task Information
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Key Performance Metrics
                 </h4>
-                <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Title *</label>
-                    <input
-                      type="text"
-                      name="title"
-                      value={taskForm.title}
-                      onChange={handleTaskInputChange}
-                      required
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
-                      placeholder="Enter task title"
-                    />
+                        <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Completion Rate</p>
+                        <p className="text-2xl font-bold text-blue-900">{getTaskAnalytics().completionRate}%</p>
                   </div>
+                      <div className="p-2 bg-blue-200 rounded-lg">
+                        <CheckCircle className="w-5 h-5 text-blue-700" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                    <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Description *</label>
-                    <textarea
-                      name="description"
-                      value={taskForm.description}
-                      onChange={handleTaskInputChange}
-                      required
-                      rows={3}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base resize-none"
-                      placeholder="Describe the task in detail"
-                    />
+                        <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Completed This Week</p>
+                        <p className="text-2xl font-bold text-green-900">{getTaskAnalytics().completedThisWeek}</p>
+                      </div>
+                      <div className="p-2 bg-green-200 rounded-lg">
+                        <Calendar className="w-5 h-5 text-green-700" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-orange-700 uppercase tracking-wide">Completed This Month</p>
+                        <p className="text-2xl font-bold text-orange-900">{getTaskAnalytics().completedThisMonth}</p>
+                      </div>
+                      <div className="p-2 bg-orange-200 rounded-lg">
+                        <TrendingUp className="w-5 h-5 text-orange-700" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Overdue Rate</p>
+                        <p className="text-2xl font-bold text-red-900">{getTaskAnalytics().overdueRate}%</p>
+                      </div>
+                      <div className="p-2 bg-red-200 rounded-lg">
+                        <AlertCircle className="w-5 h-5 text-red-700" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Task Details */}
+              {/* Category Performance */}
               <div>
                 <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
-                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
-                  Task Details
+                  <Target className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Category Performance
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Category *</label>
-                    <select
-                      name="category"
-                      value={taskForm.category}
-                      onChange={handleTaskInputChange}
-                      required
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
-                    >
-                      <option value="follow_up">Follow Up</option>
-                      <option value="meeting">Meeting</option>
-                      <option value="delivery">Delivery</option>
-                      <option value="marketing">Marketing</option>
-                      <option value="support">Support</option>
-                      <option value="other">Other</option>
-                    </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getTaskAnalytics().categoryStats.map((stat) => (
+                    <div key={stat.category} className="bg-white border border-[#D4AF37] rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(stat.category as Task['category'])}`}>
+                          <div className="flex items-center gap-1">
+                            {getCategoryIcon(stat.category as Task['category'])}
+                            {stat.category.replace('_', ' ')}
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Priority *</label>
-                    <select
-                      name="priority"
-                      value={taskForm.priority}
-                      onChange={handleTaskInputChange}
-                      required
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Status *</label>
-                    <select
-                      name="status"
-                      value={taskForm.status}
-                      onChange={handleTaskInputChange}
-                      required
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                      <option value="overdue">Overdue</option>
-                    </select>
+                        <span className="text-sm font-medium text-[#8B7A1A]">{stat.count} tasks</span>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Assigned To *</label>
-                    <input
-                      type="text"
-                      name="assignedTo"
-                      value={taskForm.assignedTo}
-                      onChange={handleTaskInputChange}
-                      required
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
-                      placeholder="e.g., Sales Team, John Doe"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Due Date *</label>
-                    <input
-                      type="date"
-                      name="dueDate"
-                      value={taskForm.dueDate}
-                      onChange={handleTaskInputChange}
-                      required
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
-                    />
-                  </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[#8B7A1A]">Completed: {stat.completed}</span>
+                        <span className="text-xs font-medium text-green-600">
+                          {stat.count > 0 ? Math.round((stat.completed / stat.count) * 100) : 0}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Additional Information */}
+              {/* Priority Distribution */}
+                  <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                  <Flag className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Priority Distribution
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {getTaskAnalytics().priorityStats.map((stat) => (
+                    <div key={stat.priority} className="bg-white border border-[#D4AF37] rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(stat.priority as Task['priority'])}`}>
+                          {stat.priority}
+                  </div>
+                        <span className="text-sm font-medium text-[#8B7A1A]">{stat.count} tasks</span>
+                  </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[#8B7A1A]">Completed: {stat.completed}</span>
+                        <span className="text-xs font-medium text-green-600">
+                          {stat.count > 0 ? Math.round((stat.completed / stat.count) * 100) : 0}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Time Tracking */}
               <div>
                 <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
-                  <Tag className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
-                  Additional Information
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Time Tracking Summary
                 </h4>
-                <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4 border border-indigo-200">
+                    <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Tags</label>
-                    <input
-                      type="text"
-                      name="tags"
-                      value={taskForm.tags}
-                      onChange={handleTaskInputChange}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
-                      placeholder="Enter tags separated by commas (e.g., urgent, follow-up, customer)"
-                    />
+                        <p className="text-xs font-medium text-indigo-700 uppercase tracking-wide">Total Estimated Time</p>
+                        <p className="text-xl font-bold text-indigo-900">{formatTime(getTaskAnalytics().totalEstimatedTime)}</p>
                   </div>
+                      <div className="p-2 bg-indigo-200 rounded-lg">
+                        <Clock className="w-5 h-5 text-indigo-700" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                    <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Notes</label>
-                    <textarea
-                      name="notes"
-                      value={taskForm.notes}
-                      onChange={handleTaskInputChange}
-                      rows={3}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base resize-none"
-                      placeholder="Add any additional notes or context"
-                    />
+                        <p className="text-xs font-medium text-purple-700 uppercase tracking-wide">Total Actual Time</p>
+                        <p className="text-xl font-bold text-purple-900">{formatTime(getTaskAnalytics().totalActualTime)}</p>
+                      </div>
+                      <div className="p-2 bg-purple-200 rounded-lg">
+                        <Activity className="w-5 h-5 text-purple-700" />
+                      </div>
+                    </div>
+                  </div>
                   </div>
                 </div>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex items-center justify-end space-x-4 pt-8 border-t border-[#D4AF37]">
+            <div className="flex items-center justify-end p-4 sm:p-6 lg:p-8 border-t border-[#D4AF37]">
                 <button
-                  type="button"
-                  onClick={() => setShowEditTaskModal(false)}
-                  className="px-6 py-3 text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-xl transition-colors duration-200 font-medium"
-                  disabled={isSubmittingTask}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isSubmittingTask}
-                >
-                  {isSubmittingTask ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Updating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="w-4 h-4" />
-                      <span>Update Task</span>
-                    </>
-                  )}
+                onClick={() => setShowTaskAnalytics(false)}
+                className="px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-lg font-medium"
+              >
+                Close
                 </button>
               </div>
-            </form>
           </div>
         </div>
       )}

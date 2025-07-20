@@ -168,6 +168,45 @@ export interface OrderItem {
   shades?: string[];
 }
 
+// Task interface
+export interface Task {
+  id?: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  category: 'follow_up' | 'meeting' | 'delivery' | 'marketing' | 'support' | 'other';
+  dueDate: Date;
+  createdAt: Date;
+  completedAt?: Date;
+  estimatedTime?: number; // in minutes
+  actualTime?: number; // in minutes
+  tags: string[];
+  notes: string;
+  relatedTo?: {
+    type: 'lead' | 'order' | 'customer';
+    id: string;
+    name: string;
+  };
+  recurring?: {
+    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    interval: number;
+    endDate?: Date;
+  };
+  attachments?: {
+    name: string;
+    url: string;
+    type: string;
+  }[];
+  reminders?: {
+    type: 'email' | 'notification';
+    time: Date;
+    sent: boolean;
+  }[];
+  createdBy: string; // Admin UID who created the task
+  updatedAt: Date;
+}
+
 // Configure provider
 googleProvider.setCustomParameters({
   prompt: 'select_account'
@@ -797,6 +836,273 @@ export class AuthService {
     }
     
     return new Error(message);
+  }
+
+  // Task Management Methods
+
+  // Create a new task
+  static async createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>, createdBy: string): Promise<string> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { addDoc, collection } = await import('firebase/firestore');
+      
+      // Remove undefined values to prevent Firebase errors
+      const cleanTaskData = Object.fromEntries(
+        Object.entries(taskData).filter(([_, value]) => value !== undefined)
+      );
+      
+      const taskToCreate = {
+        ...cleanTaskData,
+        createdBy,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const docRef = await addDoc(collection(db, 'tasks'), taskToCreate);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating task:', error);
+      throw new Error('Failed to create task');
+    }
+  }
+
+  // Get all tasks
+  static async getTasks(): Promise<Task[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, collection, orderBy } = await import('firebase/firestore');
+      const tasksQuery = collection(db, 'tasks');
+      const querySnapshot = await getDocs(tasksQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Task[];
+    } catch (error) {
+      console.error('Error getting tasks:', error);
+      throw new Error('Failed to get tasks');
+    }
+  }
+
+  // Get tasks by status
+  static async getTasksByStatus(status: Task['status']): Promise<Task[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        where('status', '==', status),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(tasksQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Task[];
+    } catch (error) {
+      console.error('Error getting tasks by status:', error);
+      throw new Error('Failed to get tasks by status');
+    }
+  }
+
+  // Get tasks by priority
+  static async getTasksByPriority(priority: Task['priority']): Promise<Task[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        where('priority', '==', priority),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(tasksQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Task[];
+    } catch (error) {
+      console.error('Error getting tasks by priority:', error);
+      throw new Error('Failed to get tasks by priority');
+    }
+  }
+
+  // Get tasks by category
+  static async getTasksByCategory(category: Task['category']): Promise<Task[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        where('category', '==', category),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(tasksQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Task[];
+    } catch (error) {
+      console.error('Error getting tasks by category:', error);
+      throw new Error('Failed to get tasks by category');
+    }
+  }
+
+  // Get overdue tasks
+  static async getOverdueTasks(): Promise<Task[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const now = new Date();
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        where('dueDate', '<', now),
+        where('status', 'in', ['pending', 'in_progress']),
+        orderBy('dueDate', 'asc')
+      );
+      const querySnapshot = await getDocs(tasksQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Task[];
+    } catch (error) {
+      console.error('Error getting overdue tasks:', error);
+      throw new Error('Failed to get overdue tasks');
+    }
+  }
+
+  // Get tasks due today
+  static async getTasksDueToday(): Promise<Task[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        where('dueDate', '>=', today),
+        where('dueDate', '<', tomorrow),
+        orderBy('dueDate', 'asc')
+      );
+      const querySnapshot = await getDocs(tasksQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Task[];
+    } catch (error) {
+      console.error('Error getting tasks due today:', error);
+      throw new Error('Failed to get tasks due today');
+    }
+  }
+
+  // Update task
+  static async updateTask(taskId: string, updatedData: Partial<Task>): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      
+      // Remove undefined values to prevent Firebase errors
+      const cleanUpdatedData = Object.fromEntries(
+        Object.entries(updatedData).filter(([_, value]) => value !== undefined)
+      );
+      
+      await updateDoc(doc(db, 'tasks', taskId), {
+        ...cleanUpdatedData,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating task:', error);
+      throw new Error('Failed to update task');
+    }
+  }
+
+  // Update task status
+  static async updateTaskStatus(taskId: string, status: Task['status']): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      const updateData: any = {
+        status,
+        updatedAt: new Date()
+      };
+      
+      if (status === 'completed') {
+        updateData.completedAt = new Date();
+      }
+      
+      await updateDoc(doc(db, 'tasks', taskId), updateData);
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      throw new Error('Failed to update task status');
+    }
+  }
+
+  // Delete task
+  static async deleteTask(taskId: string): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'tasks', taskId));
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      throw new Error('Failed to delete task');
+    }
+  }
+
+  // Get task by ID
+  static async getTaskById(taskId: string): Promise<Task | null> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDoc, doc } = await import('firebase/firestore');
+      const taskDoc = await getDoc(doc(db, 'tasks', taskId));
+      if (taskDoc.exists()) {
+        return { id: taskDoc.id, ...taskDoc.data() } as Task;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting task by ID:', error);
+      throw new Error('Failed to get task');
+    }
   }
 }
 

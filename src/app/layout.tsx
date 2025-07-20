@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "@radix-ui/themes/styles.css";
+import { Theme } from "@radix-ui/themes";
 import { CartProvider } from "@/components/CartContext";
 import { ToastProvider } from "@/components/ToastContext";
+import LayoutContent from "@/components/LayoutContent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,14 +29,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ToastProvider>
-          <CartProvider>
-        {children}
-          </CartProvider>
-        </ToastProvider>
+        <Theme accentColor="yellow" radius="large">
+          <ToastProvider>
+            <CartProvider>
+              <LayoutContent>{children}</LayoutContent>
+            </CartProvider>
+          </ToastProvider>
+        </Theme>
       </body>
     </html>
   );

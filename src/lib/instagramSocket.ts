@@ -1,90 +1,21 @@
-import { Server as NetServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { NextApiRequest, NextApiResponse } from 'next';
-// import whatsappService from '@/services/whatsappService'; // TEMPORARILY COMMENTED OUT FOR BUILD: No such module yet, will implement later
 
-export type NextApiResponseServerIO = NextApiResponse & {
-  socket: {
-    server: NetServer & {
-      io: SocketIOServer;
-    };
-  };
-};
+// Store Socket.IO instance (will be set by the main socket handler)
+let io: SocketIOServer | null = null;
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Store active connections
+const connections = new Map<string, any>();
 
-const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
-  if (res.socket.server.io) {
-    console.log('Socket is already running');
-    res.end();
-    return;
-  }
+export function setSocketIO(socketIO: SocketIOServer) {
+  io = socketIO;
+}
 
-  console.log('Setting up socket');
-  const io = new SocketIOServer(res.socket.server, {
-    cors: {
-      origin: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
-      methods: ["GET", "POST"]
-    }
-  });
-  res.socket.server.io = io;
+export function getSocketIO(): SocketIOServer | null {
+  return io;
+}
 
-  // Setup Instagram WebSocket
-  setupInstagramSocket(io);
-
-  // WhatsApp event listeners
-  // whatsappService.onStatus((status) => {
-  //   io.emit('whatsapp:status', { status });
-  // });
-
-  // whatsappService.onMessage((message) => {
-  //   io.emit('whatsapp:message', { message });
-  // });
-
-  io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id);
-
-    // socket.on('whatsapp:connect', async () => {
-    //   try {
-    //     await whatsappService.connect();
-    //     socket.emit('whatsapp:status', { status: 'connecting' });
-    //   } catch (error) {
-    //     socket.emit('whatsapp:error', { error: 'Failed to connect' });
-    //   }
-    // });
-
-    // socket.on('whatsapp:disconnect', async () => {
-    //   try {
-    //     await whatsappService.disconnect();
-    //     socket.emit('whatsapp:status', { status: 'disconnected' });
-    //   } catch (error) {
-    //     socket.emit('whatsapp:error', { error: 'Failed to disconnect' });
-    //   }
-    // });
-
-    // socket.on('whatsapp:send', async ({ chatId, message }) => {
-    //   try {
-    //     const sentMessage = await whatsappService.sendMessage(chatId, message);
-    //     socket.emit('whatsapp:message:sent', { message: sentMessage });
-    //   } catch (error) {
-    //     socket.emit('whatsapp:error', { error: 'Failed to send message' });
-    //   }
-    // });
-
-    socket.on('disconnect', () => {
-      console.log('Client disconnected:', socket.id);
-    });
-  });
-
-  res.end();
-};
-
-// Instagram Socket.IO setup
-function setupInstagramSocket(io: SocketIOServer) {
+// Socket.IO setup for Instagram real-time messaging
+export function setupInstagramSocket(io: SocketIOServer) {
   const instagramNamespace = io.of('/instagram');
 
   instagramNamespace.on('connection', (socket) => {
@@ -101,12 +32,12 @@ function setupInstagramSocket(io: SocketIOServer) {
         }
 
         // Store connection info
-        socket.data = {
+        connections.set(socket.id, {
           accessToken,
           userId,
           pageId,
-          authenticated: true
-        };
+          socket
+        });
 
         socket.emit('authenticated', { 
           status: 'connected',
@@ -124,15 +55,16 @@ function setupInstagramSocket(io: SocketIOServer) {
     socket.on('send_message', async (data) => {
       try {
         const { recipientId, message, messageType, mediaUrl } = data;
-        
-        if (!socket.data?.authenticated) {
+        const connection = connections.get(socket.id);
+
+        if (!connection) {
           socket.emit('error', { message: 'Not authenticated' });
           return;
         }
 
         // Send message via Instagram Graph API
         const response = await fetch(
-          `https://graph.facebook.com/v18.0/${socket.data.pageId}/messages`,
+          `https://graph.facebook.com/v18.0/${connection.pageId}/messages`,
           {
             method: 'POST',
             headers: {
@@ -146,7 +78,7 @@ function setupInstagramSocket(io: SocketIOServer) {
                   payload: { url: mediaUrl }
                 }
               },
-              access_token: socket.data.accessToken,
+              access_token: connection.accessToken,
             }),
           }
         );
@@ -164,7 +96,7 @@ function setupInstagramSocket(io: SocketIOServer) {
           status: 'sent'
         });
 
-        console.log(`Instagram message sent to ${recipientId}: ${message}`);
+        console.log(`Message sent to ${recipientId}: ${message}`);
       } catch (error) {
         console.error('Error sending Instagram message:', error);
         socket.emit('error', { message: 'Failed to send message' });
@@ -175,8 +107,9 @@ function setupInstagramSocket(io: SocketIOServer) {
     socket.on('upload_media', async (data) => {
       try {
         const { file, mediaType } = data;
-        
-        if (!socket.data?.authenticated) {
+        const connection = connections.get(socket.id);
+
+        if (!connection) {
           socket.emit('error', { message: 'Not authenticated' });
           return;
         }
@@ -184,7 +117,7 @@ function setupInstagramSocket(io: SocketIOServer) {
         // Upload media to Instagram
         const formData = new FormData();
         formData.append('source', file);
-        formData.append('access_token', socket.data.accessToken);
+        formData.append('access_token', connection.accessToken);
 
         const response = await fetch(
           `https://graph.facebook.com/v18.0/me/photos`,
@@ -206,10 +139,51 @@ function setupInstagramSocket(io: SocketIOServer) {
           status: 'success'
         });
 
-        console.log(`Instagram media uploaded: ${result.id}`);
+        console.log(`Media uploaded: ${result.id}`);
       } catch (error) {
-        console.error('Error uploading Instagram media:', error);
+        console.error('Error uploading media:', error);
         socket.emit('error', { message: 'Failed to upload media' });
+      }
+    });
+
+    // Handle webhook events (for incoming messages)
+    socket.on('webhook_event', async (data) => {
+      try {
+        const { event } = data;
+        const connection = connections.get(socket.id);
+
+        if (!connection) {
+          socket.emit('error', { message: 'Not authenticated' });
+          return;
+        }
+
+        // Process webhook event
+        if (event.object === 'instagram' && event.entry) {
+          for (const entry of event.entry) {
+            if (entry.messaging) {
+              for (const messaging of entry.messaging) {
+                const message = {
+                  id: messaging.message?.mid || Date.now().toString(),
+                  from: messaging.sender.id,
+                  to: messaging.recipient.id,
+                  text: messaging.message?.text || '',
+                  timestamp: new Date(messaging.timestamp * 1000),
+                  type: messaging.message?.attachments?.[0]?.type || 'text',
+                  media_url: messaging.message?.attachments?.[0]?.payload?.url,
+                  is_from_me: false,
+                  status: 'delivered',
+                };
+
+                // Emit to all connected clients
+                instagramNamespace.emit('new_message', message);
+                console.log(`New Instagram message: ${message.text}`);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error processing webhook event:', error);
+        socket.emit('error', { message: 'Failed to process webhook event' });
       }
     });
 
@@ -228,8 +202,9 @@ function setupInstagramSocket(io: SocketIOServer) {
     socket.on('mark_read', async (data) => {
       try {
         const { messageId } = data;
-        
-        if (!socket.data?.authenticated) {
+        const connection = connections.get(socket.id);
+
+        if (!connection) {
           socket.emit('error', { message: 'Not authenticated' });
           return;
         }
@@ -244,7 +219,7 @@ function setupInstagramSocket(io: SocketIOServer) {
             },
             body: JSON.stringify({
               fields: 'read',
-              access_token: socket.data.accessToken,
+              access_token: connection.accessToken,
             }),
           }
         );
@@ -253,13 +228,14 @@ function setupInstagramSocket(io: SocketIOServer) {
           socket.emit('message_read', { messageId, status: 'read' });
         }
       } catch (error) {
-        console.error('Error marking Instagram message as read:', error);
+        console.error('Error marking message as read:', error);
       }
     });
 
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log('Instagram client disconnected:', socket.id);
+      connections.delete(socket.id);
     });
 
     // Handle errors
@@ -269,6 +245,4 @@ function setupInstagramSocket(io: SocketIOServer) {
   });
 
   return instagramNamespace;
-}
-
-export default SocketHandler; 
+} 

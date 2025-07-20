@@ -17,6 +17,7 @@ export default function ContactClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -39,10 +40,26 @@ export default function ContactClient() {
     e.preventDefault();
     if (validateForm()) {
       setIsSubmitting(true);
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      setIsSubmitting(false);
-      setIsSubmitted(true);
-      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setSubmitError(null);
+      setIsSubmitted(false);
+      try {
+        const res = await fetch('/api/contact-form', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (res.ok) {
+          setIsSubmitted(true);
+          setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        } else {
+          const data = await res.json();
+          setSubmitError(data.error || 'Something went wrong. Please try again.');
+        }
+      } catch (err) {
+        setSubmitError('Network error. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -108,7 +125,7 @@ export default function ContactClient() {
                       placeholder=" "
                       autoComplete="off"
                     />
-                    <label className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm sm:text-base font-semibold pointer-events-none transition-all duration-200 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-[#5E4E06] peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm sm:peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 bg-white/80 px-1">
+                    <label className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm sm:text-base font-semibold pointer-events-none transition-all duration-200 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-[#5E4E06] peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm sm:peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 bg-white/80 px-1 peer-not-placeholder-shown:-top-3 peer-not-placeholder-shown:text-xs peer-not-placeholder-shown:text-[#5E4E06]">
                       Full Name *
                     </label>
                     {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
@@ -123,7 +140,7 @@ export default function ContactClient() {
                       placeholder=" "
                       autoComplete="off"
                     />
-                    <label className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm sm:text-base font-semibold pointer-events-none transition-all duration-200 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-[#5E4E06] peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm sm:peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 bg-white/80 px-1">
+                    <label className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm sm:text-base font-semibold pointer-events-none transition-all duration-200 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-[#5E4E06] peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm sm:peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 bg-white/80 px-1 peer-not-placeholder-shown:-top-3 peer-not-placeholder-shown:text-xs peer-not-placeholder-shown:text-[#5E4E06]">
                       Email *
                     </label>
                     {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
@@ -140,7 +157,7 @@ export default function ContactClient() {
                       placeholder=" "
                       autoComplete="off"
                     />
-                    <label className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm sm:text-base font-semibold pointer-events-none transition-all duration-200 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-[#5E4E06] peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm sm:peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 bg-white/80 px-1">
+                    <label className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm sm:text-base font-semibold pointer-events-none transition-all duration-200 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-[#5E4E06] peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm sm:peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 bg-white/80 px-1 peer-not-placeholder-shown:-top-3 peer-not-placeholder-shown:text-xs peer-not-placeholder-shown:text-[#5E4E06]">
                       Phone
                     </label>
                   </div>
@@ -159,7 +176,9 @@ export default function ContactClient() {
                       <option value="Support" className="text-gray-800">Support</option>
                       <option value="Other" className="text-gray-800">Other</option>
                     </select>
-                    <label className="absolute left-3 sm:left-4 -top-3 text-xs text-[#5E4E06] bg-white/80 px-1 font-semibold">Subject *</label>
+                    <label className="absolute left-3 sm:left-4 -top-3 text-xs text-[#5E4E06] bg-white/80 px-1 font-semibold peer-focus:text-[#5E4E06] peer-not-placeholder-shown:text-[#5E4E06]">
+                      Subject *
+                    </label>
                     {errors.subject && <p className="text-xs text-red-600 mt-1">{errors.subject}</p>}
                   </div>
                 </div>
@@ -172,7 +191,7 @@ export default function ContactClient() {
                     className={`peer w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-lg text-sm sm:text-base bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#5E4E06] resize-none placeholder:text-gray-700 ${errors.message ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-[#B8A94A]'}`}
                     placeholder=" "
                   />
-                  <label className="absolute left-3 sm:left-4 top-3 sm:top-4 text-gray-500 text-sm sm:text-base font-semibold pointer-events-none transition-all duration-200 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-[#5E4E06] peer-placeholder-shown:top-3 sm:peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm sm:peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 bg-white/80 px-1">
+                  <label className="absolute left-3 sm:left-4 top-3 sm:top-4 text-gray-500 text-sm sm:text-base font-semibold pointer-events-none transition-all duration-200 peer-focus:-top-3 peer-focus:text-xs peer-focus:text-[#5E4E06] peer-placeholder-shown:top-3 sm:peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm sm:peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 bg-white/80 px-1 peer-not-placeholder-shown:-top-3 peer-not-placeholder-shown:text-xs peer-not-placeholder-shown:text-[#5E4E06]">
                     Message *
                   </label>
                   {errors.message && <p className="text-xs text-red-600 mt-1">{errors.message}</p>}
@@ -189,6 +208,7 @@ export default function ContactClient() {
                   )}
                   {isSubmitting ? 'Sending...' : 'Send'}
                 </button>
+                {submitError && <div className="text-red-600 text-center font-semibold mt-2">{submitError}</div>}
               </form>
             )}
           </div>
