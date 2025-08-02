@@ -24,14 +24,14 @@ const gateways = [
     id: 'cashfree',
     name: 'Cashfree',
     description: 'Pay securely via UPI, Card, Netbanking, EMI, and more.',
-    icon: <CreditCard className="w-8 h-8 text-[#D4AF37]" />,
+    icon: <CreditCard className="w-6 h-6 text-[#D4AF37]" />,
     accent: '#D4AF37',
   },
   {
     id: 'razorpay',
     name: 'Razorpay',
     description: 'Pay via UPI, Card, Netbanking, Wallets, EMI, and more.',
-    icon: <CreditCard className="w-8 h-8 text-[#5E4E06]" />,
+    icon: <CreditCard className="w-6 h-6 text-[#5E4E06]" />,
     accent: '#5E4E06',
   },
 ];
@@ -112,9 +112,8 @@ export default function PaymentPage() {
 
   // Use cart from context for all calculations and rendering
   const subtotal = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
-  const shipping = subtotal > 2000 ? 0 : 199;
-  const tax = Math.round((subtotal + shipping) * 0.18);
-  const total = subtotal + shipping + tax;
+  const shipping = 0; // Shipping fee will be calculated and paid separately after order confirmation
+  const total = subtotal + shipping; // 5% GST already included in product prices
 
   const handlePlaceOrder = async () => {
     if (!user || !user.uid) {
@@ -142,8 +141,8 @@ export default function PaymentPage() {
           shades: item.shades?.map((s: any) => s.shadeName) || []
         })),
         totalAmount: subtotal,
-        tax: subtotal * 0.18,
-        shipping: subtotal > 2000 ? 0 : 200,
+        tax: 0, // 5% GST already included in product prices
+        shipping: 0, // Shipping fee will be calculated separately after order confirmation
         finalAmount: total,
         status: 'pending' as const,
         paymentMethod: selectedGateway,
@@ -286,13 +285,11 @@ export default function PaymentPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#F5F2E8] via-[#F8F6F0] to-[#E6DCC0] font-sans relative overflow-hidden">
-
-
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#F5F2E8] via-[#F8F6F0] to-[#E6DCC0] font-sans">
       <Navigation />
-      
-      {/* Progress Bar - Matching cart/address pages */}
-      <div className="w-full bg-white/90 backdrop-blur-sm border-b border-[#D4AF37] py-4 px-2 md:px-0 flex items-center justify-center gap-4 md:gap-8 sticky top-0 z-20 shadow-sm">
+
+      {/* Simple Progress Bar */}
+      <div className="w-full bg-white/90 backdrop-blur-sm border-b border-[#D4AF37] py-3 px-4 md:px-0 flex items-center justify-center gap-4 md:gap-8 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-2 text-sm md:text-base">
           <span className="font-semibold text-[#8B7A1A] flex items-center gap-1"><ShoppingCart className="w-4 h-4 md:w-5 md:h-5" /> Cart</span>
           <span className="w-6 md:w-8 h-1 bg-[#8B7A1A] rounded-full mx-1 md:mx-2" />
@@ -302,207 +299,151 @@ export default function PaymentPage() {
         </div>
         <button 
           onClick={() => router.push('/address')} 
-          className="flex items-center gap-2 text-[#5E4E06] font-semibold hover:text-[#3D3204] transition-colors cursor-pointer text-base md:text-lg hover:scale-105"
+          className="flex items-center gap-2 text-[#5E4E06] font-semibold hover:text-[#3D3204] transition-colors cursor-pointer text-sm md:text-base"
         >
-          <ArrowLeft className="w-5 h-5" /> Back to Address
+          <ArrowLeft className="w-4 h-4" /> Back to Address
         </button>
       </div>
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-8 md:py-12">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Header */}
-            <div className="text-center mb-8 animate-fade-in">
-              <div className="inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm rounded-full px-8 py-4 mb-6 shadow-xl">
-                <CreditCard className="w-7 h-7 text-[#5E4E06]" />
-                <span className="text-[#5E4E06] font-bold text-lg">Payment Information</span>
-              </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-clip-text text-transparent mb-4">
-                Complete Your Payment
-              </h1>
-              <p className="text-[#8B7A1A] text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-                Choose your preferred payment gateway and complete your order securely. Your payment is encrypted and protected.
+      <main className="flex-1 py-8 px-4 md:px-0">
+        <div className="max-w-4xl mx-auto">
+          {/* Simple Header */}
+          <div className="text-center mb-8 pt-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-[#5E4E06] mb-2">
+              Complete Payment
+            </h1>
+            <p className="text-[#8B7A1A] text-base">
+              Choose your preferred payment method to complete your order
             </p>
           </div>
 
-            {/* Payment Gateway Selection */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-8 md:p-10 animate-fade-in">
-              <h2 className="text-2xl font-bold text-[#5E4E06] mb-6 flex items-center gap-3">
-                <CreditCard className="w-7 h-7 text-[#D4AF37]" />
-                Choose Payment Gateway
-                </h2>
-                
-              <div className="grid md:grid-cols-2 gap-6 mb-8">
-                {gateways.map((gateway) => (
-                  <button
-                    type="button"
-                    key={gateway.id}
-                    onClick={() => setSelectedGateway(gateway.id)}
-                    className={`relative p-6 rounded-2xl border-2 transition-all duration-300 focus:outline-none text-left ${
-                      selectedGateway === gateway.id
-                        ? 'border-[#D4AF37] bg-gradient-to-br from-[#FFFBEA] to-[#F9F6ED] shadow-lg'
-                        : 'border-[#E5E5E5] bg-white hover:border-[#D4AF37]/50 hover:shadow-md'
-                    }`}
-                  >
-                      <div className="flex items-center gap-4">
-                      <div className="flex-shrink-0">{gateway.icon}</div>
-                        <div className="flex-1">
-                        <h3 className="font-bold text-lg text-[#5E4E06] mb-1">{gateway.name}</h3>
-                        <p className="text-[#8B7A1A] text-sm">{gateway.description}</p>
-                      </div>
-                      {selectedGateway === gateway.id && (
-                        <CheckCircle className="w-6 h-6 text-[#D4AF37] flex-shrink-0" />
-                      )}
-                    </div>
-                  </button>
-                  ))}
+          {/* Order Summary - Simple */}
+          <div className="bg-white rounded-lg shadow-sm border border-[#D4AF37]/30 p-4 mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-[#5E4E06]" />
+                <span className="font-semibold text-[#5E4E06]">Order Total</span>
               </div>
+              <span className="text-xl font-bold text-[#5E4E06]">₹{total.toLocaleString()}</span>
+            </div>
+            <div className="text-sm text-[#8B7A1A] mt-2">
+              <span>Shipping: Pending • GST: Included</span>
+            </div>
+          </div>
 
-              {/* Payment Action */}
-              {selectedGateway && (
-                <div className="border-t border-[#E5E5E5] pt-8 animate-fade-in">
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl font-bold text-[#5E4E06] mb-2">
-                      Pay with {selectedGateway === 'cashfree' ? 'Cashfree' : 'Razorpay'}
-                  </h3>
-                    <p className="text-[#8B7A1A] text-base">
-                      You will be redirected to {selectedGateway === 'cashfree' ? 'Cashfree' : 'Razorpay'}'s secure payment gateway to complete your payment.
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={handlePlaceOrder}
-                    disabled={isProcessing || cart.length === 0}
-                    className={`w-full px-8 py-4 font-bold rounded-2xl shadow-lg transition-all duration-300 flex items-center justify-center gap-3 text-lg ${
-                      isProcessing || cart.length === 0
-                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white hover:shadow-xl hover:scale-105 active:scale-95'
-                    }`}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="w-6 h-6 animate-spin" />
-                        Creating Payment Order...
-                      </>
-                    ) : (
-                      <>
-                        <ExternalLink className="w-6 h-6" />
-                        Proceed to Payment - ₹{total.toLocaleString()}
-                      </>
+          {/* Payment Gateway Selection */}
+          <div className="bg-white rounded-lg shadow-sm border border-[#D4AF37]/30 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-[#5E4E06] mb-4 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-[#5E4E06]" />
+              Choose Payment Method
+            </h2>
+            
+            <div className="space-y-4 mb-6">
+              {gateways.map((gateway) => (
+                <button
+                  type="button"
+                  key={gateway.id}
+                  onClick={() => setSelectedGateway(gateway.id)}
+                  className={`w-full p-4 rounded-lg border-2 transition-all duration-300 focus:outline-none text-left ${
+                    selectedGateway === gateway.id
+                      ? 'border-[#D4AF37] bg-[#FFF8DC]'
+                      : 'border-[#E5E5E5] bg-white hover:border-[#D4AF37]/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">{gateway.icon}</div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-[#5E4E06] mb-1">{gateway.name}</h3>
+                      <p className="text-[#8B7A1A] text-sm">{gateway.description}</p>
+                    </div>
+                    {selectedGateway === gateway.id && (
+                      <CheckCircle className="w-5 h-5 text-[#D4AF37] flex-shrink-0" />
                     )}
-                  </button>
-                      </div>
-              )}
-                    </div>
-                    
-            {/* Security Info */}
-            <div className="bg-gradient-to-br from-white/95 to-[#F8F6F0]/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-8 mt-8 animate-fade-in">
-              <h3 className="text-xl font-bold text-[#5E4E06] mb-6 flex items-center gap-3">
-                <Shield className="w-6 h-6" />
-                Secure Checkout
-              </h3>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 text-[#8B7A1A]">
-                    <div className="w-3 h-3 rounded-full bg-[#5E4E06]"></div>
-                    <span className="text-base">SSL encrypted</span>
-                      </div>
-                  <div className="flex items-center gap-3 text-[#8B7A1A]">
-                    <div className="w-3 h-3 rounded-full bg-[#5E4E06]"></div>
-                    <span className="text-base">100% secure payment</span>
                   </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Payment Action */}
+            {selectedGateway && (
+              <div className="border-t border-[#E5E5E5] pt-6">
+                <div className="text-center mb-4">
+                  <p className="text-[#8B7A1A] text-sm">
+                    You will be redirected to {selectedGateway === 'cashfree' ? 'Cashfree' : 'Razorpay'}'s secure payment gateway.
+                  </p>
                 </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 text-[#8B7A1A]">
-                    <div className="w-3 h-3 rounded-full bg-[#5E4E06]"></div>
-                    <span className="text-base">Data protection</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[#8B7A1A]">
-                    <div className="w-3 h-3 rounded-full bg-[#5E4E06]"></div>
-                    <span className="text-base">PCI compliant</span>
-                    </div>
-                  </div>
+                
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={isProcessing || cart.length === 0}
+                  className={`w-full px-6 py-3 font-semibold rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-2 text-base ${
+                    isProcessing || cart.length === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-[#5E4E06] text-white hover:bg-[#8B7A1A] hover:shadow-md'
+                  }`}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating Payment Order...
+                    </>
+                  ) : (
+                    <>
+                      <ExternalLink className="w-4 h-4" />
+                      Pay ₹{total.toLocaleString()}
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Simple Shipping Info */}
+          <div className="bg-gradient-to-r from-[#FFF8DC] to-[#F0E68C] rounded-lg p-4 mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Shield className="w-5 h-5 text-[#5E4E06]" />
+              <h3 className="font-semibold text-[#5E4E06]">Shipping Information</h3>
+            </div>
+            <div className="text-sm text-[#8B7A1A] space-y-2">
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#5E4E06] mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <span className="font-medium text-[#5E4E06]">Transport fee not included</span> - Will be collected separately via COD after order confirmation
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#5E4E06] mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <span className="font-medium text-[#5E4E06]">Best rates negotiated</span> - We contact multiple transport companies for optimal pricing
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#5E4E06] mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <span className="font-medium text-[#5E4E06]">Transparent pricing</span> - Exact cost informed before delivery
                 </div>
               </div>
             </div>
+          </div>
 
-          {/* Order Summary Sidebar */}
-          <div className="w-full lg:w-96 flex-shrink-0 lg:sticky lg:top-32 h-fit">
-            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-8 animate-fade-in">
-              <h2 className="text-xl font-bold text-[#5E4E06] mb-6 flex items-center gap-3">
-                <ShoppingCart className="w-6 h-6 text-[#D4AF37]" />
-                  Order Summary
-                </h2>
-                
-                <div className="space-y-4 mb-6">
-                  {cart.map((item, index) => (
-                  <div key={index} className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#FFFBEA] to-[#F9F6ED] rounded-xl">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                      <img 
-                        src={item.image} 
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback to a colored div if image fails to load
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                      <div className="w-full h-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] flex items-center justify-center hidden">
-                        <span className="text-white font-bold text-lg">
-                          {item.name.includes('Aura') ? 'A' : 'D'}
-                        </span>
-                      </div>
-                      </div>
-                      <div className="flex-1">
-                      <h4 className="font-semibold text-[#5E4E06] text-base">{item.name}</h4>
-                      <p className="text-[#8B7A1A] text-xs">
-                        {item.subtitle || 'Natural product'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                      <p className="font-bold text-[#D4AF37]">₹{item.price.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Price Breakdown */}
-              <div className="space-y-3 border-t border-[#E5E5E5] pt-4">
-                <div className="flex justify-between text-[#8B7A1A]">
-                    <span>Subtotal</span>
-                    <span className="font-semibold">₹{subtotal.toLocaleString()}</span>
-                  </div>
-                <div className="flex justify-between text-[#8B7A1A]">
-                    <span>Shipping</span>
-                    <span className="font-semibold">{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
-                  </div>
-                <div className="flex justify-between text-[#8B7A1A]">
-                    <span>Tax (18% GST)</span>
-                    <span className="font-semibold">₹{tax.toLocaleString()}</span>
-                  </div>
-                <div className="border-t border-[#E5E5E5] pt-3">
-                    <div className="flex justify-between">
-                    <span className="text-lg font-bold text-[#5E4E06]">Total</span>
-                    <span className="text-lg font-bold text-[#D4AF37]">₹{total.toLocaleString()}</span>
-                  </div>
-                </div>
-                </div>
-
-                {/* Trust Badges */}
-              <div className="flex items-center justify-center gap-6 mt-6 pt-6 border-t border-[#E5E5E5]">
-                <span className="flex items-center gap-2 text-[#8B7A1A] text-sm font-semibold">
-                  <Shield className="w-4 h-4" /> Secure
-                    </span>
-                <span className="flex items-center gap-2 text-[#8B7A1A] text-sm font-semibold">
-                  <Lock className="w-4 h-4" /> Encrypted
-                    </span>
-                <span className="flex items-center gap-2 text-[#8B7A1A] text-sm font-semibold">
-                  <CheckCircle className="w-4 h-4" /> PCI DSS
-                    </span>
+          {/* Security Info */}
+          <div className="bg-white rounded-lg shadow-sm border border-[#D4AF37]/30 p-4 mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Lock className="w-5 h-5 text-[#5E4E06]" />
+              <h3 className="font-semibold text-[#5E4E06]">Secure Payment</h3>
+            </div>
+            <div className="text-sm text-[#8B7A1A] space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#5E4E06]"></div>
+                <span>SSL encrypted checkout</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#5E4E06]"></div>
+                <span>100% secure payment</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#5E4E06]"></div>
+                <span>PCI DSS compliant</span>
               </div>
             </div>
           </div>
@@ -513,11 +454,11 @@ export default function PaymentPage() {
       
       <style jsx>{`
         @keyframes fade-in {
-          from { opacity: 0; transform: translateY(30px); }
+          from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in {
-          animation: fade-in 0.8s cubic-bezier(0.4,0,0.2,1);
+          animation: fade-in 0.5s ease-out;
         }
       `}</style>
     </div>

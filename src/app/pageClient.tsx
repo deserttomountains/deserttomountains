@@ -15,19 +15,35 @@ import {
   Sun
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import React from 'react';
 
 export default function HomeClient() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Hero slideshow images
+  const heroImages = [
+    '/images/deserttomountains-4-scaled-1.webp',
+    '/images/aura-on-site-1-1.webp',
+    '/images/dhunee_1.webp',
+    '/images/aura_1.webp'
+  ];
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const testimonialInterval = setInterval(() => {
       setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
-    },5000);
-    return () => clearInterval(interval);
+    }, 5000);
+    
+    const slideshowInterval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 4000);
+    
+    return () => {
+      clearInterval(testimonialInterval);
+      clearInterval(slideshowInterval);
+    };
   }, []);
 
   const testimonials = [
@@ -50,7 +66,7 @@ export default function HomeClient() {
 
   const benefits = [
     { icon: Shield, title: "100% Natural", desc: "Zero chemicals or toxins" },
-    { icon: Heart, title: "Health First", desc: "Promotes wellbeing naturally" },
+    { icon: Heart, title: "Healthy Spaces", desc: "Promotes Natural Air Quality" },
     { icon: Leaf, title: "Eco-Conscious", desc: "Sustainable & earth-friendly" },
     { icon: Star, title: "Ancient Wisdom", desc: "5000+ years of tradition" }
   ];
@@ -80,25 +96,48 @@ export default function HomeClient() {
     <div className="relative min-h-screen overflow-hidden">
       <Navigation />
 
-      {/* Hero Section - Full Background Image, Glassmorphism Overlay, Animated Title with Floating Panel and Letter Reveal */}
+      {/* Hero Section - Autoplaying Slideshow Background, Glassmorphism Overlay, Animated Title with Floating Panel and Letter Reveal */}
       <section className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <img
-          src="/images/deserttomountains-4-scaled-1.webp"
-          alt="Desert to Mountains Hero"
-          className="absolute inset-0 w-full h-full object-cover object-center z-0"
-          style={{ filter: 'brightness(0.7) saturate(1.1)' }}
-        />
+        {/* Background Slideshow */}
+        <div className="absolute inset-0 z-0">
+          {heroImages.map((image, index) => (
+            <img
+              key={index}
+              src={image}
+              alt={`Hero Slide ${index + 1}`}
+              className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000 ${
+                index === currentSlide ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ filter: 'brightness(0.7) saturate(1.1)' }}
+            />
+          ))}
+        </div>
         {/* Dark Overlay for Readability */}
         <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/20 to-transparent z-10" />
+        
+        {/* Slide Indicators */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30 flex space-x-3">
+          {heroImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                index === currentSlide 
+                  ? 'bg-white scale-125' 
+                  : 'bg-white/50 hover:bg-white/75'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
         {/* Glassmorphism Overlay with Animated Title */}
         <div className="relative z-20 flex flex-col items-center justify-center w-full px-2 sm:px-4">
           <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl sm:rounded-3xl shadow-2xl px-4 py-8 sm:px-8 sm:py-16 md:px-20 md:py-24 max-w-[95vw] sm:max-w-xl md:max-w-2xl mx-auto flex flex-col items-center animate-panel-float" style={{boxShadow: '0 8px 48px 0 rgba(90, 80, 30, 0.18)'}}>
             <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-6xl font-extrabold text-white text-center tracking-tight mb-2 leading-tight sm:leading-tight">
-              <AnimatedTitle text="Think Aura" />
+              <AnimatedTitle text="Think Natural" />
               <br />
               <span style={{ whiteSpace: 'nowrap' }}>
-                <AnimatedTitle text="Think better Home" className="text-[#E6C866]" />
+                <AnimatedTitle text="Build Better" className="text-[#E6C866]" />
               </span>
             </h1>
           </div>
@@ -350,7 +389,7 @@ export default function HomeClient() {
 
       {/* Testimonials Section - Enhanced */}
       <section className="py-24 bg-gradient-to-br from-[#2A2418] via-[#5E4E06] to-[#8B7A1A] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-0"></div>
         
         <div className="relative z-10 max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -483,7 +522,6 @@ export default function HomeClient() {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 } 

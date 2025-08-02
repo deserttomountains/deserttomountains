@@ -1,7 +1,6 @@
 'use client';
 
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Leaf, Mountain, Heart, Sparkles, Shield, Users, Globe, ArrowRight, Star } from 'lucide-react';
 import Link from 'next/link';
 
@@ -243,7 +242,6 @@ export default function AboutClient() {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 } 

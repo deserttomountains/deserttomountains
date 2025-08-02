@@ -34,9 +34,8 @@ function OrderConfirmationContent() {
     if (checkoutData && cart.length > 0) {
       const parsedCheckoutData = JSON.parse(checkoutData);
       const totalAmount = cart.reduce((sum: number, item: any) => sum + item.price, 0);
-      const tax = totalAmount * 0.18;
-      const shipping = totalAmount > 2000 ? 0 : 200;
-      const finalTotal = totalAmount + tax + shipping;
+      const shipping = 0; // Shipping fee will be calculated separately after order confirmation
+      const finalTotal = totalAmount + shipping; // 5% GST already included in product prices
 
       setOrderDetails({
         orderId,
@@ -168,6 +167,19 @@ function OrderConfirmationContent() {
                     <span>₹{orderDetails.totalAmount}</span>
                   </div>
                 </div>
+                
+                {/* Shipping Information */}
+                <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200">
+                  <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                    <Truck className="w-4 h-4" />
+                    Shipping Information
+                  </h4>
+                  <div className="space-y-2 text-sm text-amber-700">
+                    <p>• Shipping charges will be calculated separately and collected as cash on delivery</p>
+                    <p>• We negotiate with multiple transport companies to provide you the best rates</p>
+                    <p>• You will be informed of the exact shipping cost before delivery</p>
+                  </div>
+                </div>
               </div>
 
               {/* Delivery Information */}
@@ -241,8 +253,8 @@ function OrderConfirmationContent() {
                       <span className="text-amber-700 font-bold text-sm">2</span>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-900">Shipping Confirmation</h4>
-                      <p className="text-gray-600 text-sm">You'll receive tracking details via email</p>
+                      <h4 className="font-semibold text-gray-900">Shipping Calculation</h4>
+                      <p className="text-gray-600 text-sm">We'll calculate shipping costs and inform you before delivery</p>
                     </div>
                   </div>
                   
@@ -252,7 +264,7 @@ function OrderConfirmationContent() {
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900">Delivery</h4>
-                      <p className="text-gray-600 text-sm">Your order will be delivered within 5-7 days</p>
+                      <p className="text-gray-600 text-sm">Your order will be delivered within 5-7 days with shipping charges collected as cash on delivery</p>
                     </div>
                   </div>
                 </div>

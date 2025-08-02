@@ -1,6 +1,5 @@
 import React from "react";
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Info, FileText, UserCheck, Shield, Edit3, AlertCircle, RefreshCcw, Gavel, Mail } from 'lucide-react';
 
 const sections = [
@@ -83,7 +82,6 @@ export default function TermsPage() {
           ))}
         </div>
       </main>
-      <Footer />
     </div>
   );
 } 

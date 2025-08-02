@@ -1,6 +1,7 @@
 import { Server as NetServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { NextApiRequest, NextApiResponse } from 'next';
+import { setWebhookSocketIO } from '@/lib/instagramSocket';
 // import whatsappService from '@/services/whatsappService'; // TEMPORARILY COMMENTED OUT FOR BUILD: No such module yet, will implement later
 
 export type NextApiResponseServerIO = NextApiResponse & {
@@ -35,6 +36,9 @@ const SocketHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
 
   // Setup Instagram WebSocket
   setupInstagramSocket(io);
+  
+  // Set the Socket.IO instance for the webhook
+  setWebhookSocketIO(io);
 
   // WhatsApp event listeners
   // whatsappService.onStatus((status) => {

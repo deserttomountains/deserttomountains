@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle, Phone, User, Shield, Heart } from 'lucide-react';
 import Link from 'next/link';
 import { AuthService, auth } from '@/lib/firebase';
@@ -29,21 +28,50 @@ export default function LoginClient() {
   const [phoneVerificationSent, setPhoneVerificationSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [deviceInfo, setDeviceInfo] = useState<any>(null);
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect');
 
+  // Detect device information
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userAgent = navigator.userAgent;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+      const isAndroid = /Android/.test(userAgent);
+      
+      setDeviceInfo({
+        isMobile,
+        isIOS,
+        isAndroid,
+        userAgent,
+        platform: navigator.platform,
+        language: navigator.language
+      });
+    }
+  }, []);
+
   // Redirect logged-in users to their appropriate dashboard or redirect param
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && role) {
+      console.log('LoginClient: User is logged in, checking redirection...', {
+        user: user.uid,
+        role,
+        redirectTo
+      });
+      
       const timer = setTimeout(() => {
         if (redirectTo) {
+          console.log('LoginClient: Redirecting to:', redirectTo);
           router.push(redirectTo);
         } else if (role === 'admin') {
+          console.log('LoginClient: Redirecting admin to /admin');
           router.push('/admin');
         } else {
+          console.log('LoginClient: Redirecting customer to /dashboard');
           router.push('/dashboard');
         }
       }, 100);
@@ -96,10 +124,21 @@ export default function LoginClient() {
     if (validateForm()) {
       setIsSubmitting(true);
       try {
+        console.log('LoginClient: Starting email login for:', formData.email);
         await AuthService.setPersistence(formData.rememberMe);
         const userCredential = await AuthService.signInWithEmail(formData.email, formData.password);
+        console.log('LoginClient: Email login successful, user:', userCredential.user.uid);
+        
+        // Check if user profile exists, create if not
+        const existingProfile = await AuthService.getUserProfile(userCredential.user.uid);
+        if (!existingProfile) {
+          console.log('LoginClient: Creating user profile for existing user');
+          await AuthService.createUserProfile(userCredential.user);
+        }
+        
         await redirectBasedOnRole(userCredential.user.uid);
       } catch (error) {
+        console.error('LoginClient: Email login failed:', error);
         setErrors({ email: (error as Error).message });
       } finally {
         setIsSubmitting(false);
@@ -112,12 +151,32 @@ export default function LoginClient() {
     if (validateForm()) {
       setIsSubmitting(true);
       try {
+        console.log('LoginClient: Starting phone login for:', formData.phone, 'Device:', deviceInfo);
+        
+        // Device-specific warnings
+        if (deviceInfo?.isMobile) {
+          console.log('Mobile device detected - SMS should work well');
+        } else {
+          console.log('Desktop device detected - user needs access to phone for SMS');
+        }
+        
         await AuthService.setPersistence(formData.rememberMe);
         const result = await AuthService.signInWithPhone(formData.phone, recaptchaVerifierRef.current!);
         setConfirmationResult(result);
         setPhoneVerificationSent(true);
+        console.log('LoginClient: Phone verification code sent successfully');
       } catch (error) {
-        setErrors({ phone: (error as Error).message });
+        console.error('LoginClient: Phone login failed:', error);
+        
+        // Device-specific error messages
+        let errorMessage = (error as Error).message;
+        if (deviceInfo?.isMobile && errorMessage.includes('reCAPTCHA')) {
+          errorMessage = 'reCAPTCHA verification failed. Please try again or use email login.';
+        } else if (!deviceInfo?.isMobile && errorMessage.includes('SMS')) {
+          errorMessage = 'SMS delivery failed. Please ensure you have access to your phone or try email login.';
+        }
+        
+        setErrors({ phone: errorMessage });
       } finally {
         setIsSubmitting(false);
       }
@@ -161,11 +220,13 @@ export default function LoginClient() {
       // Create user profile if it doesn't exist (for Google login)
       const existingProfile = await AuthService.getUserProfile(userCredential.user.uid);
       if (!existingProfile) {
+        console.log('LoginClient: Creating user profile for Google login');
         await AuthService.createUserProfile(userCredential.user);
       }
       
       await redirectBasedOnRole(userCredential.user.uid);
     } catch (error) {
+      console.error('LoginClient: Google login failed:', error);
       setErrors({ general: (error as Error).message });
     } finally {
       setIsSubmitting(false);
@@ -474,6 +535,21 @@ export default function LoginClient() {
                     <p className="mt-2 text-sm text-[#8B7A1A]">
                       We'll send you a verification code via SMS
                     </p>
+                    
+                    {/* Device-specific tips */}
+                    {deviceInfo && (
+                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                        {deviceInfo.isMobile ? (
+                          <p className="text-yellow-700 text-sm">
+                            💡 <strong>Tip:</strong> SMS verification works best on mobile devices. Make sure you have good network coverage.
+                          </p>
+                        ) : (
+                          <p className="text-yellow-700 text-sm">
+                            💡 <strong>Tip:</strong> You'll need access to your phone to receive the SMS verification code.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="submit"
@@ -506,6 +582,21 @@ export default function LoginClient() {
                     <p className="text-[#8B7A1A] text-lg">
                       We've sent a 6-digit code to <span className="font-bold">{formData.phone}</span>
                     </p>
+                    
+                    {/* Device-specific guidance */}
+                    {deviceInfo && (
+                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                        {deviceInfo.isMobile ? (
+                          <p className="text-blue-700 text-sm">
+                            📱 <strong>Mobile Device:</strong> Check your SMS messages for the verification code.
+                          </p>
+                        ) : (
+                          <p className="text-blue-700 text-sm">
+                            💻 <strong>Desktop Device:</strong> Please check your phone for the SMS verification code.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -629,7 +720,6 @@ export default function LoginClient() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 } 

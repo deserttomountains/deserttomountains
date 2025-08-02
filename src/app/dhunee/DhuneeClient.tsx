@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Sparkles, CheckCircle, ShoppingCart, Star, ArrowRight } from 'lucide-react';
 import { useCart } from '@/components/CartContext';
 import { useRouter } from 'next/navigation';
@@ -304,7 +303,6 @@ export default function DhuneeClient() {
         </div>
       </section>
       
-      <Footer />
     </div>
   );
 } 

@@ -35,6 +35,27 @@ export async function GET(request: NextRequest) {
         const businessProfile = await whatsappBusinessService.getBusinessProfile();
         return NextResponse.json({ businessProfile });
 
+      case 'load-existing-chats':
+        const existingChats = await whatsappBusinessService.loadExistingChats();
+        return NextResponse.json({ chats: existingChats });
+
+      case 'chat-history':
+        const phoneNumber = searchParams.get('phoneNumber');
+        const limit = parseInt(searchParams.get('limit') || '50');
+        if (!phoneNumber) {
+          return NextResponse.json({ error: 'Phone number required' }, { status: 400 });
+        }
+        const chatHistory = await whatsappBusinessService.getChatHistory(phoneNumber, limit);
+        return NextResponse.json({ messages: chatHistory });
+
+      case 'contact-info':
+        const contactPhoneNumber = searchParams.get('phoneNumber');
+        if (!contactPhoneNumber) {
+          return NextResponse.json({ error: 'Phone number required' }, { status: 400 });
+        }
+        const contactInfo = await whatsappBusinessService.getContactInfo(contactPhoneNumber);
+        return NextResponse.json({ contactInfo });
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }

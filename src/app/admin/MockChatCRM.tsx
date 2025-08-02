@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Instagram, Send, User, Search, MoreVertical, Phone, Video, Image, FileText, Smile, X, Wifi, WifiOff, Settings, MessageCircle, ExternalLink, CheckCircle, AlertCircle, Paperclip, Mic, Eye, EyeOff, Clock, Check, CheckCheck } from 'lucide-react';
+import { Instagram, Send, User, Search, MoreVertical, Phone, Video, Image, FileText, Smile, X, Wifi, WifiOff, Settings, MessageCircle, ExternalLink, CheckCircle, AlertCircle, Paperclip, Mic, Eye, EyeOff, Clock, Check, CheckCheck, Loader2 } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
@@ -60,76 +60,213 @@ const EmojiPicker = ({ onEmojiSelect, onClose }: { onEmojiSelect: (emoji: string
   );
 };
 
-// Enhanced WhatsApp Config Modal
-const WhatsAppConfigModal = ({ isOpen, onClose, onSave }: { 
+// WhatsApp Configuration Modal
+const WhatsAppConfigModal = ({ isOpen, onClose }: { 
   isOpen: boolean; 
   onClose: () => void; 
-  onSave: (config: any) => void; 
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+  
   const [config, setConfig] = useState({
-    phoneNumber: '',
-    apiKey: '',
-    webhookUrl: ''
+    accessToken: '',
+    phoneNumberId: '',
+    businessAccountId: '',
+    webhookVerifyToken: '',
+    apiVersion: 'v18.0'
   });
 
-  const handleSave = () => {
-    onSave(config);
-    onClose();
+  const handleInputChange = (field: string, value: string) => {
+    setConfig(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleTestConnection = async () => {
+    setIsLoading(true);
+    setTestResult(null);
+
+    try {
+      // Update the service configuration
+      await whatsappBusinessClientService.updateConfig(config);
+      
+      // Test the connection
+      const status = await whatsappBusinessClientService.getStatus();
+      
+      if (status.connected) {
+        setTestResult({
+          success: true,
+          message: 'WhatsApp Business API connected successfully!'
+        });
+        // Refresh chats when config is updated
+        window.location.reload();
+      } else {
+        setTestResult({
+          success: false,
+          message: 'Connection failed. Please check your credentials.'
+        });
+      }
+    } catch (error: any) {
+      setTestResult({
+        success: false,
+        message: error.message || 'Connection test failed'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openMetaDeveloperConsole = () => {
+    window.open('https://developers.facebook.com/apps/', '_blank');
   };
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md z-50">
-          <Dialog.Title className="text-xl font-bold text-gray-900 mb-4">
-            WhatsApp Business Configuration
-          </Dialog.Title>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-              <input
-                type="text"
-                value={config.phoneNumber}
-                onChange={(e) => setConfig({...config, phoneNumber: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="+1234567890"
-              />
+        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto z-50">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">WhatsApp Business API Configuration</h2>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
-              <input
-                type="password"
-                value={config.apiKey}
-                onChange={(e) => setConfig({...config, apiKey: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Enter your API key"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
-              <input
-                type="url"
-                value={config.webhookUrl}
-                onChange={(e) => setConfig({...config, webhookUrl: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="https://your-domain.com/webhook"
-              />
-            </div>
+            <p className="text-gray-600 mt-2">
+              Configure your WhatsApp Business API credentials to enable messaging functionality.
+            </p>
           </div>
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-            >
-              Save Configuration
-            </button>
+
+          <div className="p-6 space-y-6">
+            {/* Setup Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-2">Setup Instructions</h3>
+              <ol className="text-sm text-blue-800 space-y-1">
+                <li>1. Go to <button onClick={openMetaDeveloperConsole} className="text-blue-600 underline flex items-center gap-1">Meta Developer Console <ExternalLink className="w-3 h-3" /></button></li>
+                <li>2. Create a new app or use existing one</li>
+                <li>3. Add WhatsApp Business API product</li>
+                <li>4. Configure phone number and get credentials</li>
+                <li>5. Enter the credentials below</li>
+              </ol>
+            </div>
+
+            {/* Configuration Form */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Access Token *
+                </label>
+                <input
+                  type="password"
+                  value={config.accessToken}
+                  onChange={(e) => handleInputChange('accessToken', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter your WhatsApp Business API access token"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number ID *
+                </label>
+                <input
+                  type="text"
+                  value={config.phoneNumberId}
+                  onChange={(e) => handleInputChange('phoneNumberId', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter your phone number ID"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Business Account ID *
+                </label>
+                <input
+                  type="text"
+                  value={config.businessAccountId}
+                  onChange={(e) => handleInputChange('businessAccountId', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter your business account ID"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Webhook Verify Token
+                </label>
+                <input
+                  type="text"
+                  value={config.webhookVerifyToken}
+                  onChange={(e) => handleInputChange('webhookVerifyToken', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter webhook verify token (optional)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  API Version
+                </label>
+                <input
+                  type="text"
+                  value={config.apiVersion}
+                  onChange={(e) => handleInputChange('apiVersion', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="v18.0"
+                />
+              </div>
+            </div>
+
+            {/* Test Result */}
+            {testResult && (
+              <div className={`p-4 rounded-lg ${
+                testResult.success 
+                  ? 'bg-green-50 border border-green-200' 
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {testResult.success ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                  )}
+                  <span className={testResult.success ? 'text-green-800' : 'text-red-800'}>
+                    {testResult.message}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={handleTestConnection}
+                disabled={isLoading || !config.accessToken || !config.phoneNumberId}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                Test Connection
+              </button>
+              
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -287,7 +424,6 @@ function MockChatCRM() {
   const [whatsappConnected, setWhatsappConnected] = useState(false);
   const [whatsappStatus, setWhatsappStatus] = useState<string>('disconnected');
   const [showConfigModal, setShowConfigModal] = useState(false);
-  const [useMockData, setUseMockData] = useState(true);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -330,10 +466,11 @@ function MockChatCRM() {
     const token = localStorage.getItem('instagram_access_token');
     const userId = localStorage.getItem('instagram_user_id');
     
-    if (token && userId) {
-      instagramService.initialize(token, userId);
-      setInstagramConnected(true);
-      loadInstagramUser();
+          if (token && userId) {
+        const pageId = process.env.NEXT_PUBLIC_INSTAGRAM_PAGE_ID || '100504907989379';
+        instagramService.initialize(token, userId, pageId);
+        setInstagramConnected(true);
+        loadInstagramUser();
     }
   };
 
@@ -392,10 +529,11 @@ function MockChatCRM() {
       localStorage.setItem('instagram_access_token', accessToken);
       localStorage.setItem('instagram_user_id', userId);
       
-      // Initialize service
-      instagramService.initialize(accessToken, userId);
-      setInstagramConnected(true);
-      setInstagramError(null);
+              // Initialize service
+        const pageId = process.env.NEXT_PUBLIC_INSTAGRAM_PAGE_ID || '100504907989379';
+        instagramService.initialize(accessToken, userId, pageId);
+        setInstagramConnected(true);
+        setInstagramError(null);
       
       // Load user profile
       loadInstagramUser();
@@ -428,67 +566,75 @@ function MockChatCRM() {
 
       // Initialize Socket.IO client
       const { io } = require('socket.io-client');
-      const socket = io(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/instagram`, {
+      const socketUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/socket`;
+      console.log('Connecting to Socket.IO server:', socketUrl);
+      
+      const socket = io(socketUrl, {
         transports: ['websocket', 'polling'],
         autoConnect: true,
       });
+      
+      // Connect to Instagram namespace
+      const instagramSocket = socket.of('/instagram');
+      console.log('Connecting to Instagram namespace');
 
       // Connection events
-      socket.on('connect', () => {
+      instagramSocket.on('connect', () => {
         console.log('Instagram WebSocket connected');
         setInstagramSocketConnected(true);
         setInstagramSocketError(null);
         
         // Authenticate with the server
-        socket.emit('authenticate', {
+        const pageId = process.env.NEXT_PUBLIC_INSTAGRAM_PAGE_ID || '100504907989379';
+        instagramSocket.emit('authenticate', {
           accessToken,
           userId,
-          pageId: null // Will be set when user connects Instagram Business account
+          pageId
         });
       });
 
-      socket.on('authenticated', (data: any) => {
+      instagramSocket.on('authenticated', (data: any) => {
         console.log('Instagram WebSocket authenticated:', data);
         setInstagramSocketConnected(true);
       });
 
-      socket.on('disconnect', () => {
+      instagramSocket.on('disconnect', () => {
         console.log('Instagram WebSocket disconnected');
         setInstagramSocketConnected(false);
       });
 
-      socket.on('error', (error: any) => {
+      instagramSocket.on('error', (error: any) => {
         console.error('Instagram WebSocket error:', error);
         setInstagramSocketError(error.message || 'WebSocket connection error');
       });
 
       // Message events
-      socket.on('new_message', (message: any) => {
+      instagramSocket.on('new_message', (message: any) => {
         console.log('New Instagram message received:', message);
         handleNewInstagramMessage(message);
       });
 
-      socket.on('message_sent', (data: any) => {
+      instagramSocket.on('message_sent', (data: any) => {
         console.log('Instagram message sent:', data);
         handleInstagramMessageSent(data);
       });
 
-      socket.on('message_delivered', (data: any) => {
+      instagramSocket.on('message_delivered', (data: any) => {
         console.log('Instagram message delivered:', data);
         handleInstagramMessageDelivered(data);
       });
 
-      socket.on('message_read', (data: any) => {
+      instagramSocket.on('message_read', (data: any) => {
         console.log('Instagram message read:', data);
         handleInstagramMessageRead(data);
       });
 
-      socket.on('typing_start', (data: any) => {
+      instagramSocket.on('typing_start', (data: any) => {
         console.log('Instagram typing started:', data);
         setTypingUsers(prev => new Set(prev).add(data.recipientId));
       });
 
-      socket.on('typing_stop', (data: any) => {
+      instagramSocket.on('typing_stop', (data: any) => {
         console.log('Instagram typing stopped:', data);
         setTypingUsers(prev => {
           const newSet = new Set(prev);
@@ -497,17 +643,17 @@ function MockChatCRM() {
         });
       });
 
-      socket.on('postback_received', (data: any) => {
+      instagramSocket.on('postback_received', (data: any) => {
         console.log('Instagram postback received:', data);
         handleInstagramPostback(data);
       });
 
-      socket.on('reaction_received', (data: any) => {
+      instagramSocket.on('reaction_received', (data: any) => {
         console.log('Instagram reaction received:', data);
         handleInstagramReaction(data);
       });
 
-      setInstagramSocket(socket);
+      setInstagramSocket(instagramSocket);
 
     } catch (error) {
       console.error('Error setting up Instagram WebSocket:', error);
@@ -632,27 +778,37 @@ function MockChatCRM() {
 
   const loadChats = async () => {
     try {
-      if (useMockData) {
-        const mockChats = whatsappBusinessClientService.getMockChats();
-        setChats(mockChats);
-        if (mockChats.length > 0 && !selectedChatId) {
-          setSelectedChatId(mockChats[0].id);
-        }
-      } else {
-        const realChats = await whatsappBusinessClientService.getChats();
-        setChats(realChats);
-        if (realChats.length > 0 && !selectedChatId) {
-          setSelectedChatId(realChats[0].id);
-        }
+      // Load existing chats with full conversation history
+      const realChats = await whatsappBusinessClientService.loadExistingChats();
+      setChats(realChats);
+      if (realChats.length > 0 && !selectedChatId) {
+        setSelectedChatId(realChats[0].id);
       }
     } catch (error) {
       console.error('Error loading chats:', error);
-      // Fallback to mock data
-      const mockChats = whatsappBusinessClientService.getMockChats();
-      setChats(mockChats);
-      if (mockChats.length > 0 && !selectedChatId) {
-        setSelectedChatId(mockChats[0].id);
-      }
+      // Show empty state if no chats available
+      setChats([]);
+    }
+  };
+
+  // Load more chat history for a specific conversation
+  const loadChatHistory = async (chatId: string, limit: number = 100) => {
+    try {
+      const chat = chats.find(c => c.id === chatId);
+      if (!chat) return;
+
+      const messages = await whatsappBusinessClientService.getChatHistory(chat.number, limit);
+      
+      // Update the chat with loaded messages
+      setChats(prevChats => 
+        prevChats.map(c => 
+          c.id === chatId 
+            ? { ...c, messages: messages }
+            : c
+        )
+      );
+    } catch (error) {
+      console.error('Error loading chat history:', error);
     }
   };
 
@@ -695,97 +851,25 @@ function MockChatCRM() {
     if (!input.trim() || !selectedChat) return;
     
     try {
-      if (useMockData) {
-        // Mock message for demo
-        const newMessage: WhatsAppBusinessMessage = {
-          id: Date.now().toString(),
-          from: 'business',
-          to: selectedChat.number,
-          body: input,
-          timestamp: new Date(),
-          type: 'text',
-          status: 'sending',
-          isFromMe: true
-        };
+      // Real WhatsApp Business API message
+      const sentMessage = await whatsappBusinessClientService.sendMessage(selectedChat.number, input);
+      
+      // Update chat with sent message
+      setChats(prevChats => 
+        prevChats.map(chat => 
+          chat.id === selectedChat.id 
+            ? {
+                ...chat,
+                messages: [...chat.messages, sentMessage],
+                lastMessage: input,
+                lastMessageTime: new Date()
+              }
+            : chat
+        )
+      );
 
-        // Update chat with new message
-        setChats(prevChats => 
-          prevChats.map(chat => 
-            chat.id === selectedChat.id 
-              ? {
-                  ...chat,
-                  messages: [...chat.messages, newMessage],
-                  lastMessage: input,
-                  lastMessageTime: new Date()
-                }
-              : chat
-          )
-        );
-
-        setInput('');
-        setShowEmojiPicker(false);
-        
-        // Simulate message status change
-        setTimeout(() => {
-          setChats(prevChats => 
-            prevChats.map(chat => 
-              chat.id === selectedChat.id 
-                ? {
-                    ...chat,
-                    messages: chat.messages.map(msg => 
-                      msg.id === newMessage.id 
-                        ? { ...msg, status: 'delivered' }
-                        : msg
-                    )
-                  }
-                : chat
-            )
-          );
-        }, 1000);
-
-        setTimeout(() => {
-          setChats(prevChats => 
-            prevChats.map(chat => 
-              chat.id === selectedChat.id 
-                ? {
-                    ...chat,
-                    messages: chat.messages.map(msg => 
-                      msg.id === newMessage.id 
-                        ? { ...msg, status: 'read' }
-                        : msg
-                    )
-                  }
-                : chat
-            )
-          );
-        }, 2000);
-
-        // Simulate typing indicator
-        setIsTyping(true);
-        setTimeout(() => {
-          setIsTyping(false);
-        }, 3000);
-      } else {
-        // Real WhatsApp Business API message
-        const sentMessage = await whatsappBusinessClientService.sendMessage(selectedChat.number, input);
-        
-        // Update chat with sent message
-        setChats(prevChats => 
-          prevChats.map(chat => 
-            chat.id === selectedChat.id 
-              ? {
-                  ...chat,
-                  messages: [...chat.messages, sentMessage],
-                  lastMessage: input,
-                  lastMessageTime: new Date()
-                }
-              : chat
-          )
-        );
-
-        setInput('');
-        setShowEmojiPicker(false);
-      }
+      setInput('');
+      setShowEmojiPicker(false);
     } catch (error) {
       console.error('Error sending message:', error);
       alert('Failed to send message. Please try again.');
@@ -912,16 +996,7 @@ function MockChatCRM() {
     );
   };
 
-  const handleConfigSave = async (config: any) => {
-    try {
-      await whatsappBusinessClientService.updateConfig(config);
-      setUseMockData(false);
-      await loadChats();
-    } catch (error) {
-      console.error('Error saving config:', error);
-      alert('Failed to save configuration. Please try again.');
-    }
-  };
+
 
   // Responsive: show only chat list or chat window on mobile
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
@@ -1084,8 +1159,10 @@ function MockChatCRM() {
       const fetchInstagramChats = async () => {
         try {
           setInstagramLoading(true);
+          console.log('Fetching real Instagram conversations...');
           // Fetch real Instagram conversations
           const conversations = await instagramService.getDirectMessages();
+          console.log('Instagram conversations received:', conversations);
           // Map to InstagramChat UI structure
           const chats = conversations.map((conv) => {
             const user = conv.participants.find((p) => p.id !== instagramService['userId']) || conv.participants[0];
@@ -1193,44 +1270,15 @@ function MockChatCRM() {
                 <div className="flex gap-2">
                   <button 
                     onClick={() => setShowConfigModal(true)}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Configure
-                  </button>
-                  <button 
-                    onClick={() => setUseMockData(!useMockData)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer ${
-                      useMockData 
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white' 
-                        : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                      whatsappConnected 
+                        ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white' 
+                        : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white'
                     }`}
                   >
-                    <MessageCircle className="w-4 h-4" />
-                    {useMockData ? 'Mock Data' : 'Real API'}
+                    <Settings className="w-4 h-4" />
+                    {whatsappConnected ? 'WhatsApp Connected' : 'Configure WhatsApp'}
                   </button>
-                  {!useMockData && (
-                    <button 
-                      onClick={whatsappConnected ? handleDisconnect : handleConnect}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer ${
-                        whatsappConnected 
-                          ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white' 
-                          : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
-                      }`}
-                    >
-                      {whatsappConnected ? (
-                        <>
-                          <WifiOff className="w-4 h-4" />
-                          Disconnect
-                        </>
-                      ) : (
-                        <>
-                          <Wifi className="w-4 h-4" />
-                          Connect
-                        </>
-                      )}
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -1290,6 +1338,8 @@ function MockChatCRM() {
                       onSelect={() => {
                         setSelectedChatId(chat.id);
                         setShowChatListMobile(false);
+                        // Load chat history when a chat is selected
+                        loadChatHistory(chat.id, 100);
                       }}
                     />
                   ))
@@ -1375,9 +1425,16 @@ function MockChatCRM() {
                                 <User className="w-4 h-4" />
                                 View Profile
                               </DropdownMenu.Item>
-                              <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded cursor-pointer">
+                              <DropdownMenu.Item 
+                                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded cursor-pointer"
+                                onClick={() => {
+                                  if (selectedChat) {
+                                    loadChatHistory(selectedChat.id, 200);
+                                  }
+                                }}
+                              >
                                 <FileText className="w-4 h-4" />
-                                Chat History
+                                Load More Messages
                               </DropdownMenu.Item>
                               <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
                               <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded cursor-pointer">
@@ -1521,7 +1578,6 @@ function MockChatCRM() {
           <WhatsAppConfigModal
             isOpen={showConfigModal}
             onClose={() => setShowConfigModal(false)}
-            onSave={handleConfigSave}
           />
         </>
       ) : (
@@ -1857,7 +1913,6 @@ function MockChatCRM() {
       <WhatsAppConfigModal
         isOpen={showConfigModal}
         onClose={() => setShowConfigModal(false)}
-        onSave={handleConfigSave}
       />
     </div>
   );

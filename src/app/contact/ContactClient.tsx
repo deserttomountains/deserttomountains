@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Sparkles, Mail, Phone, MapPin, Send, CheckCircle, Instagram, MessageCircle, ChevronDown, ChevronUp, Star } from 'lucide-react';
 
 export default function ContactClient() {
@@ -278,7 +277,6 @@ export default function ContactClient() {
         </div>
       </section>
       
-      <Footer />
     </div>
   );
 } 

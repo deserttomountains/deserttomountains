@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 
 export default function GalleryClient() {
   const galleryItems = [
@@ -13,6 +12,32 @@ export default function GalleryClient() {
     { id: 5, image: '/images/gallery/5.webp' },
     { id: 6, image: '/images/gallery/6.webp' },
     { id: 7, image: '/images/gallery/7.webp' },
+    { id: 8, image: '/images/gallery/8.webp' },
+    { id: 9, image: '/images/gallery/9.webp' },
+    { id: 10, image: '/images/gallery/10.webp' },
+    { id: 11, image: '/images/gallery/11.webp' },
+    { id: 12, image: '/images/gallery/12.webp' },
+    { id: 13, image: '/images/gallery/13.webp' },
+    { id: 14, image: '/images/gallery/14.webp' },
+    { id: 15, image: '/images/gallery/15.webp' },
+    { id: 16, image: '/images/gallery/16.webp' },
+    { id: 17, image: '/images/gallery/17.webp' },
+    { id: 18, image: '/images/gallery/18.webp' },
+    { id: 19, image: '/images/gallery/19.webp' },
+    { id: 20, image: '/images/gallery/20.webp' },
+    { id: 21, image: '/images/gallery/21.webp' },
+    { id: 22, image: '/images/gallery/22.webp' },
+    { id: 23, image: '/images/gallery/23.webp' },
+    { id: 24, image: '/images/gallery/24.webp' },
+    { id: 25, image: '/images/gallery/25.webp' },
+    { id: 26, image: '/images/gallery/26.webp' },
+    { id: 27, image: '/images/gallery/27.webp' },
+    { id: 28, image: '/images/gallery/28.webp' },
+    { id: 29, image: '/images/gallery/29.webp' },
+    { id: 30, image: '/images/gallery/30.webp' },
+    { id: 31, image: '/images/gallery/31.webp' },
+    { id: 32, image: '/images/gallery/32.webp' },
+    { id: 33, image: '/images/gallery/33.webp' },
   ];
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -30,7 +55,7 @@ export default function GalleryClient() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-white to-amber-50">
       <Navigation />
       <main className="flex-1 pt-32 pb-10">
-        <div className="max-w-7xl mx-auto px-2 md:px-6">
+        <div className="max-w-[95vw] mx-auto px-2 md:px-6">
           {/* Masonry Grid */}
           <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-6 [column-fill:_balance]"><div className="w-full h-0"></div>{galleryItems.map((item, idx) => (
             <button
@@ -82,7 +107,6 @@ export default function GalleryClient() {
           </div>
         )}
       </main>
-      <Footer />
       <style jsx global>{`
         @keyframes fade-in {
           from { opacity: 0; }

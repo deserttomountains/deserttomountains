@@ -178,6 +178,51 @@ class WhatsAppBusinessClientService {
     }
   }
 
+  // Load existing chats and conversation history
+  public async loadExistingChats(): Promise<WhatsAppBusinessChat[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}?action=load-existing-chats`);
+      if (!response.ok) {
+        throw new Error('Failed to load existing chats');
+      }
+      const result = await response.json();
+      return result.chats || [];
+    } catch (error) {
+      console.error('Load existing chats error:', error);
+      return [];
+    }
+  }
+
+  // Get chat history for a specific conversation
+  public async getChatHistory(phoneNumber: string, limit: number = 50): Promise<WhatsAppBusinessMessage[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}?action=chat-history&phoneNumber=${phoneNumber}&limit=${limit}`);
+      if (!response.ok) {
+        throw new Error('Failed to get chat history');
+      }
+      const result = await response.json();
+      return result.messages || [];
+    } catch (error) {
+      console.error('Get chat history error:', error);
+      return [];
+    }
+  }
+
+  // Get contact information
+  public async getContactInfo(phoneNumber: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}?action=contact-info&phoneNumber=${phoneNumber}`);
+      if (!response.ok) {
+        throw new Error('Failed to get contact info');
+      }
+      const result = await response.json();
+      return result.contactInfo;
+    } catch (error) {
+      console.error('Get contact info error:', error);
+      throw error;
+    }
+  }
+
   // Configuration
   public async updateConfig(config: Partial<WhatsAppBusinessConfig>): Promise<void> {
     try {
@@ -232,76 +277,6 @@ class WhatsAppBusinessClientService {
 
   public getConnectionStatus(): string {
     return this.connectionStatus;
-  }
-
-  // Mock data for development/testing
-  public getMockChats(): WhatsAppBusinessChat[] {
-    return [
-      {
-        id: '1234567890',
-        name: 'John Doe',
-        number: '1234567890',
-        avatar: '/api/placeholder/40/40',
-        status: 'online',
-        lastMessage: 'Hi, I have a question about your products',
-        lastMessageTime: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-        unreadCount: 2,
-        messages: [
-          {
-            id: '1',
-            from: '1234567890',
-            to: 'business',
-            body: 'Hi, I have a question about your products',
-            timestamp: new Date(Date.now() - 1000 * 60 * 10),
-            type: 'text',
-            status: 'read',
-            isFromMe: false
-          },
-          {
-            id: '2',
-            from: 'business',
-            to: '1234567890',
-            body: 'Hello! I\'d be happy to help. What would you like to know?',
-            timestamp: new Date(Date.now() - 1000 * 60 * 8),
-            type: 'text',
-            status: 'read',
-            isFromMe: true
-          },
-          {
-            id: '3',
-            from: '1234567890',
-            to: 'business',
-            body: 'Do you have wall putty in stock?',
-            timestamp: new Date(Date.now() - 1000 * 60 * 5),
-            type: 'text',
-            status: 'delivered',
-            isFromMe: false
-          }
-        ]
-      },
-      {
-        id: '9876543210',
-        name: 'Jane Smith',
-        number: '9876543210',
-        avatar: '/api/placeholder/40/40',
-        status: 'offline',
-        lastMessage: 'Thank you for the quick delivery!',
-        lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        unreadCount: 0,
-        messages: [
-          {
-            id: '4',
-            from: '9876543210',
-            to: 'business',
-            body: 'Thank you for the quick delivery!',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-            type: 'text',
-            status: 'read',
-            isFromMe: false
-          }
-        ]
-      }
-    ];
   }
 }
 

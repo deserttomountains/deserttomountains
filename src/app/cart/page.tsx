@@ -1,7 +1,6 @@
 "use client";
 
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { ShoppingCart, Trash2, ArrowRight, CheckCircle, Lock, Truck, Shield, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -36,9 +35,7 @@ export default function CartPage() {
   const subtotal = cart.reduce((sum, item) => sum + item.price * quantityMap[item.id], 0);
   const discount = appliedCode === VALID_CODE ? DISCOUNT_AMOUNT : 0;
   const shipping = cart.length === 0 ? 0 : 0; // Placeholder, will be calculated at next step
-  const taxableAmount = cart.length === 0 ? 0 : subtotal - discount + shipping;
-  const tax = cart.length === 0 ? 0 : Math.round(taxableAmount * 0.18);
-  const total = taxableAmount + tax;
+  const total = subtotal - discount + shipping; // 5% GST already included in product prices
 
   const handleRemove = (id: number) => {
     removeFromCart(id);
@@ -262,12 +259,12 @@ export default function CartPage() {
               )}
               <div className="flex justify-between">
                 <span className="text-[#8B7A1A]">Shipping</span>
-                <span className="font-bold text-[#5E4E06]">--</span>
+                <span className="font-bold text-[#5E4E06]">Pending</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#8B7A1A]">G.S.T (18%)</span>
-                <span className="font-bold text-[#5E4E06]">₹{tax}</span>
-              </div>
+                             <div className="flex justify-between">
+                 <span className="text-[#8B7A1A]">GST (5% included)</span>
+                 <span className="font-bold text-[#5E4E06]">Included</span>
+               </div>
               <div className="flex justify-between border-t border-[#D4AF37] pt-3 mt-3">
                 <span className="text-lg md:text-xl font-extrabold text-[#5E4E06]">Total</span>
                 <span className="text-lg md:text-xl font-extrabold text-[#5E4E06]">₹{total}</span>
@@ -297,11 +294,17 @@ export default function CartPage() {
             </div>
             
             <p className="text-xs text-[#8B7A1A] text-center mt-2">Inclusive of all taxes</p>
+            
+            {/* Shipping Information Note */}
+            <div className="mt-4 p-3 bg-gradient-to-r from-[#FFF8DC] to-[#F0E68C] rounded-lg border border-[#D4AF37]">
+              <p className="text-xs text-[#5E4E06] font-semibold mb-1">📦 Shipping Information</p>
+              <p className="text-xs text-[#8B7A1A]">
+                Shipping charges will be calculated separately and collected as cash on delivery. We negotiate with multiple transport companies to provide you the best rates.
+              </p>
+            </div>
           </div>
         </div>
       </main>
-      
-      <Footer />
       
       <style jsx>{`
         @keyframes fade-in {

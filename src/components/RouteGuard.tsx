@@ -20,15 +20,28 @@ export const RouteGuard = ({
   const router = useRouter();
 
   useEffect(() => {
+    console.log('RouteGuard: Checking access...', {
+      user: user?.uid,
+      role,
+      loading,
+      requiredRole,
+      redirectTo
+    });
+    
     if (!loading) {
       // If user is not authenticated, redirect to login
       if (!user) {
+        console.log('RouteGuard: No user, redirecting to login');
         router.push('/login');
         return;
       }
 
       // If role is required and user doesn't have the required role
       if (requiredRole && role !== requiredRole) {
+        console.log('RouteGuard: Role mismatch, redirecting...', {
+          requiredRole,
+          actualRole: role
+        });
         if (redirectTo) {
           router.push(redirectTo);
         } else {
@@ -41,11 +54,14 @@ export const RouteGuard = ({
         }
         return;
       }
+      
+      console.log('RouteGuard: Access granted');
     }
   }, [user, role, loading, requiredRole, redirectTo, router]);
 
   // Show loading spinner while checking authentication
   if (loading) {
+    console.log('RouteGuard: Loading...');
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
@@ -55,15 +71,18 @@ export const RouteGuard = ({
 
   // If user is not authenticated, don't render children
   if (!user) {
+    console.log('RouteGuard: No user, not rendering children');
     return null;
   }
 
   // If role is required and user doesn't have the required role, don't render children
   if (requiredRole && role !== requiredRole) {
+    console.log('RouteGuard: Role mismatch, not rendering children');
     return null;
   }
 
   // User is authenticated and has the required role (if any)
+  console.log('RouteGuard: Rendering children');
   return <>{children}</>;
 };
 

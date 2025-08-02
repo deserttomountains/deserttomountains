@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
-import { Sparkles, Shield, CheckCircle, Leaf, Heart, Star, ArrowRight, Package, Truck, Clock, Palette, ShoppingCart, Zap, Mountain, Sun } from 'lucide-react';
+import { Sparkles, Shield, CheckCircle, Leaf, Heart, Star, ArrowRight, Package, Clock, Palette, ShoppingCart, Zap, Mountain, Sun } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
@@ -143,7 +142,7 @@ export default function AuraClient() {
             id: 3,
             name: 'Aura Wall Plaster Pigmented',
             image: '/images/aura_1.webp',
-            price: 1099, // price per unit
+            price: 689, // price per unit
             quantity: getPigmentedTotalQty(),
             subtitle: 'Pigmented Shades',
             shades: selectedShades,
@@ -174,7 +173,7 @@ export default function AuraClient() {
 
   // Helper for pigmented total price
   const getPigmentedTotalQty = () => Object.values(pigmentedSelections).reduce((sum, qty) => sum + qty, 0);
-  const getPigmentedTotalPrice = () => getPigmentedTotalQty() * 1099;
+  const getPigmentedTotalPrice = () => getPigmentedTotalQty() * 689;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-[#E8E4D8] relative overflow-hidden">
@@ -332,7 +331,16 @@ export default function AuraClient() {
                         >
                           -
                         </button>
-                        <span className="w-10 sm:w-12 text-center font-bold text-[#2A2418] text-sm sm:text-base">{neutralQuantity}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={neutralQuantity}
+                          onChange={e => {
+                            const val = Math.max(1, parseInt(e.target.value) || 1);
+                            setNeutralQuantity(val);
+                          }}
+                          className="w-10 sm:w-12 text-center font-bold text-[#2A2418] text-sm sm:text-base bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-[#5E4E06] rounded"
+                        />
                         <button
                           onClick={() => setNeutralQuantity(neutralQuantity + 1)}
                           className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-sm shadow hover:scale-110 transition-all duration-200 cursor-pointer"
@@ -347,14 +355,18 @@ export default function AuraClient() {
                 {/* Wall Plaster Pigmented */}
                 {productType === 'wallplaster' && wallPlasterType === 'pigmented' && (
                   <div className="space-y-4">
-                    <div className="text-gray-700 font-bold text-lg">1099 per 25kg</div>
+                    <div className="text-gray-700 font-bold text-lg">
+                      <span className="text-2xl font-black text-[#5E4E06]">₹689</span>
+                      <span className="text-lg text-gray-400 line-through ml-2">₹1099</span>
+                      <span className="text-sm text-green-600 font-bold ml-2">Save ₹410!</span>
+                    </div>
                     <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-xl border border-[#E8E4D8] p-4 sm:p-6">
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                         {shaderColors.map((color) => {
                           const selectedQty = pigmentedSelections[color.id] || 0;
                           return (
                             <div key={color.id} className={`relative flex flex-col items-center p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 shadow-sm bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] group hover:shadow-md ${selectedQty > 0 ? 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] scale-105' : 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] hover:border-gradient-to-r from-[#5E4E06] to-[#8B7A1A]'}`}>
-                              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full mb-2 sm:mb-3 border-4 border-white shadow-lg" style={{ background: color.hex }}></div>
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full mb-3 sm:mb-4 border-4 border-white shadow-lg" style={{ background: color.hex }}></div>
                               <div className="font-bold text-gray-800 text-xs mb-2 sm:mb-3 text-center leading-tight">{color.name}</div>
                               <div className="flex items-center gap-1">
                                 <button
@@ -395,7 +407,7 @@ export default function AuraClient() {
                               const color = shaderColors.find(c => c.id === shadeId);
                               return (
                                 <div key={shadeId} className="flex items-center gap-2 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] px-3 py-2 rounded-full border border-[#E8E4D8] shadow-sm">
-                                  <span className="w-4 h-4 rounded-full border border-gray-300" style={{ background: color?.hex }}></span>
+                                  <span className="w-6 h-6 rounded-full border border-gray-300" style={{ background: color?.hex }}></span>
                                   <span className="text-gray-700 text-sm font-medium">{color?.name}</span>
                                   <span className="text-gray-900 font-bold text-sm">x{qty}</span>
                                 </div>
@@ -452,7 +464,7 @@ export default function AuraClient() {
                             }`}
                           >
                             <div 
-                              className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full mb-1 sm:mb-2 shadow-md border-2 border-white ${
+                              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full mb-2 sm:mb-3 shadow-md border-2 border-white ${
                                 selectedColors.includes(color.id) ? 'ring-2 ring-gradient-to-r from-[#5E4E06] to-[#8B7A1A]' : ''
                               }`}
                               style={{ backgroundColor: color.hex }}
@@ -632,16 +644,11 @@ export default function AuraClient() {
       <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-12 text-center">Shipping & Support</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-8 bg-white rounded-2xl shadow-lg border border-gray-100">
-              <Truck className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Free Shipping</h3>
-              <p className="text-gray-600">Free delivery on orders above ₹2000</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="text-center p-8 bg-white rounded-2xl shadow-lg border border-gray-100">
               <Clock className="w-12 h-12 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-3">Fast Delivery</h3>
-              <p className="text-gray-600">3-5 business days across India</p>
+              <p className="text-gray-600">7-10 business days across India</p>
             </div>
             <div className="text-center p-8 bg-white rounded-2xl shadow-lg border border-gray-100">
               <Shield className="w-12 h-12 text-gray-600 mx-auto mb-4" />
@@ -670,7 +677,6 @@ export default function AuraClient() {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 } 

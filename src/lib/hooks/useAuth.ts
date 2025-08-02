@@ -21,11 +21,20 @@ export const useAuth = () => {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      console.log('Auth state changed:', { user: user?.uid, email: user?.email });
+      
       if (user) {
         try {
           // Get user profile and role
           const profile = await AuthService.getUserProfile(user.uid);
           const role = await AuthService.getUserRole(user.uid);
+          
+          console.log('User profile loaded:', { 
+            uid: user.uid, 
+            role, 
+            hasProfile: !!profile,
+            profileEmail: profile?.email 
+          });
           
           setAuthState({
             user,
@@ -43,6 +52,7 @@ export const useAuth = () => {
           });
         }
       } else {
+        console.log('User signed out');
         setAuthState({
           user: null,
           userProfile: null,
@@ -58,23 +68,36 @@ export const useAuth = () => {
   const signOut = async () => {
     try {
       await AuthService.signOut();
-      router.push('/');
+      // Redirect to login page instead of home page
+      router.push('/login');
     } catch (error) {
       console.error('Error signing out:', error);
+      // Still redirect to login even if signOut fails
+      router.push('/login');
     }
   };
 
   const redirectBasedOnRole = async (uid: string) => {
     try {
+      console.log('Redirecting based on role for user:', uid);
+      
+      // Add a small delay to ensure Firebase auth state is fully updated
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const role = await AuthService.getUserRole(uid);
+      console.log('User role determined:', role);
+      
       if (role === 'admin') {
+        console.log('Redirecting to admin dashboard');
         router.push('/admin');
       } else {
+        console.log('Redirecting to customer dashboard');
         router.push('/dashboard');
       }
     } catch (error) {
       console.error('Error getting user role:', error);
       // Default to customer dashboard on error
+      console.log('Defaulting to customer dashboard due to error');
       router.push('/dashboard');
     }
   };

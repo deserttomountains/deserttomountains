@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSocketIO } from '@/lib/instagramSocket';
+import { emitInstagramEvent } from '@/lib/instagramSocket';
 
 // Webhook verification token
 const VERIFY_TOKEN = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN || 'your_webhook_verify_token';
@@ -103,11 +103,8 @@ async function processMessagingEvent(messaging: any) {
     };
 
     // Emit to all connected Instagram clients
-    const io = getSocketIO();
-    if (io) {
-      io.of('/instagram').emit('new_message', message);
-      console.log(`Instagram message broadcasted: ${message.text}`);
-    }
+    emitInstagramEvent('new_message', message);
+    console.log(`Instagram message broadcasted: ${message.text}`);
 
     // Store message in database (optional)
     await storeInstagramMessage(message);
@@ -131,10 +128,7 @@ async function processPostbackEvent(postback: any) {
     };
 
     // Emit postback event
-    const io = getSocketIO();
-    if (io) {
-      io.of('/instagram').emit('postback_received', postbackEvent);
-    }
+    emitInstagramEvent('postback_received', postbackEvent);
 
   } catch (error) {
     console.error('Error processing postback event:', error);
@@ -156,10 +150,7 @@ async function processReactionEvent(reaction: any) {
     };
 
     // Emit reaction event
-    const io = getSocketIO();
-    if (io) {
-      io.of('/instagram').emit('reaction_received', reactionEvent);
-    }
+    emitInstagramEvent('reaction_received', reactionEvent);
 
   } catch (error) {
     console.error('Error processing reaction event:', error);
@@ -176,10 +167,7 @@ async function processDeliveryEvent(delivery: any) {
     };
 
     // Emit delivery event
-    const io = getSocketIO();
-    if (io) {
-      io.of('/instagram').emit('message_delivered', deliveryEvent);
-    }
+    emitInstagramEvent('message_delivered', deliveryEvent);
 
   } catch (error) {
     console.error('Error processing delivery event:', error);
@@ -195,10 +183,7 @@ async function processReadEvent(read: any) {
     };
 
     // Emit read event
-    const io = getSocketIO();
-    if (io) {
-      io.of('/instagram').emit('message_read', readEvent);
-    }
+    emitInstagramEvent('message_read', readEvent);
 
   } catch (error) {
     console.error('Error processing read event:', error);

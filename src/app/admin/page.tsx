@@ -350,9 +350,10 @@ function AdminDashboardContent() {
   const handleLogout = async () => {
     try {
       await AuthService.signOut();
-      router.push('/');
+      router.push('/login');
     } catch (error) {
       console.error('Sign out failed:', error);
+      router.push('/login');
     }
   };
 

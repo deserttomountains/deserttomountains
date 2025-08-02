@@ -1,6 +1,5 @@
 import React from "react";
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Truck, Package, DollarSign, Undo2, CheckCircle, AlertCircle, Mail, Info, MapPin, Clock, XCircle, Shield } from 'lucide-react';
 
 const sections = [
@@ -128,7 +127,6 @@ export default function ShippingPolicyPage() {
           ))}
         </div>
       </main>
-      <Footer />
     </div>
   );
 } 

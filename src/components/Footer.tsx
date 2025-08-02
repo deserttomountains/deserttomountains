@@ -6,7 +6,7 @@ export default function Footer() {
   return (
     <footer className="bg-[#2A2418] text-white py-12">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="flex flex-col items-center text-center mb-8 md:mb-0">
             <Image
               src="/desert-to-mountains-logo.webp"
@@ -35,15 +35,7 @@ export default function Footer() {
               <li><Link href="/about" className="hover:text-[#E6C866] transition-colors">About Us</Link></li>
               <li><Link href="/gallery" className="hover:text-[#E6C866] transition-colors">Gallery</Link></li>
               <li><Link href="/contact" className="hover:text-[#E6C866] transition-colors">Contact</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold mb-4">Support</h4>
-            <ul className="space-y-2 text-[#F5F2E8]">
-              <li><a href="#" className="hover:text-[#E6C866] transition-colors">FAQ</a></li>
-              <li><a href="#" className="hover:text-[#E6C866] transition-colors">Shipping</a></li>
-              <li><a href="#" className="hover:text-[#E6C866] transition-colors">Returns</a></li>
+              <li><Link href="/franchise" className="hover:text-[#E6C866] transition-colors">Franchise</Link></li>
             </ul>
           </div>
         </div>

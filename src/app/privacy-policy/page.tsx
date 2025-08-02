@@ -1,6 +1,5 @@
 import React from "react";
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Shield, User, Mail, Globe, Lock, AlertCircle, Cookie, ArrowRight, Info } from 'lucide-react';
 
 const sections = [
@@ -107,7 +106,6 @@ export default function PrivacyPolicyPage() {
           ))}
         </div>
       </main>
-      <Footer />
     </div>
   );
 } 

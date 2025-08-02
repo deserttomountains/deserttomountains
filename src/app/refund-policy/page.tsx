@@ -1,6 +1,5 @@
 import React from "react";
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Undo2, Package, CheckCircle, AlertCircle, Mail, Info } from 'lucide-react';
 
 const sections = [
@@ -79,7 +78,6 @@ export default function RefundPolicyPage() {
           ))}
         </div>
       </main>
-      <Footer />
     </div>
   );
 } 

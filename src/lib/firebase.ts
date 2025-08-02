@@ -227,6 +227,8 @@ export class AuthService {
     }
 
     try {
+      console.log('Creating user profile for:', user.uid, user.email);
+      
       const userProfile: UserProfile = {
         uid: user.uid,
         email: user.email || '',
@@ -240,6 +242,7 @@ export class AuthService {
       };
 
       await setDoc(doc(db, 'users', user.uid), userProfile);
+      console.log('User profile created successfully for:', user.uid);
     } catch (error) {
       console.error('Error creating user profile:', error);
       throw new Error('Failed to create user profile');
@@ -253,10 +256,16 @@ export class AuthService {
     }
 
     try {
+      console.log('Getting user role for:', uid);
       const userDoc = await getDoc(doc(db, 'users', uid));
+      
       if (userDoc.exists()) {
-        return userDoc.data().role as UserRole;
+        const role = userDoc.data().role as UserRole;
+        console.log('User role found:', role, 'for user:', uid);
+        return role;
       }
+      
+      console.log('No user profile found, defaulting to customer for user:', uid);
       return 'customer'; // Default role if no profile exists
     } catch (error) {
       console.error('Error getting user role:', error);

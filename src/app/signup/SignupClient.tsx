@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { Sparkles, User, Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import PhoneInput from 'react-phone-input-2';
@@ -641,7 +640,6 @@ export default function SignupClient() {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 } 

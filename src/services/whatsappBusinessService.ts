@@ -219,6 +219,119 @@ class WhatsAppBusinessService {
     return await this.makeRequest('GET', mediaId);
   }
 
+  // Fetch existing conversations and chat history
+  public async loadExistingChats(): Promise<WhatsAppBusinessChat[]> {
+    if (!this.config?.phoneNumberId) {
+      throw new Error('Phone number ID not configured');
+    }
+
+    try {
+      // Get conversations from WhatsApp Business API
+      const conversationsResponse = await this.makeRequest('GET', `${this.config.phoneNumberId}/conversations`);
+      
+      const chats: WhatsAppBusinessChat[] = [];
+      
+      if (conversationsResponse.data) {
+        for (const conversation of conversationsResponse.data) {
+          const chatId = conversation.id;
+          const phoneNumber = conversation.phone_number;
+          
+          // Get contact info
+          let contactName = phoneNumber;
+          try {
+            const contactResponse = await this.makeRequest('GET', `${phoneNumber}`);
+            if (contactResponse.profile?.name) {
+              contactName = contactResponse.profile.name;
+            }
+          } catch (error) {
+            console.log('Could not fetch contact info for:', phoneNumber);
+          }
+
+          // Get recent messages for this conversation
+          const messagesResponse = await this.makeRequest('GET', `${this.config.phoneNumberId}/messages?to=${phoneNumber}&limit=50`);
+          
+          const messages: WhatsAppBusinessMessage[] = [];
+          if (messagesResponse.data) {
+            for (const msg of messagesResponse.data) {
+              messages.push({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                body: msg.text?.body || msg.type,
+                timestamp: new Date(msg.timestamp * 1000),
+                type: msg.type,
+                status: msg.status || 'delivered',
+                isFromMe: msg.from === this.config.phoneNumberId
+              });
+            }
+          }
+
+          const chat: WhatsAppBusinessChat = {
+            id: chatId,
+            name: contactName,
+            number: phoneNumber,
+            avatar: undefined,
+            status: 'offline',
+            lastMessage: messages.length > 0 ? messages[messages.length - 1].body : '',
+            lastMessageTime: messages.length > 0 ? messages[messages.length - 1].timestamp : new Date(),
+            unreadCount: conversation.unread_count || 0,
+            messages: messages
+          };
+
+          chats.push(chat);
+          this.chats.set(chatId, chat);
+        }
+      }
+
+      return chats;
+    } catch (error) {
+      console.error('Error loading existing chats:', error);
+      throw error;
+    }
+  }
+
+  // Get conversation history for a specific chat
+  public async getChatHistory(phoneNumber: string, limit: number = 50): Promise<WhatsAppBusinessMessage[]> {
+    if (!this.config?.phoneNumberId) {
+      throw new Error('Phone number ID not configured');
+    }
+
+    try {
+      const response = await this.makeRequest('GET', `${this.config.phoneNumberId}/messages?to=${phoneNumber}&limit=${limit}`);
+      
+      const messages: WhatsAppBusinessMessage[] = [];
+      if (response.data) {
+        for (const msg of response.data) {
+          messages.push({
+            id: msg.id,
+            from: msg.from,
+            to: msg.to,
+            body: msg.text?.body || msg.type,
+            timestamp: new Date(msg.timestamp * 1000),
+            type: msg.type,
+            status: msg.status || 'delivered',
+            isFromMe: msg.from === this.config.phoneNumberId
+          });
+        }
+      }
+
+      return messages;
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+      throw error;
+    }
+  }
+
+  // Get contact information
+  public async getContactInfo(phoneNumber: string): Promise<any> {
+    try {
+      return await this.makeRequest('GET', phoneNumber);
+    } catch (error) {
+      console.error('Error getting contact info:', error);
+      throw error;
+    }
+  }
+
   public async uploadMedia(file: Buffer, type: string): Promise<any> {
     if (!this.config?.phoneNumberId) {
       throw new Error('Phone number ID not configured');
