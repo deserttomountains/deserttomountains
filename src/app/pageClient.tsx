@@ -132,8 +132,8 @@ export default function HomeClient() {
         </div>
         {/* Glassmorphism Overlay with Animated Title */}
         <div className="relative z-20 flex flex-col items-center justify-center w-full px-2 sm:px-4">
-          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl sm:rounded-3xl shadow-2xl px-4 py-8 sm:px-8 sm:py-16 md:px-20 md:py-24 max-w-[95vw] sm:max-w-xl md:max-w-2xl mx-auto flex flex-col items-center animate-panel-float" style={{boxShadow: '0 8px 48px 0 rgba(90, 80, 30, 0.18)'}}>
-            <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-6xl font-extrabold text-white text-center tracking-tight mb-2 leading-tight sm:leading-tight">
+          <div className="backdrop-blur-xl bg-white/20 border border-white/30 rounded-2xl sm:rounded-3xl shadow-2xl px-3 py-6 sm:px-8 sm:py-16 md:px-20 md:py-24 max-w-[95vw] sm:max-w-xl md:max-w-2xl mx-auto flex flex-col items-center animate-panel-float" style={{boxShadow: '0 8px 48px 0 rgba(90, 80, 30, 0.18)'}}>
+            <h1 className="text-xl xs:text-2xl sm:text-4xl md:text-6xl font-extrabold text-white text-center tracking-tight mb-2 leading-tight sm:leading-tight">
               <AnimatedTitle text="Think Natural" />
               <br />
               <span style={{ whiteSpace: 'nowrap' }}>
@@ -270,32 +270,32 @@ export default function HomeClient() {
                   </p>
                   
                   <div className="grid grid-cols-1 gap-4 mb-10">
-                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
-                        <CheckCircle className="w-6 h-6 text-white" />
+                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
-                      <div>
-                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">100% Natural Ingredients</h4>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[#2A2418] font-bold text-sm sm:text-base md:text-lg">100% Natural Ingredients</h4>
                         <p className="text-[#2A2418]/60 text-xs sm:text-sm">Pure gypsum and organic cow dung</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
-                        <CheckCircle className="w-6 h-6 text-white" />
+                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
-                      <div>
-                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Breathable & Healthy</h4>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[#2A2418] font-bold text-sm sm:text-base md:text-lg">Breathable & Healthy</h4>
                         <p className="text-[#2A2418]/60 text-xs sm:text-sm">Naturally regulates indoor air quality</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
-                        <CheckCircle className="w-6 h-6 text-white" />
+                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
-                      <div>
-                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Zero Toxins</h4>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[#2A2418] font-bold text-sm sm:text-base md:text-lg">Zero Toxins</h4>
                         <p className="text-[#2A2418]/60 text-xs sm:text-sm">Completely safe for your family</p>
                       </div>
                     </div>
@@ -345,32 +345,32 @@ export default function HomeClient() {
                   </p>
                   
                   <div className="grid grid-cols-1 gap-4 mb-10">
-                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
-                        <CheckCircle className="w-6 h-6 text-white" />
+                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
-                      <div>
-                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Himalayan Herbs</h4>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[#2A2418] font-bold text-sm sm:text-base md:text-lg">Himalayan Herbs</h4>
                         <p className="text-[#2A2418]/60 text-xs sm:text-sm">Pure herbs from pristine mountains</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
-                        <CheckCircle className="w-6 h-6 text-white" />
+                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
-                      <div>
-                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Purifying Properties</h4>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[#2A2418] font-bold text-sm sm:text-base md:text-lg">Purifying Properties</h4>
                         <p className="text-[#2A2418]/60 text-xs sm:text-sm">Naturally cleanses your space</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform">
-                        <CheckCircle className="w-6 h-6 text-white" />
+                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:shadow-lg transition-all duration-300 group/feature hover:scale-105">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg group-hover/feature:scale-110 transition-transform flex-shrink-0">
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
-                      <div>
-                        <h4 className="text-[#2A2418] font-bold text-base sm:text-lg">Peaceful Ambiance</h4>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[#2A2418] font-bold text-sm sm:text-base md:text-lg">Peaceful Ambiance</h4>
                         <p className="text-[#2A2418]/60 text-xs sm:text-sm">Creates a calming atmosphere</p>
                       </div>
                     </div>
@@ -400,18 +400,18 @@ export default function HomeClient() {
           </div>
 
           <div className="relative">
-            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-12 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500">
-              <Quote className="w-16 h-16 text-[#E6C866] mx-auto mb-8 animate-bounce" style={{animationDuration: '3s'}} />
+            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-8 md:p-12 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500">
+              <Quote className="w-12 h-12 sm:w-16 sm:h-16 text-[#E6C866] mx-auto mb-6 sm:mb-8 animate-bounce" style={{animationDuration: '3s'}} />
               
               <div className="text-center">
-                <p className="text-2xl md:text-3xl text-white mb-8 leading-relaxed font-light italic">
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white mb-6 sm:mb-8 leading-relaxed font-light italic">
                   "{testimonials[activeTestimonial].text}"
                 </p>
                 
-                <div className="text-[#E6C866] font-bold text-xl mb-2">
+                <div className="text-[#E6C866] font-bold text-lg sm:text-xl mb-2">
                   {testimonials[activeTestimonial].author}
                 </div>
-                <div className="text-[#F5F2E8] text-lg">
+                <div className="text-[#F5F2E8] text-base sm:text-lg">
                   {testimonials[activeTestimonial].location}
                 </div>
               </div>
@@ -448,9 +448,9 @@ export default function HomeClient() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-2xl opacity-20 animate-pulse"></div>
                 <img
-                  src="/images/dtm_1.webp"
+                  src="/images/gallery/1.webp"
                   alt="From Desert to Mountains"
-                  className="relative w-full h-[500px] object-cover rounded-3xl shadow-2xl hover:scale-105 transition-transform duration-700"
+                  className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover rounded-3xl shadow-2xl hover:scale-105 transition-transform duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#2A2418]/30 to-transparent rounded-3xl"></div>
               </div>
@@ -472,14 +472,14 @@ export default function HomeClient() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-6 mb-12">
-                <div className="text-center p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:scale-105 transition-transform duration-300">
-                  <div className="text-3xl font-black text-[#5E4E06] mb-2">Ancient</div>
-                  <div className="text-[#2A2418]/70 font-medium">Wisdom</div>
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-12">
+                <div className="text-center p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:scale-105 transition-transform duration-300">
+                  <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-[#5E4E06] mb-1 sm:mb-2 whitespace-nowrap">Ancient</div>
+                  <div className="text-[#2A2418]/70 font-medium text-sm sm:text-base whitespace-nowrap">Wisdom</div>
                 </div>
-                <div className="text-center p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:scale-105 transition-transform duration-300">
-                  <div className="text-3xl font-black text-[#5E4E06] mb-2">Modern</div>
-                  <div className="text-[#2A2418]/70 font-medium">Innovation</div>
+                <div className="text-center p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:scale-105 transition-transform duration-300">
+                  <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-[#5E4E06] mb-1 sm:mb-2 whitespace-nowrap">Modern</div>
+                  <div className="text-[#2A2418]/70 font-medium text-sm sm:text-base whitespace-nowrap">Innovation</div>
                 </div>
               </div>
 
@@ -505,18 +505,18 @@ export default function HomeClient() {
             <span className="font-semibold text-[#E6C866]"> ancient wisdom</span>
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-8 justify-center">
-            <Link href="/contact" className="group px-12 py-6 bg-gradient-to-r from-[#5E4E06] via-[#8B7A1A] to-[#5E4E06] text-white font-bold rounded-full shadow-2xl hover:shadow-[#5E4E06]/25 transition-all duration-500 hover:scale-105 relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 justify-center">
+            <Link href="/contact" className="group px-8 sm:px-12 py-4 sm:py-6 bg-gradient-to-r from-[#5E4E06] via-[#8B7A1A] to-[#5E4E06] text-white font-bold rounded-full shadow-2xl hover:shadow-[#5E4E06]/25 transition-all duration-500 hover:scale-105 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-              <span className="flex items-center gap-4 text-xl relative z-10">
-                <Phone className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+              <span className="flex items-center gap-3 sm:gap-4 text-lg sm:text-xl relative z-10">
+                <Phone className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform" />
                 Begin Your Journey
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-2 transition-transform" />
               </span>
             </Link>
             
-            <Link href="/gallery" className="px-12 py-6 border-2 border-white/30 text-white font-bold rounded-full hover:bg-white hover:text-[#2A2418] transition-all duration-300 hover:scale-105">
-              <span className="text-xl">View Gallery</span>
+            <Link href="/gallery" className="px-8 sm:px-12 py-4 sm:py-6 border-2 border-white/30 text-white font-bold rounded-full hover:bg-white hover:text-[#2A2418] transition-all duration-300 hover:scale-105">
+              <span className="text-lg sm:text-xl">View Gallery</span>
             </Link>
           </div>
         </div>

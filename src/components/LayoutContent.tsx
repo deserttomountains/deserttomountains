@@ -7,12 +7,13 @@ import Footer from "@/components/Footer";
 export default function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname?.startsWith('/admin');
+  const isDashboardPage = pathname?.startsWith('/dashboard');
 
   return (
     <>
       <Navigation />
       <div className="pt-20 min-h-[70vh]">{children}</div>
-      {!isAdminPage && <Footer />}
+      {!isAdminPage && !isDashboardPage && <Footer />}
     </>
   );
 } 

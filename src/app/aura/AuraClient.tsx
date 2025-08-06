@@ -22,7 +22,7 @@ export default function AuraClient() {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   // Only one size: 25kg pack
-  const pack = { label: '25kg Pack', mrp: 499, price: 429, coverage: '125 sq ft' };
+  const pack = { label: '25kg Pack', mrp: 599, price: 499, coverage: '125 sq ft' };
 
   const samplePacks = [
     { size: 3, price: 1499, label: '3 Samples' },
@@ -31,6 +31,22 @@ export default function AuraClient() {
   ];
 
   const shaderColors = [
+    { id: 'thar-grey', name: 'Thar Grey', hex: '#898D8D' },
+    { id: 'amber-rust', name: 'Amber Rust', hex: '#E89E6D' },
+    { id: 'pushkar-sunset', name: 'Pushkar Sunset', hex: '#FF8674' },
+    { id: 'rose-quartz', name: 'Rose Quartz', hex: '#E9A2B2' }, 
+    { id: 'jaisalmer-dune', name: 'Jaisalmer Dune', hex: '#DDCBA4' },
+    { id: 'sandstone-dust', name: 'Sandstone Dust', hex: '#CDA788' },
+    { id: 'udaipur-terracotta', name: 'Udaipur Terracotta', hex: '#E8927C' },
+    { id: 'aravalli-green', name: 'Aravalli Green', hex: '#9ABEAA' },
+    { id: 'kishangarh-lime', name: 'Kishangarh Lime', hex: '#E9DF97' },
+    { id: 'almond-biege', name: 'Almond Biege', hex: '#E0C6AD' },
+    { id: 'rajasthan-ochre', name: 'Rajasthan Ochre', hex: '#FDBE87' },
+    { id: 'jodhpur-blue', name: 'Jodhpur Blue', hex: '#B9D9EB' },
+  ];
+
+  const sampleColors = [
+    { id: 'natural-white', name: 'Natural White', hex: '#F5F5F5' },
     { id: 'thar-grey', name: 'Thar Grey', hex: '#898D8D' },
     { id: 'amber-rust', name: 'Amber Rust', hex: '#E89E6D' },
     { id: 'pushkar-sunset', name: 'Pushkar Sunset', hex: '#FF8674' },
@@ -89,7 +105,7 @@ export default function AuraClient() {
     
     // If 12 samples selected, automatically select all colors
     if (packSize === 12) {
-      setSelectedColors(shaderColors.map(color => color.id));
+      setSelectedColors(sampleColors.map(color => color.id));
     } else {
       // For 3 and 6 samples, clear all selections and let user choose manually
       setSelectedColors([]);
@@ -177,17 +193,7 @@ export default function AuraClient() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-[#E8E4D8] relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-24 left-10 w-32 h-32 bg-gradient-to-br from-[#5E4E06]/10 to-[#8B7A1A]/10 rounded-full animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-[#E6C866]/20 to-[#D4AF37]/20 rounded-full animate-bounce" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-40 left-1/4 w-20 h-20 bg-gradient-to-br from-[#B8A94A]/15 to-[#5E4E06]/15 rounded-full animate-ping" style={{animationDelay: '2s'}}></div>
-        <div className="absolute top-1/2 right-1/3 w-16 h-16 bg-gradient-to-br from-[#8B7A1A]/10 to-[#E6C866]/10 rounded-full animate-spin" style={{animationDuration: '20s'}}></div>
-        <Mountain className="absolute top-32 left-16 w-8 h-8 text-[#5E4E06]/20 animate-float" />
-        <Sun className="absolute top-24 right-24 w-6 h-6 text-[#E6C866]/30 animate-float" style={{animationDelay: '1.5s'}} />
-        <Leaf className="absolute bottom-32 left-32 w-5 h-5 text-[#8B7A1A]/25 animate-float" style={{animationDelay: '2.5s'}} />
-        <Zap className="absolute bottom-40 right-16 w-7 h-7 text-[#D4AF37]/20 animate-float" style={{animationDelay: '3s'}} />
-      </div>
+
       <Navigation />
       
       {/* Hero/Product Image Section */}
@@ -250,24 +256,24 @@ export default function AuraClient() {
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button
                     onClick={() => setProductType('wallplaster')}
-                    className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer text-sm sm:text-base ${
+                    className={`flex-1 px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer text-sm sm:text-base ${
                       productType === 'wallplaster' 
                         ? 'border-[#5E4E06] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#5E4E06] shadow-lg' 
                         : 'border-[#B8A94A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#2A2418] hover:border-[#5E4E06] hover:shadow-md'
                     }`}
                   >
-                    <Package className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <Package className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                     Wall Plaster
                   </button>
                   <button
                     onClick={() => setProductType('sample')}
-                    className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer text-sm sm:text-base ${
+                    className={`flex-1 px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer text-sm sm:text-base ${
                       productType === 'sample' 
                         ? 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-gray-900 shadow-lg' 
                         : 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-gray-700 hover:shadow-md'
                     }`}
                   >
-                    <Palette className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <Palette className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                     Sample Pack
                   </button>
                 </div>
@@ -280,7 +286,7 @@ export default function AuraClient() {
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <button
                       onClick={() => setWallPlasterType('neutral')}
-                      className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none cursor-pointer text-sm sm:text-base ${
+                      className={`flex-1 px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none cursor-pointer text-sm sm:text-base ${
                         wallPlasterType === 'neutral'
                           ? 'border-[#5E4E06] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#5E4E06] shadow-lg'
                           : 'border-[#B8A94A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#2A2418] hover:border-[#5E4E06] hover:shadow-md'
@@ -290,7 +296,7 @@ export default function AuraClient() {
                     </button>
                     <button
                       onClick={() => setWallPlasterType('pigmented')}
-                      className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none cursor-pointer text-sm sm:text-base ${
+                      className={`flex-1 px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none cursor-pointer text-sm sm:text-base ${
                         wallPlasterType === 'pigmented'
                           ? 'border-[#5E4E06] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#5E4E06] shadow-lg'
                           : 'border-[#B8A94A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#2A2418] hover:border-[#5E4E06] hover:shadow-md'
@@ -327,7 +333,7 @@ export default function AuraClient() {
                       <div className="flex items-center gap-2 sm:gap-3">
                         <button
                           onClick={() => setNeutralQuantity(Math.max(1, neutralQuantity - 1))}
-                          className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-sm shadow hover:scale-110 transition-all duration-200 cursor-pointer"
+                          className="w-8 h-8 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-sm shadow hover:scale-110 transition-all duration-200 cursor-pointer"
                         >
                           -
                         </button>
@@ -339,11 +345,11 @@ export default function AuraClient() {
                             const val = Math.max(1, parseInt(e.target.value) || 1);
                             setNeutralQuantity(val);
                           }}
-                          className="w-10 sm:w-12 text-center font-bold text-[#2A2418] text-sm sm:text-base bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-[#5E4E06] rounded"
+                          className="w-12 sm:w-12 text-center font-bold text-[#2A2418] text-sm sm:text-base bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-[#5E4E06] rounded"
                         />
                         <button
                           onClick={() => setNeutralQuantity(neutralQuantity + 1)}
-                          className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-sm shadow hover:scale-110 transition-all duration-200 cursor-pointer"
+                          className="w-8 h-8 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-sm shadow hover:scale-110 transition-all duration-200 cursor-pointer"
                         >
                           +
                         </button>
@@ -354,69 +360,148 @@ export default function AuraClient() {
 
                 {/* Wall Plaster Pigmented */}
                 {productType === 'wallplaster' && wallPlasterType === 'pigmented' && (
-                  <div className="space-y-4">
-                    <div className="text-gray-700 font-bold text-lg">
-                      <span className="text-2xl font-black text-[#5E4E06]">₹689</span>
-                      <span className="text-lg text-gray-400 line-through ml-2">₹1099</span>
-                      <span className="text-sm text-green-600 font-bold ml-2">Save ₹410!</span>
-                    </div>
-                    <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-xl border border-[#E8E4D8] p-4 sm:p-6">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-                        {shaderColors.map((color) => {
-                          const selectedQty = pigmentedSelections[color.id] || 0;
-                          return (
-                            <div key={color.id} className={`relative flex flex-col items-center p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 shadow-sm bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] group hover:shadow-md ${selectedQty > 0 ? 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] scale-105' : 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] hover:border-gradient-to-r from-[#5E4E06] to-[#8B7A1A]'}`}>
-                              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full mb-3 sm:mb-4 border-4 border-white shadow-lg" style={{ background: color.hex }}></div>
-                              <div className="font-bold text-gray-800 text-xs mb-2 sm:mb-3 text-center leading-tight">{color.name}</div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-xs sm:text-sm disabled:opacity-50 shadow hover:bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] transition cursor-pointer"
-                                  onClick={() => setPigmentedSelections(s => ({ ...s, [color.id]: Math.max((s[color.id] || 0) - 1, 0) }))}
-                                  disabled={selectedQty === 0}
-                                >-</button>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={selectedQty}
-                                  onChange={e => {
-                                    const val = Math.max(Number(e.target.value), 0);
-                                    setPigmentedSelections(s => ({ ...s, [color.id]: val }));
-                                  }}
-                                  className="w-8 sm:w-10 text-center border-2 border-gray-300 rounded font-bold text-xs sm:text-sm focus:ring-2 focus:ring-gradient-to-r from-[#5E4E06] to-[#8B7A1A] focus:border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-gray-400"
-                                />
-                                <button
-                                  type="button"
-                                  className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-xs sm:text-sm shadow hover:bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] transition cursor-pointer"
-                                  onClick={() => setPigmentedSelections(s => ({ ...s, [color.id]: (s[color.id] || 0) + 1 }))}
-                                >+</button>
-                              </div>
-                              {selectedQty > 0 && (
-                                <div className="absolute -top-2 -right-2 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">x{selectedQty}</div>
-                              )}
-                            </div>
-                          );
-                        })}
+                  <div className="space-y-6">
+                    {/* Price Banner */}
+                    <div className="bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] rounded-xl p-6 text-white">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-3xl font-black">₹689</div>
+                          <div className="text-sm opacity-90">per 25kg pack</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg opacity-70 line-through">₹1099</div>
+                          <div className="text-sm font-bold text-yellow-300">Save ₹410!</div>
+                        </div>
                       </div>
-                      {/* Summary of selected shades */}
-                      {Object.entries(pigmentedSelections).filter(([_, qty]) => qty > 0).length > 0 && (
-                        <div className="mt-6 p-4 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-lg border border-[#E8E4D8]">
-                          <div className="font-semibold mb-3 text-gray-900">Selected Shades:</div>
-                          <div className="flex flex-wrap gap-2">
-                            {Object.entries(pigmentedSelections).filter(([_, qty]) => qty > 0).map(([shadeId, qty]) => {
-                              const color = shaderColors.find(c => c.id === shadeId);
-                              return (
-                                <div key={shadeId} className="flex items-center gap-2 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] px-3 py-2 rounded-full border border-[#E8E4D8] shadow-sm">
-                                  <span className="w-6 h-6 rounded-full border border-gray-300" style={{ background: color?.hex }}></span>
-                                  <span className="text-gray-700 text-sm font-medium">{color?.name}</span>
-                                  <span className="text-gray-900 font-bold text-sm">x{qty}</span>
-                                </div>
-                              );
-                            })}
+                    </div>
+
+                    {/* Color Palette Concept */}
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                      {/* Header */}
+                      <div className="bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] p-6 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-2xl font-bold text-gray-900">Color Palette</h3>
+                            <p className="text-gray-600">Select your perfect shades</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-600">Selected: {Object.entries(pigmentedSelections).filter(([_, qty]) => qty > 0).length} colors</div>
+                            <div className="text-lg font-bold text-[#5E4E06]">₹{getPigmentedTotalPrice().toLocaleString()}</div>
                           </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Color Swatches */}
+                      <div className="p-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {shaderColors.map((color) => {
+                            const selectedQty = pigmentedSelections[color.id] || 0;
+                            return (
+                              <div key={color.id} className={`group relative overflow-hidden rounded-xl border-2 transition-all duration-300 ${
+                                selectedQty > 0 
+                                  ? 'border-[#5E4E06] shadow-lg' 
+                                  : 'border-gray-200 hover:border-[#5E4E06] hover:shadow-md'
+                              }`}>
+                                {/* Color Swatch */}
+                                <div 
+                                  className="h-24 w-full relative"
+                                  style={{ background: color.hex }}
+                                >
+                                  {/* Overlay on hover */}
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300"></div>
+                                  
+                                  {/* Selected indicator */}
+                                  {selectedQty > 0 && (
+                                    <div className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-lg">
+                                      <CheckCircle className="w-4 h-4 text-[#5E4E06]" />
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Color Info */}
+                                <div className="p-4 bg-white">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                      <h4 className="font-bold text-gray-900">{color.name}</h4>
+                                      <p className="text-xs text-gray-500">Natural shade</p>
+                                    </div>
+                                    {selectedQty > 0 && (
+                                      <div className="text-right">
+                                        <div className="text-sm font-bold text-[#5E4E06]">₹{(selectedQty * 689).toLocaleString()}</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Quantity Selector */}
+                                  <div className="flex items-center gap-3">
+                                                                         <button
+                                       type="button"
+                                       className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-[#5E4E06] hover:text-white transition-all duration-200 disabled:opacity-50 cursor-pointer"
+                                       onClick={() => setPigmentedSelections(s => ({ ...s, [color.id]: Math.max((s[color.id] || 0) - 1, 0) }))}
+                                       disabled={selectedQty === 0}
+                                     >
+                                       -
+                                     </button>
+                                    <div className="flex-1 text-center">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={selectedQty}
+                                        onChange={e => {
+                                          const val = Math.max(Number(e.target.value), 0);
+                                          setPigmentedSelections(s => ({ ...s, [color.id]: val }));
+                                        }}
+                                        className="w-full text-center border-2 border-gray-200 rounded-lg py-2 font-bold text-sm focus:ring-2 focus:ring-[#5E4E06] focus:border-[#5E4E06]"
+                                        placeholder="0"
+                                      />
+                                    </div>
+                                                                         <button
+                                       type="button"
+                                       className="w-8 h-8 flex items-center justify-center rounded-full bg-[#5E4E06] text-white font-bold hover:bg-[#8B7A1A] transition-all duration-200 cursor-pointer"
+                                       onClick={() => setPigmentedSelections(s => ({ ...s, [color.id]: (s[color.id] || 0) + 1 }))}
+                                     >
+                                       +
+                                     </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Quick Summary */}
+                    {Object.entries(pigmentedSelections).filter(([_, qty]) => qty > 0).length > 0 && (
+                      <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-xl p-6 border border-[#E8E4D8]">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-xl font-bold text-gray-900">Your Selection</h4>
+                          <div className="text-sm text-gray-600">
+                            {getPigmentedTotalQty()} packs selected
+                          </div>
+                        </div>
+                        
+                        {/* Color chips */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {Object.entries(pigmentedSelections).filter(([_, qty]) => qty > 0).map(([shadeId, qty]) => {
+                            const color = shaderColors.find(c => c.id === shadeId);
+                            return (
+                              <div key={shadeId} className="flex items-center gap-2 bg-white px-3 py-2 rounded-full border border-gray-200 shadow-sm">
+                                <span className="w-4 h-4 rounded-full" style={{ background: color?.hex }}></span>
+                                <span className="text-sm font-medium text-gray-700">{color?.name}</span>
+                                <span className="text-xs text-gray-500">×{qty}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Total */}
+                        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                          <span className="text-lg font-bold text-gray-900">Total</span>
+                          <span className="text-2xl font-black text-[#5E4E06]">₹{getPigmentedTotalPrice().toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -428,7 +513,7 @@ export default function AuraClient() {
                         <button
                           key={pack.size}
                           onClick={() => handleSamplePackChange(pack.size as 3 | 6 | 12)}
-                          className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none cursor-pointer ${
+                          className={`flex-1 px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none cursor-pointer ${
                             selectedSamplePack === pack.size 
                               ? 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-gray-900 shadow-lg' 
                               : 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-gray-700 hover:shadow-md'
@@ -450,7 +535,7 @@ export default function AuraClient() {
                     <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-xl border border-[#E8E4D8] p-4 sm:p-6">
                       <div className="font-semibold text-gray-800 mb-4 text-sm sm:text-base">Select Colors ({selectedColors.length}/{selectedSamplePack}):</div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-                        {shaderColors.map(color => (
+                        {sampleColors.map(color => (
                           <button
                             key={color.id}
                             onClick={() => handleColorToggle(color.id)}
@@ -464,14 +549,14 @@ export default function AuraClient() {
                             }`}
                           >
                             <div 
-                              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full mb-2 sm:mb-3 shadow-md border-2 border-white ${
+                              className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full mb-2 sm:mb-3 shadow-md border-2 border-white ${
                                 selectedColors.includes(color.id) ? 'ring-2 ring-gradient-to-r from-[#5E4E06] to-[#8B7A1A]' : ''
                               }`}
                               style={{ backgroundColor: color.hex }}
                             />
                             <span className="text-xs font-semibold text-gray-800 text-center leading-tight">{color.name}</span>
                             {selectedColors.includes(color.id) && (
-                              <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-4 h-4 sm:w-6 sm:h-6 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center">
+                              <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 w-4 h-4 sm:w-6 sm:h-6 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center">
                                 <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                               </div>
                             )}
@@ -489,24 +574,24 @@ export default function AuraClient() {
 
       {/* Sticky Add to Cart Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-        <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-3 md:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 md:gap-4">
             <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4">
               {productType === 'wallplaster' && wallPlasterType === 'neutral' && (
-                <span className="text-xl sm:text-2xl font-black text-[#5E4E06]">₹{pack.price * neutralQuantity}</span>
+                <span className="text-lg sm:text-xl md:text-2xl font-black text-[#5E4E06]">₹{pack.price * neutralQuantity}</span>
               )}
               {productType === 'wallplaster' && wallPlasterType === 'pigmented' && getPigmentedTotalQty() > 0 && (
-                <span className="text-xl sm:text-2xl font-black text-[#5E4E06]">Total: ₹{getPigmentedTotalPrice()}</span>
+                <span className="text-lg sm:text-xl md:text-2xl font-black text-[#5E4E06]">Total: ₹{getPigmentedTotalPrice()}</span>
               )}
               {productType === 'sample' && (
-                <span className="text-xl sm:text-2xl font-black text-gray-900">₹{getCurrentPrice()}</span>
+                <span className="text-lg sm:text-xl md:text-2xl font-black text-gray-900">₹{getCurrentPrice()}</span>
               )}
               <span className="text-xs sm:text-sm text-gray-500">Inclusive of all taxes</span>
             </div>
             <button
               onClick={handleAddToCart}
               disabled={!canAddToCart || isAddingToCart}
-              className={`w-full sm:w-auto px-6 sm:px-8 py-3 font-bold rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base ${
+              className={`w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2 sm:py-3 font-bold rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base ${
                 canAddToCart && !isAddingToCart
                   ? 'bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white hover:shadow-xl hover:scale-105 cursor-pointer'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -532,33 +617,33 @@ export default function AuraClient() {
             {[
               {
                 icon: Shield,
-                title: "Natural Air Purification",
-                desc: "Removes toxins and improves indoor air quality naturally"
+                title: "Ancient Wisdom, Modern Benefits",
+                desc: "Crafted using traditional Indian techniques with natural ingredients that have been trusted for centuries"
               },
               {
                 icon: Leaf,
-                title: "Humidity Regulation",
-                desc: "Maintains optimal moisture levels for comfort"
+                title: "Natural Climate Control",
+                desc: "Regulates humidity and temperature naturally, creating a comfortable living environment year-round"
               },
               {
                 icon: Heart,
-                title: "Health Benefits",
-                desc: "Promotes respiratory health and wellbeing"
+                title: "Health-First Approach",
+                desc: "Improves indoor air quality and promotes respiratory health through natural air purification"
               },
               {
                 icon: Sparkles,
-                title: "Thermal Insulation",
-                desc: "Keeps your space cool in summer and warm in winter"
+                title: "Eco-Friendly Excellence",
+                desc: "100% natural ingredients sourced sustainably, reducing your carbon footprint"
               },
               {
                 icon: Star,
-                title: "Fire Resistant",
-                desc: "Enhanced safety with natural fire resistance"
+                title: "Superior Durability",
+                desc: "Fire-resistant, mold-resistant, and built to last with exceptional wear resistance"
               },
               {
                 icon: CheckCircle,
-                title: "Easy Application",
-                desc: "Simple to apply with professional finish"
+                title: "Easy & Versatile",
+                desc: "Simple application process with professional finish on any wall surface"
               }
             ].map((feature, idx) => (
               <div key={idx} className="p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl shadow-lg border border-[#E8E4D8] text-center group hover:shadow-2xl transition-all duration-300">
@@ -569,6 +654,219 @@ export default function AuraClient() {
                 <p className="text-gray-600 text-base">{feature.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Natural Ingredients Section */}
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-12 text-center">Natural Ingredients</h2>
+          <p className="text-xl text-gray-600 mb-12 text-center max-w-4xl mx-auto">
+            Aura is crafted from carefully selected natural ingredients, each bringing unique properties that work together to create the perfect wall plaster.
+          </p>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
+            {/* Earthen Clay */}
+            <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl p-4 sm:p-6 md:p-8 border border-[#E8E4D8] shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-[#8B4513] to-[#A0522D] rounded-full flex items-center justify-center flex-shrink-0">
+                  <Mountain className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Earthen Clay</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Earth clay enhances the plaster's inherent durability</p>
+                </div>
+              </div>
+              <div className="space-y-4 text-gray-700">
+                <p className="leading-relaxed text-sm sm:text-base">
+                  Earth clay enhances the plaster's inherent durability. The natural earth clay absorbs excess humidity in the air and releases it slowly, thus helping in regulating the house temperature. An often overlooked and subtle benefit of clay is that when it comes into contact with water, it emits a negative charge. These negative ions help humans to absorb more oxygen. This also helps to counteract the positive charges and ions that are emitted by home electronics. Earth clay makes wall surfaces fireproof and mold resistant as well.
+                </p>
+              </div>
+            </div>
+
+            {/* Gypsum */}
+            <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl p-4 sm:p-6 md:p-8 border border-[#E8E4D8] shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-[#F5F5DC] to-[#DEB887] rounded-full flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Gypsum</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">The primary ingredient or the dominant binder in Aura</p>
+                </div>
+              </div>
+              <div className="space-y-4 text-gray-700">
+                <p className="leading-relaxed text-sm sm:text-base">
+                  Gypsum offers exceptional yield and high-performance with superior acoustic and thermal insulation properties. Additionally, it provides passive fire-resistance, moisture & vapour control with shock resistance, that helps in regulating the interior climate and air quality. It's timeless appeal lies in its excellent resistance to wear and tear, making the wall surface impervious to natural ageing or deterioration over time.
+                </p>
+              </div>
+            </div>
+
+            {/* Cow Dung */}
+            <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl p-4 sm:p-6 md:p-8 border border-[#E8E4D8] shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-[#8B4513] to-[#A0522D] rounded-full flex items-center justify-center flex-shrink-0">
+                  <Leaf className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Cow Dung</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Effective protection from microbial growth</p>
+                </div>
+              </div>
+              <div className="space-y-4 text-gray-700">
+                <p className="leading-relaxed text-sm sm:text-base">
+                  Vaccae present in cow dung provides effective protection from microbial growth that affects most wall surfaces. Not only is it a good binder, but the fibers present in it creates a smooth, fine floor finish that stops cracks from appearing. What's more, it also increases the insulation properties of the plaster.
+                </p>
+                <div className="bg-gradient-to-r from-[#5E4E06]/10 to-[#8B7A1A]/10 rounded-lg p-3 sm:p-4 border border-[#B8A94A]">
+                  <p className="text-xs sm:text-sm text-gray-700 italic">
+                    Traditionally used for plastering walls and floors, the cow dung used in Aura Natural Wall Plaster is only of the Desi (Bhartiya) cows. grazed in a natural habitat on the land of Thar. This results in a quality organic insulation of your home, giving you a very pleasant earthy freshness.
+                  </p>
+                </div>
+                <div className="bg-gradient-to-r from-[#5E4E06]/10 to-[#8B7A1A]/10 rounded-lg p-3 sm:p-4 border border-[#B8A94A]">
+                  <p className="text-xs sm:text-sm text-gray-700 italic">
+                    We source our cow dung from an independently run Gaushala, helping in the upkeep and maintenance of local community-driven intitiatives.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Other Ingredients */}
+            <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl p-4 sm:p-6 md:p-8 border border-[#E8E4D8] shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-[#F0E68C] to-[#DAA520] rounded-full flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Other Ingredients</h3>
+                  <p className="text-gray-600 text-sm sm:text-base">Aura also contains lime concentrate</p>
+                </div>
+              </div>
+              <div className="space-y-4 text-gray-700">
+                <p className="leading-relaxed text-sm sm:text-base">
+                  Aura also contains lime concentrate that makes your wall surface durable and all- weather resistant. It makes the wall impervious to mold and bacteria and also enhances the workability and ease of application of the final mixture, providing good whiteness index, smooth finish and supreme natural adhesion.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Origin Section */}
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-12 text-center">The Story of Aura</h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-12">
+            {/* Left Side - Image */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-2xl opacity-20"></div>
+              <img
+                src="/images/aura_1.webp"
+                alt="Aura Natural Wall Plaster"
+                className="relative w-full h-80 object-cover rounded-3xl shadow-2xl"
+              />
+              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#E6C866]" />
+                  <span className="text-sm font-bold text-gray-900">Created in Jodhpur</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Content */}
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] border border-[#B8A94A] text-[#5E4E06] rounded-full text-sm font-semibold">
+                <Leaf className="w-4 h-4" />
+                <span>Eco-Friendly Innovation</span>
+              </div>
+              
+              <h3 className="text-2xl font-bold text-gray-900">A Natural Revolution</h3>
+              
+              <div className="space-y-4 text-gray-700 leading-relaxed">
+                <p>
+                  Many people have come to realize the damage caused to oneself and the environment by using sand-cement plasters. As more people come face-to-face with grim reality, a growing demand for natural, organic alternative options came to the foray, opening demand for economically feasible and naturally beneficial alternatives for the purpose of plastering or finishing.
+                </p>
+                <p>
+                  After years of conducting tests and experimentation, practicing Eco-friendly sourcing and manufacturing methods, Aura was developed in Jodhpur, home to a rich ecosystem of raw materials, an aesthetically-pleasing yet strong gypsum-based plaster, the ingredients in Aura are naturally sturdy, created in the harshest of environments to withstand the most inhuman conditions
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Journey Timeline */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8] shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <span className="text-2xl font-bold text-white">1</span>
+              </div>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">Environmental Awareness</h4>
+              <p className="text-gray-600 text-sm">Recognition of sand-cement plaster damage to environment and health</p>
+            </div>
+            
+            <div className="text-center p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8] shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <span className="text-2xl font-bold text-white">2</span>
+              </div>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">Research & Development</h4>
+              <p className="text-gray-600 text-sm">Years of testing and eco-friendly manufacturing methods</p>
+            </div>
+            
+                         <div className="text-center p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8] shadow-lg">
+               <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                 <span className="text-2xl font-bold text-white">3</span>
+               </div>
+               <h4 className="text-lg font-bold text-gray-900 mb-2">Creation of Aura</h4>
+               <p className="text-gray-600 text-sm">Natural plaster developed in Jodhpur's rich ecosystem</p>
+             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Video Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-12 text-center">Learn More About Aura</h2>
+          <p className="text-xl text-gray-600 mb-12 text-center max-w-4xl mx-auto">
+            Discover the story behind Aura and learn how to apply it for the best results
+          </p>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Introduction Video */}
+            <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl p-6 border border-[#E8E4D8] shadow-lg">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Introduction to Aura</h3>
+              <p className="text-gray-600 mb-6">
+                Learn about the natural ingredients and benefits that make Aura the perfect choice for your walls.
+              </p>
+              <div className="aspect-video bg-gray-200 rounded-xl overflow-hidden">
+                <iframe
+                  src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                  title="Introduction to Aura"
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+
+            {/* Application Video */}
+            <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl p-6 border border-[#E8E4D8] shadow-lg">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Application Guide</h3>
+              <p className="text-gray-600 mb-6">
+                Step-by-step guide on how to apply Aura Natural Wall Plaster for professional results.
+              </p>
+              <div className="aspect-video bg-gray-200 rounded-xl overflow-hidden">
+                <iframe
+                  src="https://www.youtube.com/embed/jNQXAC9IVRw"
+                  title="Aura Application Guide"
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
           </div>
         </div>
       </section>
