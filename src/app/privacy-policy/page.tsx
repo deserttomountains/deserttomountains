@@ -1,6 +1,41 @@
+import type { Metadata } from 'next';
 import React from "react";
 import Navigation from '@/components/Navigation';
 import { Shield, User, Mail, Globe, Lock, AlertCircle, Cookie, ArrowRight, Info } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | Desert to Mountains',
+  description: 'Read Desert to Mountains Privacy Policy. Learn how we protect your personal information, use cookies, and maintain data security for our natural building solutions.',
+  keywords: 'Desert to Mountains privacy policy, data protection, personal information, cookie policy, data security, natural building solutions privacy',
+  openGraph: {
+    title: 'Privacy Policy | Desert to Mountains',
+    description: 'Read Desert to Mountains Privacy Policy. Learn how we protect your personal information, use cookies, and maintain data security for our natural building solutions.',
+    type: 'website',
+    url: 'https://deserttomountains.com/privacy-policy',
+    siteName: 'Desert to Mountains',
+    images: [
+      {
+        url: '/images/about_page_img.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Desert to Mountains Privacy Policy',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Privacy Policy | Desert to Mountains',
+    description: 'Read Desert to Mountains Privacy Policy. Learn how we protect your personal information, use cookies, and maintain data security for our natural building solutions.',
+    images: ['/images/about_page_img.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: 'https://deserttomountains.com/privacy-policy',
+  },
+};
 
 const sections = [
   {

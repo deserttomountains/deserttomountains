@@ -100,7 +100,7 @@ export default function DhuneeClient() {
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2A2418] mb-2 animate-fade-in-up">Dhunee</h1>
             <p className="text-[#5E4E06] font-bold text-lg sm:text-xl mb-4 animate-fade-in-up">Organic Incense</p>
-            <p className="text-[#2A2418]/70 text-base sm:text-lg mb-6 animate-fade-in-up">Premium incense crafted from Himalayan herbs, desi cow dung, and pure ghee, based on ancient Vedic traditions for purification and peaceful ambiance.</p>
+            <p className="text-[#2A2418]/70 text-base sm:text-lg mb-6 animate-fade-in-up">Premium incense crafted from Himalayan herbs, desi cow dung, and pure ghee, based on traditional Vedic practices for purification and peaceful ambiance.</p>
             
             {/* Size Selection */}
             <div className="mb-6">
@@ -259,7 +259,7 @@ export default function DhuneeClient() {
           {/* Text Side */}
           <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-[#E8E4D8]">
             <h3 className="text-xl sm:text-2xl font-bold text-[#5E4E06] mb-4 text-center">About Dhunee & The Hawan Tradition</h3>
-            <p className="text-sm sm:text-lg text-gray-700 mb-4">In primeval times, Deva Rishis, ancient scholars who lived their lives with simplicity and renunciation, practised Hawan – a crucial and sacred ritual of Hindu Culture – for mental peace and well being.</p>
+                            <p className="text-sm sm:text-lg text-gray-700 mb-4">In primeval times, Deva Rishis, traditional scholars who lived their lives with simplicity and renunciation, practised Hawan – a crucial and sacred ritual of Hindu Culture – for mental peace and well being.</p>
             <blockquote className="border-l-4 border-[#5E4E06] pl-4 italic text-[#5E4E06] mb-4 bg-[#F8F6F0] py-2 rounded text-sm sm:text-base">Mahamrityunjay Mantra, a noted chant from Hindu Mythology, manifests as <span className='font-semibold'>sugandhim</span> (Aroma/Good Smell) <span className='font-semibold'>pushtivardhanam</span> (Give rise to good Health/nourishment) emphasizing that a clean and a fragrant atmosphere helps in nourishing the soul within.</blockquote>
             <p className="text-sm sm:text-lg text-gray-700 mb-4">Hawan follows the scientific process wherein carefully picked Himalayan medicinal herbs are offered to Agni Dev (the Fire God) along with 100% organic cow dung & Ghee (Butter), producing Oxygen when burnt together.</p>
             <p className="text-sm sm:text-lg text-gray-700 mb-4">Although widely noted as something practiced by Deva Rishis, the practice of Hawan is also recommended by the earliest holy scriptures of Hindu religion – Yajur Veda. It advocates performing Hawan every morning and evening to attain spiritual enlightenment, mental peace, purification of mind, and calm aura.</p>
@@ -272,7 +272,7 @@ export default function DhuneeClient() {
       <section className="py-12 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
           <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Experience Purity & Peace</h3>
-          <p className="text-sm sm:text-lg text-gray-700 mb-4">Dhunee is more than incense—it's a sacred tradition. Each stick is hand-rolled using Himalayan herbs, desi cow dung, and pure ghee, following ancient Vedic recipes for spiritual and environmental purification. Light Dhunee to cleanse your space, invite peace, and connect with timeless Indian wisdom.</p>
+          <p className="text-sm sm:text-lg text-gray-700 mb-4">Dhunee is more than incense—it's a sacred tradition. Each stick is hand-rolled using Himalayan herbs, desi cow dung, and pure ghee, following traditional Vedic recipes for spiritual and environmental purification. Light Dhunee to cleanse your space, invite peace, and connect with timeless Indian knowledge.</p>
         </div>
       </section>
 

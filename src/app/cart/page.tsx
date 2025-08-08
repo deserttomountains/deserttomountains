@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 
-const ESTIMATED_DELIVERY = '3-5 business days';
+const ESTIMATED_DELIVERY = '7-10 days';
 const VALID_CODE = 'AURA10';
 const DISCOUNT_AMOUNT = 500;
 

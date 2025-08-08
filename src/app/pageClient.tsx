@@ -12,7 +12,9 @@ import {
   Quote,
   Zap,
   Mountain,
-  Sun
+  Sun,
+  Globe,
+  Compass
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import Link from 'next/link';
@@ -20,7 +22,6 @@ import { useState, useEffect } from 'react';
 import React from 'react';
 
 export default function HomeClient() {
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Hero slideshow images
@@ -32,44 +33,18 @@ export default function HomeClient() {
   ];
 
   useEffect(() => {
-    const testimonialInterval = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
-    
     const slideshowInterval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
     }, 4000);
     
     return () => {
-      clearInterval(testimonialInterval);
       clearInterval(slideshowInterval);
     };
   }, []);
 
-  const testimonials = [
-    {
-      text: "The Aura plaster completely transformed our home. The air quality improved dramatically and the walls look absolutely stunning.",
-      author: "Priya Sharma",
-      location: "Mumbai"
-    },
-    {
-      text: "Dhunee incense has become an essential part of our daily ritual. The aroma is pure and brings such peace to our space.",
-      author: "Rajesh Kumar",
-      location: "Delhi"
-    },
-    {
-      text: "Finally found products that align with our values of natural living. The quality and authenticity are unmatched.",
-      author: "Anita Patel",
-      location: "Bangalore"
-    }
-  ];
 
-  const benefits = [
-    { icon: Shield, title: "100% Natural", desc: "Zero chemicals or toxins" },
-    { icon: Heart, title: "Healthy Spaces", desc: "Promotes Natural Air Quality" },
-    { icon: Leaf, title: "Eco-Conscious", desc: "Sustainable & earth-friendly" },
-    { icon: Star, title: "Ancient Wisdom", desc: "5000+ years of tradition" }
-  ];
+
+
 
   // Helper to split text into spans for letter animation
   function AnimatedTitle({ text, className = '' }: { text: string; className?: string }) {
@@ -104,7 +79,7 @@ export default function HomeClient() {
             <img
               key={index}
               src={image}
-              alt={`Hero Slide ${index + 1}`}
+              alt={`Desert to Mountains Hero Slide ${index + 1} - Natural Building Solutions`}
               className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000 ${
                 index === currentSlide ? 'opacity-100' : 'opacity-0'
               }`}
@@ -180,56 +155,111 @@ export default function HomeClient() {
         `}</style>
       </section>
 
-      {/* Benefits Section - Enhanced with Dynamic Background */}
-      <section className="py-24 bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-[#E8E4D8] relative overflow-hidden">
+      {/* Desert to Mountains Section - New */}
+      <section className="py-24 bg-gradient-to-br from-[#F0EDE4] via-[#F8F6F0] to-[#E8E4D8] relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%235E4E06' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%235E4E06' fill-opacity='0.1'%3E%3Cpath d='M40 40c0-22.091-17.909-40-40-40v80c22.091 0 40-17.909 40-40zm0 0c0 22.091 17.909 40 40 40V0c-22.091 0-40 17.909-40 40z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
           }}></div>
         </div>
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-6">Why Choose Aura?</h2>
-            <p className="text-2xl text-[#2A2418]/70 max-w-4xl mx-auto font-light">
-              Experience the transformative power of nature's finest ingredients
+          <div className="text-center mb-20">
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <Mountain className="w-12 h-12 text-[#5E4E06]" />
+              <h1 className="text-5xl md:text-6xl font-black text-[#2A2418]">Desert to Mountains</h1>
+              <Sun className="w-12 h-12 text-[#8B7A1A]" />
+            </div>
+            <p className="text-2xl md:text-3xl text-[#5E4E06] font-semibold mb-6">
+              A Return to the Earth, A Step Toward the Future
             </p>
           </div>
-          
-          
-          {/* Benefits Cards Grid - Centered and Responsive */}
-          <div className="mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 justify-items-center max-w-4xl">
-            {benefits
-              .filter((benefit) => benefit.title !== "Ancient Wisdom")
-              .map((benefit, index) => (
-                <div key={index} className="group text-center p-10 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 border border-[#E8E4D8] backdrop-blur-sm relative overflow-hidden w-full max-w-xs">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06]/5 to-[#8B7A1A]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="w-20 h-20 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg group-hover:shadow-[#5E4E06]/25 transition-all duration-300 relative z-10 group-hover:scale-110">
-                  <benefit.icon className="w-10 h-10 text-white group-hover:rotate-12 transition-transform duration-300" />
-                </div>
-                <h3 className="text-2xl font-black text-[#2A2418] mb-4 relative z-10">{benefit.title}</h3>
-                <p className="text-[#2A2418]/70 text-lg font-medium relative z-10">{benefit.desc}</p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-20">
+            <div className="order-2 lg:order-1">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-2xl opacity-20 animate-pulse"></div>
+                <img
+                  src="/images/deserttomountains-4-scaled-1.webp"
+                  alt="Desert to Mountains Landscape - Natural Building Solutions from Thar Desert to Himalayas"
+                  className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover rounded-3xl shadow-2xl hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#2A2418]/30 to-transparent rounded-3xl"></div>
               </div>
-            ))}
+            </div>
+
+            <div className="order-1 lg:order-2">
+              <div className="space-y-8">
+                <p className="text-xl md:text-2xl text-[#2A2418]/80 leading-relaxed font-light">
+                  Desert to Mountains is a vision born from the raw beauty and wisdom of India's landscapes—from the
+                  sun-baked dunes of the Thar Desert to the enduring serenity of the Himalayan ranges. Our mission is rooted
+                  in a single belief: <span className="font-semibold text-[#5E4E06]">nature has everything we need</span>, if only we learn how to use it responsibly.
+                </p>
+                
+                <p className="text-lg md:text-xl text-[#2A2418]/70 leading-relaxed">
+                  We are dedicated to reviving ancient building practices through modern, sustainable innovation. By crafting
+                  eco-conscious materials that honor our ecological heritage, we aim to redefine how homes and buildings
+                  interact with the environment.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20">
+            <div className="group p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl border border-[#E8E4D8] hover:shadow-2xl transition-all duration-500 hover:scale-105">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <Leaf className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-black text-[#2A2418]">Minimally Processed</h3>
+              </div>
+              <p className="text-[#2A2418]/70 text-lg leading-relaxed">
+                Each of our products is developed with care—minimally processed, naturally sourced, and designed to nourish not just your spaces, but also your wellbeing.
+              </p>
+            </div>
+
+            <div className="group p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl border border-[#E8E4D8] hover:shadow-2xl transition-all duration-500 hover:scale-105">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <Globe className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-black text-[#2A2418]">Natural Ingredients</h3>
+              </div>
+              <p className="text-[#2A2418]/70 text-lg leading-relaxed">
+                From clay that breathes, to lime that strengthens, from gypsum that insulates, to cow dung that heals, we work with ingredients that have long protected Indian homes—now reimagined for the world of tomorrow.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="max-w-4xl mx-auto">
+              <div className="relative p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl border border-[#B8A94A] shadow-xl">
+                <Quote className="w-12 h-12 text-[#5E4E06] mx-auto mb-6" />
+                <p className="text-2xl md:text-3xl text-[#2A2418]/80 font-light leading-relaxed mb-6">
+                  We don't just create materials—we create movements. Movements toward healthier homes, cleaner air,
+                  skilled local communities, and a future where construction doesn't compromise the planet.
+                </p>
+                <div className="flex items-center justify-center gap-4">
+                  <Compass className="w-8 h-8 text-[#5E4E06]" />
+                  <span className="text-[#5E4E06] font-semibold text-lg">Building Tomorrow, Today</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
+
+
       {/* Products Section - Enhanced with Dynamic Elements */}
       <section className="py-24 bg-gradient-to-br from-[#F0EDE4] via-[#F8F6F0] to-[#E8E4D8] relative overflow-hidden">
-        {/* Floating Elements */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-20 left-10 w-4 h-4 bg-[#5E4E06]/20 rounded-full animate-bounce" style={{animationDelay: '0.5s'}}></div>
-          <div className="absolute top-40 right-20 w-3 h-3 bg-[#8B7A1A]/30 rounded-full animate-bounce" style={{animationDelay: '1.5s'}}></div>
-          <div className="absolute bottom-20 left-1/3 w-5 h-5 bg-[#E6C866]/25 rounded-full animate-bounce" style={{animationDelay: '2.5s'}}></div>
-        </div>
 
         <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 relative z-10">
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-8">Our Premium Collection</h2>
             <p className="text-2xl text-[#2A2418]/70 max-w-4xl mx-auto font-light">
-              Two masterpieces born from ancient wisdom, perfected for modern homes
+              Two masterpieces born from timeless traditions, perfected for modern homes
             </p>
           </div>
           
@@ -257,7 +287,7 @@ export default function HomeClient() {
                     <div className="relative overflow-hidden rounded-2xl shadow-2xl">
                       <img
                         src="/images/aura.webp"
-                        alt="Aura Natural Wall Plaster"
+                        alt="Aura Natural Wall Plaster - Eco-Friendly Gypsum and Cow Dung Based Plaster"
                         className="w-full h-48 sm:h-56 md:h-64 object-cover group-hover:scale-110 transition-transform duration-700 rounded-xl"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#2A2418]/20 to-transparent"></div>
@@ -266,7 +296,7 @@ export default function HomeClient() {
                   
                   <p className="text-[#2A2418]/70 text-base sm:text-lg md:text-xl mb-10 leading-relaxed font-light">
                     Revolutionary gypsum and cow dung-based plaster that naturally regulates air quality 
-                    while creating stunning, healthy surfaces inspired by ancient Indian wisdom.
+                    while creating stunning, healthy surfaces inspired by traditional Indian knowledge.
                   </p>
                   
                   <div className="grid grid-cols-1 gap-4 mb-10">
@@ -332,7 +362,7 @@ export default function HomeClient() {
                     <div className="relative overflow-hidden rounded-2xl shadow-2xl">
                       <img
                         src="/images/dhunee.webp"
-                        alt="Dhunee Organic Incense"
+                        alt="Dhunee Organic Incense - Traditional Vedic Incense with Himalayan Herbs"
                         className="w-full h-48 sm:h-56 md:h-64 object-cover group-hover:scale-110 transition-transform duration-700 rounded-xl"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#2A2418]/20 to-transparent"></div>
@@ -341,7 +371,7 @@ export default function HomeClient() {
                   
                   <p className="text-[#2A2418]/70 text-base sm:text-lg md:text-xl mb-10 leading-relaxed font-light">
                     Premium incense crafted from Himalayan herbs, desi cow dung, and pure ghee, 
-                    based on ancient Vedic traditions for purification and peaceful ambiance.
+                    based on traditional Vedic practices for purification and peaceful ambiance.
                   </p>
                   
                   <div className="grid grid-cols-1 gap-4 mb-10">
@@ -387,51 +417,7 @@ export default function HomeClient() {
         </div>
       </section>
 
-      {/* Testimonials Section - Enhanced */}
-      <section className="py-24 bg-gradient-to-br from-[#2A2418] via-[#5E4E06] to-[#8B7A1A] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-0"></div>
-        
-        <div className="relative z-10 max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl md:text-6xl font-black text-white mb-8">What Our Family Says</h2>
-            <p className="text-2xl text-[#F5F2E8] max-w-3xl mx-auto font-light">
-              Join thousands who've transformed their homes and lives
-            </p>
-          </div>
 
-          <div className="relative">
-            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-8 md:p-12 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500">
-              <Quote className="w-12 h-12 sm:w-16 sm:h-16 text-[#E6C866] mx-auto mb-6 sm:mb-8 animate-bounce" style={{animationDuration: '3s'}} />
-              
-              <div className="text-center">
-                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white mb-6 sm:mb-8 leading-relaxed font-light italic">
-                  "{testimonials[activeTestimonial].text}"
-                </p>
-                
-                <div className="text-[#E6C866] font-bold text-lg sm:text-xl mb-2">
-                  {testimonials[activeTestimonial].author}
-                </div>
-                <div className="text-[#F5F2E8] text-base sm:text-lg">
-                  {testimonials[activeTestimonial].location}
-                </div>
-              </div>
-            </div>
-            
-            {/* Testimonial Indicators */}
-            <div className="flex justify-center gap-3 mt-8">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setActiveTestimonial(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    index === activeTestimonial ? 'bg-[#E6C866] w-8' : 'bg-white/30'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Story Section - Enhanced */}
       <section id="story" className="py-24 bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-[#E8E4D8] relative overflow-hidden">
@@ -462,7 +448,7 @@ export default function HomeClient() {
               <div className="space-y-8 mb-12">
                 <p className="text-2xl text-[#2A2418]/70 leading-relaxed font-light">
                   Born from a sacred journey across India's diverse landscapes, we discovered the 
-                  <span className="font-semibold text-[#5E4E06]"> ancient secrets</span> that transform 
+                  <span className="font-semibold text-[#5E4E06]"> traditional secrets</span> that transform 
                   simple materials into powerful wellness solutions.
                 </p>
                 
@@ -474,8 +460,8 @@ export default function HomeClient() {
 
               <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-12">
                 <div className="text-center p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:scale-105 transition-transform duration-300">
-                  <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-[#5E4E06] mb-1 sm:mb-2 whitespace-nowrap">Ancient</div>
-                  <div className="text-[#2A2418]/70 font-medium text-sm sm:text-base whitespace-nowrap">Wisdom</div>
+                  <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-[#5E4E06] mb-1 sm:mb-2 whitespace-nowrap">Traditional</div>
+                  <div className="text-[#2A2418]/70 font-medium text-sm sm:text-base whitespace-nowrap">Knowledge</div>
                 </div>
                 <div className="text-center p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#B8A94A] hover:scale-105 transition-transform duration-300">
                   <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-[#5E4E06] mb-1 sm:mb-2 whitespace-nowrap">Modern</div>
@@ -502,7 +488,7 @@ export default function HomeClient() {
           <p className="text-2xl text-[#F5F2E8] mb-16 max-w-4xl mx-auto leading-relaxed font-light">
             Join our growing family of conscious homeowners who've chosen the path of 
             <span className="font-semibold text-[#E6C866]"> natural living</span> and 
-            <span className="font-semibold text-[#E6C866]"> ancient wisdom</span>
+            <span className="font-semibold text-[#E6C866]"> traditional knowledge</span>
           </p>
           
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 justify-center">

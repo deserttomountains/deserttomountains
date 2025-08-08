@@ -16,7 +16,7 @@ export default function AuraClient() {
   const [productType, setProductType] = useState<'wallplaster' | 'sample'>('wallplaster');
   const [selectedSamplePack, setSelectedSamplePack] = useState<3 | 6 | 12>(3);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [wallPlasterType, setWallPlasterType] = useState<'neutral' | 'pigmented'>('neutral');
+  const [wallPlasterType, setWallPlasterType] = useState<'natural' | 'pigmented'>('natural');
   const [neutralQuantity, setNeutralQuantity] = useState(1);
   const [pigmentedSelections, setPigmentedSelections] = useState<{ [shadeId: string]: number }>({});
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -132,7 +132,7 @@ export default function AuraClient() {
       let cartItem;
       
       if (productType === 'wallplaster') {
-        if (wallPlasterType === 'neutral') {
+        if (wallPlasterType === 'natural') {
           cartItem = {
             id: 1,
             name: 'Aura Wall Plaster 25kg',
@@ -165,10 +165,10 @@ export default function AuraClient() {
           };
         }
       } else {
-        // Sample pack
+        // Mock Sample pack
         cartItem = {
           id: 2,
-          name: `Sample Pack (${selectedSamplePack} Colors)` ,
+          name: `Mock Sample (${selectedSamplePack} Colors)` ,
           image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80',
           price: selectedPack?.price || 0,
           quantity: 1,
@@ -223,14 +223,14 @@ export default function AuraClient() {
           <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 border border-[#E8E4D8] animate-fade-in-up">
             <div className="mb-4 inline-flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] border border-[#B8A94A] text-[#5E4E06] rounded-full text-sm font-semibold animate-fade-in-up">
               <Sparkles className="w-4 h-4 animate-spin" style={{animationDuration: '3s'}} />
-              <span>Natural Wall Plaster • Ancient Wisdom</span>
+              <span>Natural Wall Plaster • Traditional Knowledge</span>
               <Sparkles className="w-4 h-4 animate-spin" style={{animationDuration: '3s', animationDirection: 'reverse'}} />
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-[#2A2418] mb-2 animate-fade-in-up">Aura</h1>
             <p className="text-[#5E4E06] font-bold text-xl mb-4 animate-fade-in-up">Natural Wall Plaster</p>
             <p className="text-[#2A2418]/70 text-lg mb-6 animate-fade-in-up">
               Revolutionary gypsum and cow dung-based plaster that naturally regulates air quality 
-              while creating stunning, healthy surfaces inspired by ancient Indian wisdom.
+              while creating stunning, healthy surfaces inspired by traditional Indian knowledge.
             </p>
             
             {/* Quick Features */}
@@ -265,17 +265,17 @@ export default function AuraClient() {
                     <Package className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                     Wall Plaster
                   </button>
-                  <button
-                    onClick={() => setProductType('sample')}
-                    className={`flex-1 px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer text-sm sm:text-base ${
-                      productType === 'sample' 
-                        ? 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-gray-900 shadow-lg' 
-                        : 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-gray-700 hover:shadow-md'
-                    }`}
-                  >
-                    <Palette className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
-                    Sample Pack
-                  </button>
+                                      <button
+                      onClick={() => setProductType('sample')}
+                      className={`flex-1 px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none flex items-center justify-center gap-2 sm:gap-3 cursor-pointer text-sm sm:text-base ${
+                        productType === 'sample' 
+                          ? 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-gray-900 shadow-lg' 
+                          : 'border-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-gray-700 hover:shadow-md'
+                      }`}
+                    >
+                      <Palette className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                      Mock Sample
+                    </button>
                 </div>
               </div>
 
@@ -285,14 +285,14 @@ export default function AuraClient() {
                   <h3 className="text-lg font-bold text-[#2A2418] mb-4">Step 2: Choose Wall Plaster Type</h3>
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <button
-                      onClick={() => setWallPlasterType('neutral')}
+                      onClick={() => setWallPlasterType('natural')}
                       className={`flex-1 px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none cursor-pointer text-sm sm:text-base ${
-                        wallPlasterType === 'neutral'
+                        wallPlasterType === 'natural'
                           ? 'border-[#5E4E06] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#5E4E06] shadow-lg'
                           : 'border-[#B8A94A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#2A2418] hover:border-[#5E4E06] hover:shadow-md'
                       }`}
                     >
-                      Neutral
+                      Natural
                     </button>
                     <button
                       onClick={() => setWallPlasterType('pigmented')}
@@ -311,11 +311,11 @@ export default function AuraClient() {
               {/* Step 3: Product Configuration */}
               <div>
                 <h3 className="text-lg font-bold text-[#2A2418] mb-4">
-                  Step 3: {productType === 'wallplaster' ? (wallPlasterType === 'neutral' ? 'Pack Details' : 'Select Shades') : 'Choose Sample Pack'}
+                  Step 3: {productType === 'wallplaster' ? (wallPlasterType === 'natural' ? 'Pack Details' : 'Select Shades') : 'Choose Mock Sample'}
                 </h3>
                 
-                {/* Wall Plaster Neutral */}
-                {productType === 'wallplaster' && wallPlasterType === 'neutral' && (
+                {/* Wall Plaster Natural */}
+                {productType === 'wallplaster' && wallPlasterType === 'natural' && (
                   <div className="bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-xl p-6 border border-[#E8E4D8]">
                     <div className="flex items-center justify-between mb-4">
                       <div>
@@ -505,7 +505,7 @@ export default function AuraClient() {
                   </div>
                 )}
 
-                {/* Sample Pack Selection */}
+                {/* Mock Sample Selection */}
                 {productType === 'sample' && (
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -577,7 +577,7 @@ export default function AuraClient() {
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-3 md:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 md:gap-4">
             <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4">
-              {productType === 'wallplaster' && wallPlasterType === 'neutral' && (
+              {productType === 'wallplaster' && wallPlasterType === 'natural' && (
                 <span className="text-lg sm:text-xl md:text-2xl font-black text-[#5E4E06]">₹{pack.price * neutralQuantity}</span>
               )}
               {productType === 'wallplaster' && wallPlasterType === 'pigmented' && getPigmentedTotalQty() > 0 && (
@@ -617,7 +617,7 @@ export default function AuraClient() {
             {[
               {
                 icon: Shield,
-                title: "Ancient Wisdom, Modern Benefits",
+                title: "Traditional Knowledge, Modern Benefits",
                 desc: "Crafted using traditional Indian techniques with natural ingredients that have been trusted for centuries"
               },
               {
@@ -908,35 +908,7 @@ export default function AuraClient() {
         </div>
       </section>
 
-      {/* Application Process */}
-      <section className="py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-12 text-center">Simple Application Process</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <span className="text-2xl font-bold text-white">1</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Surface Preparation</h3>
-              <p className="text-gray-600">Clean and prepare your wall surface for optimal adhesion</p>
-            </div>
-            <div className="text-center p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <span className="text-2xl font-bold text-white">2</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Application</h3>
-              <p className="text-gray-600">Apply Aura plaster using traditional techniques</p>
-            </div>
-            <div className="text-center p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <span className="text-2xl font-bold text-white">3</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Curing</h3>
-              <p className="text-gray-600">Allow natural curing for best results</p>
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* Shipping & Support */}
       <section className="py-16 bg-gradient-to-br from-gray-50 to-white">

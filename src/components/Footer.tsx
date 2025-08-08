@@ -10,14 +10,14 @@ export default function Footer() {
           <div className="flex flex-col items-center text-center mb-8 md:mb-0">
             <Image
               src="/desert-to-mountains-logo.webp"
-              alt="Desert to Mountains Logo"
+              alt="Desert to Mountains - Natural Building Solutions Logo"
               width={112}
               height={56}
               className="h-14 w-auto mb-2"
               priority
             />
             <p className="text-[#F5F2E8] leading-relaxed text-sm max-w-xs mx-auto">
-              Ancient wisdom meets modern living through natural wall plaster and organic incense.
+              Traditional knowledge meets modern living through natural wall plaster and organic incense.
             </p>
           </div>
           

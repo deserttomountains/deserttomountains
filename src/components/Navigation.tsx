@@ -77,7 +77,7 @@ export default function Navigation() {
             <Link href="/" className="flex items-center group">
               <Image
                 src="/desert-to-mountains-logo.webp"
-                alt="Desert to Mountains"
+                alt="Desert to Mountains - Natural Building Solutions Logo"
                 width={180}
                 height={50}
                 className="h-12 w-auto transition-transform duration-300 group-hover:scale-105"

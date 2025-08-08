@@ -1,247 +1,388 @@
 'use client';
 
 import Navigation from '@/components/Navigation';
-import { Leaf, Mountain, Heart, Sparkles, Shield, Users, Globe, ArrowRight, Star } from 'lucide-react';
+import { 
+  User, 
+  Target, 
+  Heart, 
+  Leaf, 
+  Building, 
+  ArrowRight, 
+  Quote,
+  Globe,
+  Shield,
+  Sparkles,
+  Star,
+  Zap
+} from 'lucide-react';
 import Link from 'next/link';
 
 export default function AboutClient() {
-  const products = [
-    {
-      icon: Shield,
-      title: "Aura Natural Plaster",
-      description: "Gypsum and Cow-dung based natural plaster for green building",
-      status: "Available Now"
-    },
-    {
-      icon: Sparkles,
-      title: "Eco-friendly Textiles",
-      description: "Sustainable fashion and textile products",
-      status: "Coming Soon"
-    },
-    {
-      icon: Leaf,
-      title: "Natural Lifestyle Products",
-      description: "Range of daily-use natural lifestyle products",
-      status: "Coming Soon"
-    },
-    {
-      icon: Mountain,
-      title: "Upcycled Furniture",
-      description: "Sustainable furniture from recycled materials",
-      status: "Coming Soon"
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4]">
+    <div className="min-h-screen bg-white">
       <Navigation />
       
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-white overflow-hidden">
+      {/* Hero Section - About Page Specific */}
+      <section className="pt-32 pb-20 bg-gradient-to-br from-white via-[#F8F6F0] to-[#F0EDE4] relative overflow-hidden">
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%235E4E06' fill-opacity='0.1'%3E%3Cpath d='M30 30c0-16.569-13.431-30-30-30v60c16.569 0 30-13.431 30-30zm0 0c0 16.569 13.431 30 30 30V0c-16.569 0-30 13.431-30 30z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+          }}></div>
+        </div>
+
         {/* Floating Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-br from-[#5E4E06]/20 to-[#8B7A1A]/20 rounded-full blur-xl animate-float"></div>
-        <div className="absolute top-40 right-20 w-16 h-16 bg-gradient-to-br from-[#B8A94A]/30 to-[#5E4E06]/30 rounded-full blur-lg animate-float" style={{animationDelay: '2s'}}></div>
-        <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-gradient-to-br from-[#8B7A1A]/25 to-[#B8A94A]/25 rounded-full blur-xl animate-float" style={{animationDelay: '4s'}}></div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 sm:mb-16">
-            <div className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] border border-[#B8A94A] text-[#5E4E06] rounded-full text-xs sm:text-sm font-semibold shadow-lg mb-6 sm:mb-8 animate-fade-in-up">
-              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" style={{animationDuration: '3s'}} />
-              <span>Our Story</span>
-              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" style={{animationDuration: '3s', animationDirection: 'reverse'}} />
+        <div className="absolute top-20 left-10 w-24 h-24 bg-gradient-to-br from-[#5E4E06]/10 to-[#8B7A1A]/10 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute bottom-32 right-20 w-32 h-32 bg-gradient-to-br from-[#B8A94A]/10 to-[#5E4E06]/10 rounded-full blur-2xl animate-pulse" style={{animationDelay: '2s'}}></div>
+
+        <div className="relative max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Left Side - Content */}
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#5E4E06]/10 to-[#8B7A1A]/10 text-[#5E4E06] rounded-full text-sm font-semibold mb-8">
+                <User className="w-4 h-4" />
+                <span>About Us</span>
             </div>
             
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-[#2A2418] mb-6 sm:mb-8 leading-tight animate-fade-in-up">
-              From Desert to
-              <span className="block bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-clip-text text-transparent">
-                Mountains
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-[#2A2418] mb-8 leading-tight">
+                The Story
+                <span className="block text-transparent bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-clip-text">
+                  Behind the Vision
               </span>
             </h1>
             
-            <p className="text-lg sm:text-xl md:text-2xl text-[#2A2418]/70 max-w-4xl mx-auto leading-relaxed animate-fade-in-up">
-              A journey across India's diverse landscapes, discovering ancient secrets that transform 
-              simple materials into powerful wellness solutions for modern living.
-            </p>
-          </div>
-        </div>
-      </section>
+              <p className="text-xl md:text-2xl text-[#2A2418]/70 leading-relaxed mb-10">
+                From one man's passion for sustainable living to a movement that's transforming 
+                the construction industry with ancient wisdom and modern innovation.
+              </p>
 
-      {/* Mission Section */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-16 items-center">
-            <div className="animate-fade-in-up">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2A2418] mb-6 sm:mb-8">Our Mission</h2>
-              <p className="text-lg sm:text-xl text-gray-600 mb-6 sm:mb-8 leading-relaxed">
-                To bridge the gap between ancient Indian wisdom and modern sustainable living, 
-                creating products that promote health, wellness, and environmental consciousness.
-              </p>
-              <p className="text-base sm:text-lg text-gray-600 mb-6 sm:mb-8 leading-relaxed">
-                Every product carries the wisdom of generations, the purity of nature, and the 
-                promise of healthier, more harmonious living spaces.
-              </p>
-              <Link href="/contact" className="inline-flex items-center gap-3 sm:gap-4 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer text-sm sm:text-base">
-                <span>Get in Touch</span>
-                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              {/* Key Points */}
+              <div className="space-y-4 mb-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] rounded-full"></div>
+                  <span className="text-[#2A2418]/80 font-medium">Founded on principles of ecological architecture</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] rounded-full"></div>
+                  <span className="text-[#2A2418]/80 font-medium">Rooted in traditional Indian building practices</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] rounded-full"></div>
+                  <span className="text-[#2A2418]/80 font-medium">Committed to 100% natural, healthy solutions</span>
+                </div>
+              </div>
+
+              <Link href="#founder" className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-full hover:shadow-xl transition-all duration-300 hover:scale-105 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                <span className="relative z-10">Meet Our Founder</span>
+                <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <div className="relative animate-fade-in-up">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06]/20 to-[#8B7A1A]/20 rounded-3xl blur-2xl opacity-20"></div>
-              <img
-                src="/images/about_page_img.jpg"
-                alt="About Desert to Mountains"
-                className="relative w-full h-64 sm:h-80 md:h-96 object-cover rounded-3xl shadow-2xl"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Values Section */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2A2418] mb-4 sm:mb-6">Our Values</h2>
-            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-              The principles that guide our journey and shape our products
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            <div className="text-center p-6 sm:p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 border border-[#E8E4D8] group">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                <Heart className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-black text-[#2A2418] mb-3 sm:mb-4">Wellness First</h3>
-              <p className="text-gray-600 text-sm sm:text-lg">Prioritizing health and wellbeing in everything we create</p>
-            </div>
-            
-            <div className="text-center p-6 sm:p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 border border-[#E8E4D8] group">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#8B7A1A] to-[#B8A94A] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                <Leaf className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-black text-[#2A2418] mb-3 sm:mb-4">Sustainability</h3>
-              <p className="text-gray-600 text-sm sm:text-lg">Committed to eco-friendly practices and materials</p>
-            </div>
-            
-            <div className="text-center p-6 sm:p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 border border-[#E8E4D8] group">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#B8A94A] to-[#5E4E06] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-black text-[#2A2418] mb-3 sm:mb-4">Ancient Wisdom</h3>
-              <p className="text-gray-600 text-sm sm:text-lg">Honoring traditional knowledge and practices</p>
-            </div>
-            
-            <div className="text-center p-6 sm:p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 border border-[#E8E4D8] group">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                <Globe className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-black text-[#2A2418] mb-3 sm:mb-4">Global Impact</h3>
-              <p className="text-gray-600 text-sm sm:text-lg">Making a positive difference worldwide</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Products Section */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2A2418] mb-4 sm:mb-6">Our Product Journey</h2>
-            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-              From our current offerings to future innovations
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-            {products.map((product, index) => (
-              <div key={index} className="p-6 sm:p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl border border-[#E8E4D8] hover:shadow-xl transition-all duration-500 group">
-                <div className="flex items-start gap-4 sm:gap-6">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <product.icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+            {/* Right Side - Visual Element */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-2xl opacity-20 scale-105"></div>
+              <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl p-8 border border-[#E8E4D8] shadow-2xl">
+                <div className="text-center">
+                  <div className="w-24 h-24 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+                    <Building className="w-12 h-12 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl sm:text-2xl font-black text-[#2A2418] mb-2">{product.title}</h3>
-                    <p className="text-gray-600 text-sm sm:text-lg mb-3 sm:mb-4">{product.description}</p>
-                    <span className={`inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold ${
-                      product.status === "Available Now" 
-                        ? "bg-green-100 text-green-700" 
-                        : "bg-[#F8F6F0] text-[#5E4E06] border border-[#B8A94A]"
-                    }`}>
-                      {product.status}
-                    </span>
+                  <h3 className="text-3xl font-black text-[#2A2418] mb-4">Desert to Mountains</h3>
+                  <p className="text-lg text-[#2A2418]/70 mb-6">
+                    Transforming construction with sustainable, natural solutions
+                  </p>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="text-center p-4 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl">
+                      <div className="text-2xl font-black text-[#5E4E06] mb-1">100%</div>
+                      <div className="text-[#2A2418]/70 font-medium text-sm">Natural Materials</div>
+                    </div>
+                    <div className="text-center p-4 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-2xl">
+                      <div className="text-2xl font-black text-[#5E4E06] mb-1">Zero</div>
+                      <div className="text-[#2A2418]/70 font-medium text-sm">Harmful Chemicals</div>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Team Section */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-[#2A2418] via-[#5E4E06] to-[#8B7A1A] relative overflow-hidden">
-        {/* Floating Elements */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-gradient-to-br from-[#B8A94A]/30 to-[#5E4E06]/30 rounded-full blur-xl animate-float"></div>
-        <div className="absolute bottom-20 right-20 w-16 h-16 bg-gradient-to-br from-[#8B7A1A]/40 to-[#B8A94A]/40 rounded-full blur-lg animate-float" style={{animationDelay: '2s'}}></div>
+      {/* Founder Section - Balanced Layout */}
+      <section id="founder" className="relative py-32 bg-gradient-to-br from-[#F8F6F0] via-white to-[#F0EDE4] overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%235E4E06' fill-opacity='0.1'%3E%3Cpath d='M50 50c0-27.614-22.386-50-50-50v100c27.614 0 50-22.386 50-50zm0 0c0 27.614 22.386 50 50 50V0c-27.614 0-50 22.386-50 50z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+          }}></div>
+        </div>
         
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6 sm:mb-8">Our Team</h2>
-          <p className="text-lg sm:text-xl text-[#F0EDE4] mb-12 sm:mb-16 max-w-3xl mx-auto">
-            A diverse group of artisans, scientists, and visionaries dedicated to bringing 
-            ancient wisdom to modern homes
-          </p>
+        <div className="relative max-w-7xl mx-auto px-6">
+          {/* Section Header */}
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5E4E06]/10 to-[#8B7A1A]/10 text-[#5E4E06] rounded-full text-sm font-semibold mb-6">
+              <Star className="w-4 h-4" />
+              <span>Meet Our Founder</span>
+              <Star className="w-4 h-4" />
+            </div>
+            <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-6">
+              The Visionary Behind
+              <span className="block text-transparent bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] bg-clip-text">
+                Desert to Mountains
+              </span>
+            </h2>
+          </div>
+
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-20">
+            {/* Left Side - Photo & Quote */}
+            <div className="order-2 lg:order-1">
+              <div className="relative mb-8">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-xl opacity-20"></div>
+                <div className="relative bg-white rounded-3xl p-4 shadow-2xl border border-[#E8E4D8]">
+                  <img
+                    src="/images/founder.jpg"
+                    alt="Divyveer Singh Bhati - Founder"
+                    className="w-full h-96 object-cover rounded-2xl"
+                  />
+                </div>
+                
+                {/* Name Card */}
+                <div className="mt-6 text-center">
+                  <h3 className="text-3xl font-black text-[#2A2418] mb-2">Divyveer Singh Bhati</h3>
+                  <p className="text-[#5E4E06] font-semibold text-xl mb-4">Founder & CEO</p>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#5E4E06]/10 to-[#8B7A1A]/10 text-[#5E4E06] rounded-full text-sm font-medium">
+                    <Leaf className="w-4 h-4" />
+                    <span>Sustainable Living Advocate</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quote Card */}
+              <div className="relative p-6 bg-white rounded-3xl shadow-xl border border-[#E8E4D8]">
+                <Quote className="w-10 h-10 text-[#5E4E06] mb-4" />
+                <blockquote className="text-2xl font-light text-[#2A2418] italic leading-relaxed mb-4">
+                  "It starts from your home—your shelter, your sacred space."
+                </blockquote>
+                <div className="text-right text-[#5E4E06] font-semibold">— Divyveer Singh Bhati</div>
+              </div>
+            </div>
+
+            {/* Right Side - Bio Content */}
+            <div className="order-1 lg:order-2">
+              <div className="space-y-6">
+                {/* Background & Vision */}
+                <div className="relative p-8 bg-gradient-to-br from-[#F8F6F0] to-white rounded-2xl border-l-4 border-[#5E4E06] shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-2xl font-bold text-[#2A2418] mb-3">The Visionary</h4>
+                      <p className="text-[#2A2418]/80 leading-relaxed">
+                        Divyveer Singh Bhati, the visionary behind Desert to Mountains, champions ecological 
+                        architecture and sustainable living. With deep reverence for India's traditional practices, 
+                        he founded Aura as a response to today's chemically-driven construction industry.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Philosophy */}
+                <div className="relative p-8 bg-gradient-to-br from-[#F8F6F0] to-white rounded-2xl border-l-4 border-[#8B7A1A] shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#8B7A1A] to-[#B8A94A] rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                      <Leaf className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-2xl font-bold text-[#2A2418] mb-3">His Philosophy</h4>
+                      <p className="text-[#2A2418]/80 leading-relaxed">
+                        For Divyveer, <strong className="text-[#5E4E06]">sustainability is not just an idea—it's a way of life</strong>. 
+                        His mission is to reconnect people with nature through mindful, ethical, and scalable building solutions 
+                        that honor both tradition and innovation.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Global Impact */}
+                <div className="relative p-8 bg-gradient-to-br from-[#F8F6F0] to-white rounded-2xl border-l-4 border-[#B8A94A] shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#B8A94A] to-[#5E4E06] rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                      <Globe className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-2xl font-bold text-[#2A2418] mb-3">Global Vision</h4>
+                      <p className="text-[#2A2418]/80 leading-relaxed">
+                        He envisions a world where every wall becomes a statement of purity, every home a sanctuary 
+                        of health, and every structure a contribution to environmental balance. His dream: 
+                        <strong className="text-[#5E4E06]"> to make natural, healthy living beautifully practical for everyone</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons - Centered */}
+          <div className="text-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/contact" className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-full hover:shadow-xl transition-all duration-300 hover:scale-105 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                <User className="w-5 h-5 relative z-10" />
+                <span className="relative z-10">Connect with Divyveer</span>
+                <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              
+              <Link href="/aura" className="inline-flex items-center justify-center gap-3 px-8 py-4 border-2 border-[#5E4E06] text-[#5E4E06] font-bold rounded-full hover:bg-[#5E4E06] hover:text-white transition-all duration-300 hover:scale-105">
+                <Sparkles className="w-5 h-5" />
+                <span>Explore Aura</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* Why We Do What We Do - Split Section */}
+      <section className="relative overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-2">
+          {/* Left Side - Content */}
+          <div className="bg-gradient-to-br from-[#2A2418] to-[#5E4E06] text-white p-16 lg:p-24 flex items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-full text-sm font-semibold mb-8">
+                <Heart className="w-4 h-4" />
+                Our Purpose
+              </div>
+              
+              <h2 className="text-4xl md:text-5xl font-black mb-8">
+                Why We Do
+                <span className="block text-[#E6C866]">What We Do?</span>
+              </h2>
+              
+              <div className="space-y-6 text-lg leading-relaxed opacity-90">
+                <p>
+                  <strong className="text-[#E6C866]">Natural earthen plasters like gypsum-based ones</strong> emerge as clear winners, 
+                  defeating sand-cement plaster by a long stretch.
+                </p>
+                
+                <p>
+                  Earthen plasters bridge the gulf between stellar masonry and beautiful, cosy wall surfaces. 
+                  They close the gap between cold, emotionless concrete and your warmth-inducing living room.
+                </p>
+                
+                <p>
+                  Such organic-material based plasters aren't just great for the environment—
+                  <strong className="text-[#E6C866]">they're good for you and your overall wellness</strong>.
+            </p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/20 group hover:bg-white/15 transition-all duration-300">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                <Users className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+              <div className="mt-12 grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-black text-[#E6C866] mb-2">100%</div>
+                  <div className="text-sm opacity-80">Natural Materials</div>
+                  </div>
+                <div className="text-center">
+                  <div className="text-3xl font-black text-[#E6C866] mb-2">0%</div>
+                  <div className="text-sm opacity-80">Harmful Chemicals</div>
+                </div>
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white mb-3 sm:mb-4">Artisans</h3>
-              <p className="text-gray-300 text-sm sm:text-lg">Traditional craftsmen preserving ancient techniques</p>
+            </div>
+          </div>
+
+          {/* Right Side - Image */}
+          <div className="relative h-96 lg:h-auto">
+            <img
+              src="/images/aura.webp"
+              alt="Natural Plaster Application"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent to-[#2A2418]/20"></div>
+          </div>
+        </div>
+      </section>
+
+      {/* Our Dream - Final Section */}
+      <section className="py-32 bg-gradient-to-br from-[#F8F6F0] via-white to-[#F0EDE4] relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-5">
+          <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-br from-[#B8A94A] to-[#5E4E06] rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="relative max-w-6xl mx-auto px-6 text-center">
+          <div className="mb-16">
+            <Globe className="w-20 h-20 text-[#5E4E06] mx-auto mb-8" />
+            <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-8">Our Dream</h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] mx-auto"></div>
+          </div>
+
+          <div className="max-w-4xl mx-auto mb-16">
+            <p className="text-2xl md:text-3xl text-[#2A2418]/80 leading-relaxed font-light">
+              Our dream to keep Mother Earth safe, and help realtors and property owners create well-laid, 
+              foundationally strong and aesthetically-attractive spaces to live, work and play, led us to create 
+              <span className="font-bold text-[#5E4E06]"> Aura</span>—an innovative gypsum-based natural plaster.
+            </p>
+          </div>
+
+          {/* Feature Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            <div className="group p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-[#E8E4D8] hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+              <Shield className="w-16 h-16 text-[#5E4E06] mx-auto mb-6 group-hover:scale-110 transition-transform" />
+              <h3 className="text-2xl font-black text-[#2A2418] mb-4">100% Healthy</h3>
+              <p className="text-[#2A2418]/70 leading-relaxed">Safe and beneficial for all family members and living spaces</p>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/20 group hover:bg-white/15 transition-all duration-300">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#8B7A1A] to-[#B8A94A] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white mb-3 sm:mb-4">Scientists</h3>
-              <p className="text-gray-300 text-sm sm:text-lg">Researchers ensuring quality and safety standards</p>
+            <div className="group p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-[#E8E4D8] hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+              <Building className="w-16 h-16 text-[#5E4E06] mx-auto mb-6 group-hover:scale-110 transition-transform" />
+              <h3 className="text-2xl font-black text-[#2A2418] mb-4">Foundationally Strong</h3>
+              <p className="text-[#2A2418]/70 leading-relaxed">Durable, long-lasting construction that stands the test of time</p>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/20 group hover:bg-white/15 transition-all duration-300">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#B8A94A] to-[#5E4E06] rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                <Mountain className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white mb-3 sm:mb-4">Visionaries</h3>
-              <p className="text-gray-300 text-sm sm:text-lg">Innovators shaping the future of sustainable living</p>
+            <div className="group p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-[#E8E4D8] hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+              <Sparkles className="w-16 h-16 text-[#5E4E06] mx-auto mb-6 group-hover:scale-110 transition-transform" />
+              <h3 className="text-2xl font-black text-[#2A2418] mb-4">Aesthetically Attractive</h3>
+              <p className="text-[#2A2418]/70 leading-relaxed">Beautiful, natural finishes that enhance any architectural style</p>
             </div>
+          </div>
+
+          {/* Final Quote */}
+          <div className="relative max-w-3xl mx-auto p-8 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl text-white shadow-2xl">
+            <Target className="w-12 h-12 mx-auto mb-6 text-[#E6C866]" />
+            <p className="text-2xl md:text-3xl font-light leading-relaxed">
+              "To make natural, healthy living not just possible, but 
+              <span className="font-bold text-[#E6C866]"> beautifully practical for everyone</span>."
+            </p>
+            <div className="mt-6 text-[#E6C866] font-semibold">— Divyveer Singh Bhati</div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2A2418] mb-6 sm:mb-8">Join Our Journey</h2>
-          <p className="text-lg sm:text-xl text-gray-600 mb-10 sm:mb-12 max-w-3xl mx-auto">
-            Be part of a movement that honors tradition while embracing innovation. 
-            Together, we can create healthier, more sustainable living spaces.
+      <section className="py-24 bg-gradient-to-r from-[#2A2418] via-[#5E4E06] to-[#8B7A1A] text-white text-center">
+        <div className="max-w-4xl mx-auto px-6">
+          <h2 className="text-4xl md:text-5xl font-black mb-8">Ready to Transform Your Space?</h2>
+          <p className="text-xl md:text-2xl mb-12 opacity-90 leading-relaxed">
+            Join thousands who have chosen the path of natural, sustainable living with Desert to Mountains.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center">
-            <Link href="/contact" className="px-8 sm:px-10 py-4 sm:py-5 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer">
-              <span className="flex items-center gap-3 text-base sm:text-lg">
-                Get Started Today
-                <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <Link href="/aura" className="group px-10 py-5 bg-white text-[#2A2418] font-bold rounded-full hover:bg-[#E6C866] transition-all duration-300 hover:scale-105 relative overflow-hidden">
+              <span className="flex items-center gap-3 text-lg">
+                <Zap className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                Explore Aura Products
+                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
               </span>
             </Link>
-            <Link href="/gallery" className="px-8 sm:px-10 py-4 sm:py-5 border-2 border-[#B8A94A] text-[#5E4E06] font-bold rounded-xl hover:bg-[#5E4E06] hover:text-white transition-all duration-300 bg-white cursor-pointer">
-              <span className="text-base sm:text-lg">View Our Work</span>
+            
+            <Link href="/contact" className="px-10 py-5 border-2 border-white/30 text-white font-bold rounded-full hover:bg-white/10 transition-all duration-300 hover:scale-105">
+              <span className="text-lg">Get In Touch</span>
             </Link>
           </div>
         </div>
       </section>
-
     </div>
   );
 } 

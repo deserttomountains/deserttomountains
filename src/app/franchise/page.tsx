@@ -1,4 +1,5 @@
-"use client";
+'use client';
+
 import * as React from "react";
 import { Button } from "@radix-ui/themes";
 import { FaHandshake, FaHeadset, FaChartLine } from "react-icons/fa";
@@ -98,57 +99,136 @@ export default function FranchisePage() {
           <div className="hidden md:block w-12 h-1 bg-[#E6C866] rounded-full" />
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-[#E6C866] flex items-center justify-center text-2xl font-bold text-[#5E4E06] mb-2 border-4 border-[#5E4E06]">3</div>
-            <span className="text-[#2A2418] text-center">Complete onboarding, training, and launch your franchise!</span>
+            <span className="text-[#2A2418] text-center">Complete training and launch your franchise business.</span>
           </div>
         </div>
       </section>
 
-      {/* Call to Action */}
-      <section className="max-w-xl text-center mb-8">
-        <h3 className="text-2xl font-semibold text-[#5E4E06] mb-2">Ready to Start Your Journey?</h3>
-        <p className="text-[#2A2418] mb-6">We’re excited to partner with passionate entrepreneurs like you. Fill out the application form below to get started.</p>
-      </section>
-
       {/* Franchise Application Form */}
-      <section id="franchise-form" className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-[#E6C866] p-8 mb-12">
-        <h4 className="text-2xl font-bold text-[#5E4E06] mb-6 text-center">Franchise Application</h4>
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="flex-1">
-              <label className="block text-[#5E4E06] font-semibold mb-2">Full Name<span className="text-red-500">*</span></label>
-              <input name="name" value={form.name} onChange={handleChange} type="text" required className="w-full rounded-lg border border-[#E6C866] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E6C866] bg-[#F5F2E8] text-[#2A2418]" placeholder="Your Name" />
+      <section id="franchise-form" className="w-full max-w-4xl">
+        <div className="bg-white rounded-3xl shadow-xl p-8 md:p-12 border border-[#E6C866]">
+          <h2 className="text-3xl font-bold text-[#5E4E06] mb-8 text-center">Apply for Franchise</h2>
+          
+          {success && (
+            <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+              Thank you for your interest! We'll get back to you within 24 hours.
             </div>
-            <div className="flex-1">
-              <label className="block text-[#5E4E06] font-semibold mb-2">Email<span className="text-red-500">*</span></label>
-              <input name="email" value={form.email} onChange={handleChange} type="email" required className="w-full rounded-lg border border-[#E6C866] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E6C866] bg-[#F5F2E8] text-[#2A2418]" placeholder="you@email.com" />
+          )}
+          
+          {error && (
+            <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+              {error}
             </div>
-          </div>
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="flex-1">
-              <label className="block text-[#5E4E06] font-semibold mb-2">Phone<span className="text-red-500">*</span></label>
-              <input name="phone" value={form.phone} onChange={handleChange} type="tel" required className="w-full rounded-lg border border-[#E6C866] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E6C866] bg-[#F5F2E8] text-[#2A2418]" placeholder="Your Phone Number" />
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-[#2A2418] mb-2">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-[#E6C866] rounded-lg focus:ring-2 focus:ring-[#5E4E06] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-[#2A2418] mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-[#E6C866] rounded-lg focus:ring-2 focus:ring-[#5E4E06] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-[#2A2418] mb-2">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-[#E6C866] rounded-lg focus:ring-2 focus:ring-[#5E4E06] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="city" className="block text-sm font-medium text-[#2A2418] mb-2">
+                  City *
+                </label>
+                <input
+                  type="text"
+                  id="city"
+                  name="city"
+                  value={form.city}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-[#E6C866] rounded-lg focus:ring-2 focus:ring-[#5E4E06] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="state" className="block text-sm font-medium text-[#2A2418] mb-2">
+                  State *
+                </label>
+                <input
+                  type="text"
+                  id="state"
+                  name="state"
+                  value={form.state}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-[#E6C866] rounded-lg focus:ring-2 focus:ring-[#5E4E06] focus:border-transparent"
+                />
+              </div>
             </div>
-            <div className="flex-1">
-              <label className="block text-[#5E4E06] font-semibold mb-2">City<span className="text-red-500">*</span></label>
-              <input name="city" value={form.city} onChange={handleChange} type="text" required className="w-full rounded-lg border border-[#E6C866] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E6C866] bg-[#F5F2E8] text-[#2A2418]" placeholder="Your City" />
+            
+            <div>
+              <label htmlFor="message" className="block text-sm font-medium text-[#2A2418] mb-2">
+                Why are you interested in a Desert to Mountains franchise? *
+              </label>
+              <textarea
+                id="message"
+                name="message"
+                value={form.message}
+                onChange={handleChange}
+                required
+                rows={4}
+                className="w-full px-4 py-3 border border-[#E6C866] rounded-lg focus:ring-2 focus:ring-[#5E4E06] focus:border-transparent"
+                placeholder="Tell us about your interest in sustainable living and business experience..."
+              />
             </div>
-          </div>
-          <div>
-            <label className="block text-[#5E4E06] font-semibold mb-2">State<span className="text-red-500">*</span></label>
-            <input name="state" value={form.state} onChange={handleChange} type="text" required className="w-full rounded-lg border border-[#E6C866] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E6C866] bg-[#F5F2E8] text-[#2A2418]" placeholder="Your State" />
-          </div>
-          <div>
-            <label className="block text-[#5E4E06] font-semibold mb-2">Why do you want to open a franchise with us?<span className="text-red-500">*</span></label>
-            <textarea name="message" value={form.message} onChange={handleChange} required rows={4} className="w-full rounded-lg border border-[#E6C866] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#E6C866] bg-[#F5F2E8] text-[#2A2418] resize-none" placeholder="Tell us about your interest, experience, and vision..." />
-          </div>
-          {error && <div className="text-red-600 text-center font-semibold">{error}</div>}
-          {success && <div className="text-green-700 text-center font-semibold">Application submitted successfully!</div>}
-          <div className="text-center pt-2">
-            <Button asChild size="3" color="yellow" radius="full" className="shadow-md text-lg px-8 py-3 bg-[#E6C866] text-[#5E4E06] hover:bg-white hover:text-[#5E4E06] border-2 border-[#E6C866]">
-              <button type="submit" className="cursor-pointer" style={{ cursor: 'pointer' }} disabled={loading}>{loading ? "Submitting..." : "Submit Application"}</button>
-            </Button>
-          </div>
-        </form>
+            
+            <div className="text-center">
+              <Button
+                type="submit"
+                size="4"
+                color="yellow"
+                radius="full"
+                disabled={loading}
+                className="shadow-lg text-lg px-12 py-4 bg-[#5E4E06] text-white hover:bg-[#4A3E05] disabled:opacity-50"
+              >
+                {loading ? "Submitting..." : "Submit Application"}
+              </Button>
+            </div>
+          </form>
+        </div>
       </section>
     </main>
   );

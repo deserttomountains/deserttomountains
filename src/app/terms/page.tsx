@@ -1,6 +1,41 @@
+import type { Metadata } from 'next';
 import React from "react";
 import Navigation from '@/components/Navigation';
 import { Info, FileText, UserCheck, Shield, Edit3, AlertCircle, RefreshCcw, Gavel, Mail } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Terms & Conditions | Desert to Mountains',
+  description: 'Read Desert to Mountains Terms & Conditions. Learn about our policies, intellectual property, product information, and legal terms for using our natural building solutions.',
+  keywords: 'Desert to Mountains terms, terms and conditions, legal policies, natural building solutions terms, eco-friendly products terms',
+  openGraph: {
+    title: 'Terms & Conditions | Desert to Mountains',
+    description: 'Read Desert to Mountains Terms & Conditions. Learn about our policies, intellectual property, product information, and legal terms for using our natural building solutions.',
+    type: 'website',
+    url: 'https://deserttomountains.com/terms',
+    siteName: 'Desert to Mountains',
+    images: [
+      {
+        url: '/images/gallery/2.webp',
+        width: 1200,
+        height: 630,
+        alt: 'Desert to Mountains Terms & Conditions',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Terms & Conditions | Desert to Mountains',
+    description: 'Read Desert to Mountains Terms & Conditions. Learn about our policies, intellectual property, product information, and legal terms for using our natural building solutions.',
+    images: ['/images/gallery/2.webp'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: 'https://deserttomountains.com/terms',
+  },
+};
 
 const sections = [
   {

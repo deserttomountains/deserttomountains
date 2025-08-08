@@ -1,6 +1,41 @@
+import type { Metadata } from 'next';
 import React from "react";
 import Navigation from '@/components/Navigation';
 import { Truck, Package, DollarSign, Undo2, CheckCircle, AlertCircle, Mail, Info, MapPin, Clock, XCircle, Shield } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Shipping Policy - Delivery & Returns | Desert to Mountains',
+  description: 'Learn about Desert to Mountains shipping policy, delivery times, tracking, and return procedures for our natural building products and organic incense across India.',
+  keywords: 'Desert to Mountains shipping policy, delivery times, tracking, return procedures, natural products shipping, eco-friendly products delivery',
+  openGraph: {
+    title: 'Shipping Policy - Delivery & Returns | Desert to Mountains',
+    description: 'Learn about Desert to Mountains shipping policy, delivery times, tracking, and return procedures for our natural building products and organic incense across India.',
+    type: 'website',
+    url: 'https://deserttomountains.com/shipping-policy',
+    siteName: 'Desert to Mountains',
+    images: [
+      {
+        url: '/images/gallery/5.webp',
+        width: 1200,
+        height: 630,
+        alt: 'Desert to Mountains Shipping Policy',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Shipping Policy - Delivery & Returns | Desert to Mountains',
+    description: 'Learn about Desert to Mountains shipping policy, delivery times, tracking, and return procedures for our natural building products and organic incense across India.',
+    images: ['/images/gallery/5.webp'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: 'https://deserttomountains.com/shipping-policy',
+  },
+};
 
 const sections = [
   {
@@ -107,11 +142,11 @@ export default function ShippingPolicyPage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-[#E8E4D8]">
       <Navigation />
       {/* Hero Section */}
-      <section className="relative w-full h-64 flex items-center justify-center bg-cover bg-center" style={{backgroundImage: 'url(/images/gallery/7.webp)'}}>
+      <section className="relative w-full h-64 flex items-center justify-center bg-cover bg-center" style={{backgroundImage: 'url(/images/gallery/5.webp)'}}>
         <div className="absolute inset-0 bg-[#5E4E06]/70" />
         <div className="relative z-10 text-center">
           <h1 className="text-5xl font-extrabold text-white drop-shadow mb-2">Shipping Policy</h1>
-          <p className="text-lg text-[#E6C866] font-medium drop-shadow">Everything you need to know about our shipping process.</p>
+          <p className="text-lg text-[#E6C866] font-medium drop-shadow">Fast, reliable delivery across India. Learn about our shipping process.</p>
         </div>
       </section>
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-12">

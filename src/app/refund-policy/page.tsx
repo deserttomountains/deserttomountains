@@ -1,13 +1,48 @@
+import type { Metadata } from 'next';
 import React from "react";
 import Navigation from '@/components/Navigation';
 import { Undo2, Package, CheckCircle, AlertCircle, Mail, Info } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Refund Policy - Return & Exchange Terms | Desert to Mountains',
+  description: 'Learn about Desert to Mountains refund and return policy. 2-day return window, warranty claims, and exchange terms for our natural building products and organic incense.',
+  keywords: 'Desert to Mountains refund policy, return policy, exchange terms, warranty claims, natural products returns, eco-friendly products refund',
+  openGraph: {
+    title: 'Refund Policy - Return & Exchange Terms | Desert to Mountains',
+    description: 'Learn about Desert to Mountains refund and return policy. 2-day return window, warranty claims, and exchange terms for our natural building products and organic incense.',
+    type: 'website',
+    url: 'https://deserttomountains.com/refund-policy',
+    siteName: 'Desert to Mountains',
+    images: [
+      {
+        url: '/images/gallery/4.webp',
+        width: 1200,
+        height: 630,
+        alt: 'Desert to Mountains Refund Policy',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Refund Policy - Return & Exchange Terms | Desert to Mountains',
+    description: 'Learn about Desert to Mountains refund and return policy. 2-day return window, warranty claims, and exchange terms for our natural building products and organic incense.',
+    images: ['/images/gallery/4.webp'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: 'https://deserttomountains.com/refund-policy',
+  },
+};
 
 const sections = [
   {
     icon: <Undo2 className="w-7 h-7 text-[#E6C866]" />, title: 'Returns',
     content: (
       <>
-        <p>Our policy lasts <span className="font-semibold text-[#5E4E06]">2 days</span>. If 2 days have gone by since your purchase, unfortunately we can’t offer you a refund or exchange unless the product is defective or damaged.</p>
+        <p>Our policy lasts <span className="font-semibold text-[#5E4E06]">2 days</span>. If 2 days have gone by since your purchase, unfortunately we can't offer you a refund or exchange unless the product is defective or damaged.</p>
         <p>To be eligible for a return, your item must be unused and in the same condition that you received it. It must also be in the original packaging.</p>
         <p>Several types of goods are exempt from being returned, such as perishable goods, custom products, and digital downloads.</p>
       </>
@@ -26,7 +61,7 @@ const sections = [
     icon: <Package className="w-7 h-7 text-[#E6C866]" />, title: 'Late or Missing Refunds',
     content: (
       <>
-        <p>If you haven’t received a refund yet, first check your bank account again. Then contact your credit card company, it may take some time before your refund is officially posted. Next contact your bank. There is often some processing time before a refund is posted. If you’ve done all of this and you still have not received your refund yet, please contact us at <a href="mailto:deserttomountains@gmail.com" className="text-[#5E4E06] underline">deserttomountains@gmail.com</a>.</p>
+        <p>If you haven't received a refund yet, first check your bank account again. Then contact your credit card company, it may take some time before your refund is officially posted. Next contact your bank. There is often some processing time before a refund is posted. If you've done all of this and you still have not received your refund yet, please contact us at <a href="mailto:deserttomountains@gmail.com" className="text-[#5E4E06] underline">deserttomountains@gmail.com</a>.</p>
       </>
     )
   },

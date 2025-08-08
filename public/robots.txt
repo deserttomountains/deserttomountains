@@ -1,0 +1,28 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /login/
+Disallow: /signup/
+Disallow: /test-auth/
+
+# Allow important pages
+Allow: /
+Allow: /about/
+Allow: /aura/
+Allow: /dhunee/
+Allow: /contact/
+Allow: /gallery/
+Allow: /terms/
+Allow: /privacy-policy/
+Allow: /refund-policy/
+Allow: /shipping-policy/
+
+# Sitemap location
+Sitemap: https://deserttomountains.com/sitemap.xml
+
+# Crawl delay (optional - be respectful to server)
+Crawl-delay: 1
