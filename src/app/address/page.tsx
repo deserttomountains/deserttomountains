@@ -307,8 +307,6 @@ export default function AddressPage() {
         </div>
       </main>
       
-      <Footer />
-      
       <style jsx>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }

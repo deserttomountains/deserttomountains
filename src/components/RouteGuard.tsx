@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { UserRole } from '@/lib/firebase';
 
@@ -18,6 +18,7 @@ export const RouteGuard = ({
 }: RouteGuardProps) => {
   const { user, role, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     console.log('RouteGuard: Checking access...', {
@@ -25,14 +26,15 @@ export const RouteGuard = ({
       role,
       loading,
       requiredRole,
-      redirectTo
+      redirectTo,
+      currentPath: pathname
     });
     
     if (!loading) {
-      // If user is not authenticated, redirect to login
+      // If user is not authenticated, redirect to login with current path as redirect
       if (!user) {
-        console.log('RouteGuard: No user, redirecting to login');
-        router.push('/login');
+        console.log('RouteGuard: No user, redirecting to login with redirect:', pathname);
+        router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         return;
       }
 
@@ -57,7 +59,7 @@ export const RouteGuard = ({
       
       console.log('RouteGuard: Access granted');
     }
-  }, [user, role, loading, requiredRole, redirectTo, router]);
+  }, [user, role, loading, requiredRole, redirectTo, router, pathname]);
 
   // Show loading spinner while checking authentication
   if (loading) {

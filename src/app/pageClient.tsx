@@ -18,29 +18,99 @@ import {
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import React from 'react';
 
 export default function HomeClient() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [preloadedImages, setPreloadedImages] = useState<Set<number>>(new Set());
+  const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hero slideshow images
   const heroImages = [
     '/images/deserttomountains-4-scaled-1.webp',
-    '/images/aura-on-site-1-1.webp',
+    '/images/gallery/55.webp',
     '/images/dhunee_1.webp',
     '/images/aura_1.webp'
   ];
 
+  // Preload images for better performance
   useEffect(() => {
-    const slideshowInterval = setInterval(() => {
+    const preloadImage = (index: number) => {
+      if (preloadedImages.has(index)) return;
+      
+      const img = new window.Image();
+      img.onload = () => {
+        setPreloadedImages(prev => new Set([...prev, index]));
+      };
+      img.src = heroImages[index];
+    };
+
+    // Preload current and next image
+    preloadImage(currentSlide);
+    preloadImage((currentSlide + 1) % heroImages.length);
+  }, [currentSlide, heroImages, preloadedImages]);
+
+  // Optimized slideshow with pause on visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (slideshowIntervalRef.current) {
+          clearInterval(slideshowIntervalRef.current);
+          slideshowIntervalRef.current = null;
+        }
+      } else {
+        if (!slideshowIntervalRef.current) {
+          slideshowIntervalRef.current = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+          }, 4000);
+        }
+      }
+    };
+
+    // Pause slideshow when tab is not visible
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Start slideshow
+    slideshowIntervalRef.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
     }, 4000);
     
     return () => {
-      clearInterval(slideshowInterval);
+      if (slideshowIntervalRef.current) {
+        clearInterval(slideshowIntervalRef.current);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+  }, [heroImages.length]);
+
+  // Smooth slide transition
+  const changeSlide = useCallback((newIndex: number) => {
+    if (isTransitioning || newIndex === currentSlide) return;
+    
+    setIsTransitioning(true);
+    setCurrentSlide(newIndex);
+    
+    // Reset transition state after animation completes
+    setTimeout(() => setIsTransitioning(false), 1000);
+  }, [currentSlide, isTransitioning]);
+
+  // Pause slideshow on hover for better UX
+  const handleMouseEnter = useCallback(() => {
+    if (slideshowIntervalRef.current) {
+      clearInterval(slideshowIntervalRef.current);
+      slideshowIntervalRef.current = null;
+    }
   }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (!slideshowIntervalRef.current) {
+      slideshowIntervalRef.current = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+      }, 4000);
+    }
+  }, [heroImages.length]);
 
 
 
@@ -72,18 +142,27 @@ export default function HomeClient() {
       <Navigation />
 
       {/* Hero Section - Autoplaying Slideshow Background, Glassmorphism Overlay, Animated Title with Floating Panel and Letter Reveal */}
-      <section className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
+      <section className="hero-section relative min-h-screen w-full flex items-center justify-center overflow-hidden">
         {/* Background Slideshow */}
-        <div className="absolute inset-0 z-0">
+        <div 
+          className="absolute inset-0 z-0"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
           {heroImages.map((image, index) => (
             <img
               key={index}
               src={image}
               alt={`Desert to Mountains Hero Slide ${index + 1} - Natural Building Solutions`}
-              className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000 ${
-                index === currentSlide ? 'opacity-100' : 'opacity-0'
+              className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-1000 ease-in-out ${
+                index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
               }`}
-              style={{ filter: 'brightness(0.7) saturate(1.1)' }}
+              style={{ 
+                filter: 'brightness(0.7) saturate(1.1)',
+                willChange: index === currentSlide ? 'opacity, transform' : 'auto'
+              }}
+              loading={index === 0 ? 'eager' : 'lazy'}
+              decoding="async"
             />
           ))}
         </div>
@@ -95,12 +174,13 @@ export default function HomeClient() {
           {heroImages.map((_, index) => (
             <button
               key={index}
-              onClick={() => setCurrentSlide(index)}
+              onClick={() => changeSlide(index)}
+              disabled={isTransitioning}
               className={`w-3 h-3 rounded-full transition-all duration-300 ${
                 index === currentSlide 
                   ? 'bg-white scale-125' 
                   : 'bg-white/50 hover:bg-white/75'
-              }`}
+              } ${isTransitioning ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}
@@ -147,7 +227,7 @@ export default function HomeClient() {
               padding-bottom: 2rem !important;
               border-radius: 1rem !important;
             }
-            h1 {
+            .hero-section h1 {
               font-size: 1.6rem !important;
               line-height: 2.2rem !important;
             }
@@ -166,10 +246,8 @@ export default function HomeClient() {
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-20">
-            <div className="flex items-center justify-center gap-4 mb-8">
-              <Mountain className="w-12 h-12 text-[#5E4E06]" />
-              <h1 className="text-5xl md:text-6xl font-black text-[#2A2418]">Desert to Mountains</h1>
-              <Sun className="w-12 h-12 text-[#8B7A1A]" />
+            <div className="text-center mb-8">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-[#2A2418] leading-tight tracking-tight">Desert to Mountains</h1>
             </div>
             <p className="text-2xl md:text-3xl text-[#5E4E06] font-semibold mb-6">
               A Return to the Earth, A Step Toward the Future
@@ -258,9 +336,6 @@ export default function HomeClient() {
         <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 relative z-10">
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-8">Our Premium Collection</h2>
-            <p className="text-2xl text-[#2A2418]/70 max-w-4xl mx-auto font-light">
-              Two masterpieces born from timeless traditions, perfected for modern homes
-            </p>
           </div>
           
           <div className="flex flex-col lg:grid lg:grid-cols-2 gap-10 lg:gap-16">
@@ -434,7 +509,7 @@ export default function HomeClient() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-2xl opacity-20 animate-pulse"></div>
                 <img
-                  src="/images/gallery/1.webp"
+                  src="/images/gallery/56.webp"
                   alt="From Desert to Mountains"
                   className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[500px] object-cover rounded-3xl shadow-2xl hover:scale-105 transition-transform duration-700"
                 />

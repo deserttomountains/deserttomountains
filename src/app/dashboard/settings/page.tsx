@@ -1,6 +1,6 @@
 "use client";
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getAuth, updateProfile, updateEmail, sendPasswordResetEmail, deleteUser } from 'firebase/auth';
 import app from '@/lib/firebase';
 import { AuthService } from '@/lib/firebase';
@@ -39,6 +39,9 @@ export default function AccountSettingsPage() {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const filteredCountries = COUNTRIES.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.code.toLowerCase().includes(countrySearch.toLowerCase()));
+  
+  // Ref for the country dropdown container
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
 
   // Load Firestore profile for all fields
   useEffect(() => {
@@ -82,6 +85,24 @@ export default function AccountSettingsPage() {
       setLoading(false);
     }
   }, [user?.uid, user?.displayName, showToast]);
+
+  // Handle click outside to close country dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+        setShowCountryDropdown(false);
+        setCountrySearch('');
+      }
+    };
+
+    if (showCountryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCountryDropdown]);
 
   const isPhonePrimary = !!user?.phoneNumber && (!user?.email || user.providerData.some(p => p.providerId === 'phone'));
   const isEmailPrimary = !!user?.email && (!user?.phoneNumber || user.providerData.some(p => p.providerId === 'password' || p.providerId === 'google.com'));
@@ -231,7 +252,7 @@ export default function AccountSettingsPage() {
 
   return (
     <DashboardLayout active="Settings">
-      <div className="max-w-5xl mx-auto pt-24 pb-12 px-2 md:px-0">
+      <div className="max-w-5xl mx-auto pt-24 pb-20 px-2 md:px-0">
         <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-10 md:p-14">
           <div className="flex flex-col md:flex-row gap-10">
             {/* Left Column: Profile & Contact */}
@@ -397,23 +418,30 @@ export default function AccountSettingsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="relative">
+                  <div className="relative" ref={countryDropdownRef}>
                     <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Country</label>
                     <button
                       type="button"
                       onClick={() => setShowCountryDropdown((v) => !v)}
-                      className="w-full pl-10 pr-10 py-2 rounded-xl border border-[#E6DCC0] bg-white text-[#5E4E06] text-base text-left focus:ring-2 focus:ring-[#D4AF37] focus:outline-none hover:border-[#D4AF37] transition-all"
+                      className="w-full pl-12 pr-12 py-2 rounded-xl border border-[#E6DCC0] bg-white text-[#5E4E06] text-base text-left focus:ring-2 focus:ring-[#D4AF37] focus:outline-none hover:border-[#D4AF37] transition-all flex items-center justify-between"
                     >
-                      {country || 'Select country'}
+                      <span className="flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-[#8B7A1A] flex-shrink-0" />
+                        <span className="truncate">{country || 'Select country'}</span>
+                      </span>
+                      <svg 
+                        className={`w-5 h-5 text-[#8B7A1A] transition-transform duration-300 flex-shrink-0 ${showCountryDropdown ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
                     </button>
-                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B7A1A]" />
-                    <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B7A1A] transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                    {showCountryDropdown && (
-                      <div className="absolute z-50 w-full mt-2 bg-white border border-[#D4AF37] rounded-xl shadow-2xl max-h-80 overflow-hidden">
-                        <div className="p-2 border-b border-[#D4AF37]/30">
-                    <input
+                                        {showCountryDropdown && (
+                      <div className="absolute z-50 w-full mt-2 bg-white border border-[#D4AF37] rounded-xl shadow-2xl overflow-hidden" style={{ maxHeight: '300px' }}>
+                        <div className="p-2 border-b border-[#D4AF37]/30 bg-white">
+                          <input
                             type="text"
                             value={countrySearch}
                             onChange={e => setCountrySearch(e.target.value)}
@@ -422,7 +450,7 @@ export default function AccountSettingsPage() {
                             autoFocus
                           />
                         </div>
-                        <div className="max-h-64 overflow-y-auto">
+                        <div className="max-h-48 overflow-y-auto bg-white">
                           {filteredCountries.map((c) => (
                             <button
                               key={c.code}
@@ -432,7 +460,7 @@ export default function AccountSettingsPage() {
                                 setShowCountryDropdown(false);
                                 setCountrySearch('');
                               }}
-                              className="w-full px-4 py-2 text-left hover:bg-[#F5F2E8] transition-colors duration-200 cursor-pointer"
+                              className="w-full px-4 py-2 text-left hover:bg-[#F5F2E8] transition-colors duration-200 cursor-pointer bg-white"
                             >
                               <div className="font-semibold text-[#5E4E06]">{c.name}</div>
                               <div className="text-xs text-[#8B7A1A]">{c.code}</div>

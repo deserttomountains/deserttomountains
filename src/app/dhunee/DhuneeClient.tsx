@@ -65,11 +65,6 @@ export default function DhuneeClient() {
       
       {/* Hero/Product Section */}
       <section className="relative pt-32 pb-20 bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-white overflow-hidden">
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-br from-[#5E4E06]/20 to-[#8B7A1A]/20 rounded-full blur-xl animate-float"></div>
-        <div className="absolute top-40 right-20 w-16 h-16 bg-gradient-to-br from-[#B8A94A]/30 to-[#5E4E06]/30 rounded-full blur-lg animate-float" style={{animationDelay: '2s'}}></div>
-        <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-gradient-to-br from-[#8B7A1A]/25 to-[#B8A94A]/25 rounded-full blur-xl animate-float" style={{animationDelay: '4s'}}></div>
-        
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-16 items-center">
           {/* Product Image */}
           <div className="flex justify-center">
@@ -279,10 +274,6 @@ export default function DhuneeClient() {
       {/* Final CTA - Inspired by Home, themed for Dhunee */}
       <section className="py-16 sm:py-24 bg-gradient-to-br from-[#2A2418] via-[#5E4E06] to-[#8B7A1A] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-[#5E4E06]/20 to-[#8B7A1A]/20"></div>
-        {/* Floating Elements */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-gradient-to-br from-[#B8A94A]/30 to-[#5E4E06]/30 rounded-full blur-xl animate-float"></div>
-        <div className="absolute bottom-20 right-20 w-16 h-16 bg-gradient-to-br from-[#8B7A1A]/40 to-[#B8A94A]/40 rounded-full blur-lg animate-float" style={{animationDelay: '2s'}}></div>
-        
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 sm:mb-10">Ready to Elevate Your Space?</h2>
           <p className="text-lg sm:text-xl lg:text-2xl text-[#F0EDE4] mb-12 sm:mb-16 max-w-4xl mx-auto leading-relaxed font-light">

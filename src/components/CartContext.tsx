@@ -50,7 +50,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i);
+        // Update existing item with new data (including new image) but preserve quantity
+        return prev.map(i => i.id === item.id ? { ...item, quantity: i.quantity + item.quantity } : i);
       }
       return [...prev, item];
     });

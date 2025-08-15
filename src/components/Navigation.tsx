@@ -102,7 +102,7 @@ export default function Navigation() {
               {isLoggedIn ? (
                 <button 
                   onClick={handleDashboardClick}
-                  className="relative p-2 rounded-xl text-white bg-[#8B7A1A] hover:bg-white hover:text-[#5E4E06] shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866]" 
+                  className="relative p-2 rounded-xl text-white bg-[#8B7A1A] hover:bg-white hover:text-[#5E4E06] shadow-md transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E6C866] cursor-pointer" 
                   aria-label={userRole === 'admin' ? 'Admin Dashboard' : 'Dashboard'}
                 >
                   <LayoutDashboard className="w-5 h-5" />

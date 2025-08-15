@@ -138,20 +138,23 @@ export default function AboutClient() {
             {/* Left Side - Photo & Quote */}
             <div className="order-2 lg:order-1">
               <div className="relative mb-8">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl blur-xl opacity-20"></div>
-                <div className="relative bg-white rounded-3xl p-4 shadow-2xl border border-[#E8E4D8]">
-                  <img
-                    src="/images/founder.jpg"
-                    alt="Divyveer Singh Bhati - Founder"
-                    className="w-full h-96 object-cover rounded-2xl"
-                  />
+                {/* Clean, Elegant Photo Container */}
+                <div className="relative flex justify-center">
+                  {/* Photo with rounded edges and shadow */}
+                  <div className="relative">
+                    <img
+                      src="/images/founder.jpg"
+                      alt="Divyveer Singh Bhati - Founder"
+                      className="w-80 h-auto object-contain rounded-3xl shadow-xl"
+                    />
+                  </div>
                 </div>
                 
-                {/* Name Card */}
-                <div className="mt-6 text-center">
-                  <h3 className="text-3xl font-black text-[#2A2418] mb-2">Divyveer Singh Bhati</h3>
+                {/* Clean Name Card */}
+                <div className="mt-8 text-center">
+                  <h3 className="text-3xl font-bold text-[#2A2418] mb-2">Divyveer Singh Bhati</h3>
                   <p className="text-[#5E4E06] font-semibold text-xl mb-4">Founder & CEO</p>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#5E4E06]/10 to-[#8B7A1A]/10 text-[#5E4E06] rounded-full text-sm font-medium">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E4E06]/10 text-[#5E4E06] rounded-full text-sm font-medium">
                     <Leaf className="w-4 h-4" />
                     <span>Sustainable Living Advocate</span>
                   </div>

@@ -11,10 +11,14 @@ export default function Footer() {
             <Image
               src="/desert-to-mountains-logo.webp"
               alt="Desert to Mountains - Natural Building Solutions Logo"
-              width={112}
-              height={56}
-              className="h-14 w-auto mb-2"
+              width={200}
+              height={100}
+              className="h-16 w-auto mb-3 filter-none"
               priority
+              quality={100}
+              style={{
+                imageRendering: 'crisp-edges'
+              }}
             />
             <p className="text-[#F5F2E8] leading-relaxed text-sm max-w-xs mx-auto">
               Traditional knowledge meets modern living through natural wall plaster and organic incense.

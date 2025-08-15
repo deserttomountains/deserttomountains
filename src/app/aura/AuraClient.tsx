@@ -169,7 +169,7 @@ export default function AuraClient() {
         cartItem = {
           id: 2,
           name: `Mock Sample (${selectedSamplePack} Colors)` ,
-          image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80',
+          image: '/images/gallery/1.webp',
           price: selectedPack?.price || 0,
           quantity: 1,
           subtitle: 'Choose your favorite shades',
@@ -277,6 +277,24 @@ export default function AuraClient() {
                       Mock Sample
                     </button>
                 </div>
+                
+                {/* Mock Sample Information */}
+                {productType === 'sample' && (
+                  <div className="mt-4 p-4 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-xl border border-[#E8E4D8]">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Palette className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-[#2A2418] text-sm sm:text-base mb-2">Mock Sample Boards</h4>
+                        <p className="text-[#2A2418]/70 text-xs sm:text-sm leading-relaxed">
+                          Get 1x1 ft sample boards on 6mm board to see how Aura Natural Wall Plaster looks and feels in your space. 
+                          Perfect for testing colors and textures before committing to a full application.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Step 2: Wall Plaster Type Selection */}
@@ -840,7 +858,7 @@ export default function AuraClient() {
               </p>
               <div className="aspect-video bg-gray-200 rounded-xl overflow-hidden">
                 <iframe
-                  src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                  src="https://www.youtube.com/embed/NqhIR2jV1Jc"
                   title="Introduction to Aura"
                   className="w-full h-full"
                   frameBorder="0"
