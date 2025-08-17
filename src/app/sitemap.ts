@@ -69,8 +69,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
         `${baseUrl}/images/gallery/3.webp`,
         `${baseUrl}/images/gallery/4.webp`,
         `${baseUrl}/images/gallery/5.webp`,
-        `${baseUrl}/images/gallery/6.webp`,
-        `${baseUrl}/images/gallery/7.webp`,
         `${baseUrl}/images/gallery/8.webp`,
         `${baseUrl}/images/gallery/9.webp`,
         `${baseUrl}/images/gallery/10.webp`,

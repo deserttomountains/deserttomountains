@@ -45,18 +45,6 @@ export default function GalleryClient() {
       alt: 'Gallery image 5' 
     },
     { 
-      id: 6, 
-      image: '/images/gallery/6.webp', 
-      mobileImage: '/images/gallery/6.webp?w=400&q=75',
-      alt: 'Gallery image 6' 
-    },
-    { 
-      id: 7, 
-      image: '/images/gallery/7.webp', 
-      mobileImage: '/images/gallery/7.webp?w=400&q=75',
-      alt: 'Gallery image 7' 
-    },
-    { 
       id: 8, 
       image: '/images/gallery/8.webp', 
       mobileImage: '/images/gallery/8.webp?w=400&q=75',
