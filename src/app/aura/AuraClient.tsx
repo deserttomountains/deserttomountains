@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Navigation from '@/components/Navigation';
-import { Sparkles, Shield, CheckCircle, Leaf, Heart, Star, ArrowRight, Package, Clock, Palette, ShoppingCart, Zap, Mountain, Sun } from 'lucide-react';
+import { Sparkles, Shield, CheckCircle, Leaf, Heart, Star, ArrowRight, Package, Clock, Palette, ShoppingCart, Zap, Mountain, Sun, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
@@ -20,9 +20,10 @@ export default function AuraClient() {
   const [neutralQuantity, setNeutralQuantity] = useState(1);
   const [pigmentedSelections, setPigmentedSelections] = useState<{ [shadeId: string]: number }>({});
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [showCoverageDetails, setShowCoverageDetails] = useState(false);
 
   // Only one size: 25kg pack
-  const pack = { label: '25kg Pack', mrp: 599, price: 499, coverage: '125 sq ft' };
+  const pack = { label: '25kg Pack', mrp: 599, price: 499, coverageSummary: '20–40 sq ft per 25kg (by surface)' };
 
   const samplePacks = [
     { size: 3, price: 1499, label: '3 Samples' },
@@ -338,13 +339,36 @@ export default function AuraClient() {
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <div className="text-2xl font-bold text-[#2A2418]">{pack.label}</div>
-                        <div className="text-sm text-[#2A2418]/70">{pack.coverage} coverage</div>
+                        <div className="text-sm text-[#2A2418]/70 flex items-center gap-2">
+                          <span>Coverage: {pack.coverageSummary}</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowCoverageDetails(v => !v)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-[#B8A94A] text-[#5E4E06] bg-white/60 hover:bg-white transition-colors cursor-pointer"
+                            aria-expanded={showCoverageDetails}
+                            aria-controls="coverage-details"
+                          >
+                            <span className="text-xs font-bold">Details</span>
+                            <ChevronDown className={`w-3 h-3 transition-transform ${showCoverageDetails ? 'rotate-180' : ''}`} />
+                          </button>
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className="text-3xl font-black text-[#5E4E06]">₹{pack.price * neutralQuantity}</div>
                         <div className="text-base text-gray-400 line-through">₹{pack.mrp * neutralQuantity}</div>
                       </div>
                     </div>
+                    {showCoverageDetails && (
+                      <div id="coverage-details" className="mb-4 mt-2 p-4 bg-gradient-to-br from-[#FFF8DC] to-[#F0E68C] rounded-xl border border-[#D4AF37] text-[#2A2418]">
+                        <ul className="list-disc pl-5 space-y-1 text-sm">
+                          <li>20 sq. ft. coverage on regular bricks or stones with a 12–15mm thickness.</li>
+                          <li>25–30 sq. ft. coverage on AAC blocks with an 8–10mm thickness.</li>
+                          <li>40 sq. ft. coverage on concrete or plaster with a 4–6mm thickness.</li>
+                        </ul>
+                        <p className="text-xs text-[#2A2418]/70 mt-2">Actual coverage varies by surface smoothness and applicator technique.</p>
+                      </div>
+                    )}
+
                     {/* Quantity Selector */}
                     <div className="flex items-center justify-between p-3 sm:p-4 bg-white/50 rounded-xl border border-[#B8A94A]">
                       <span className="font-semibold text-[#2A2418] text-sm sm:text-base">Quantity:</span>

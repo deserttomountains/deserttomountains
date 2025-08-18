@@ -98,7 +98,7 @@ export default function AuraPage() {
       {
         "@type": "PropertyValue",
         "name": "Coverage",
-        "value": "125 sq ft per 25kg pack"
+        "value": "20–40 sq ft per 25kg (varies by surface and thickness): 20 sq ft on regular bricks/stones at 12–15mm; 25–30 sq ft on AAC blocks at 8–10mm; 40 sq ft on concrete/plaster at 4–6mm."
       },
       {
         "@type": "PropertyValue",

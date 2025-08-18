@@ -335,7 +335,7 @@ export default function HomeClient() {
 
         <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 relative z-10">
           <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-8">Our Premium Collection</h2>
+            <h2 className="text-5xl md:text-6xl font-black text-[#5E4E06] mb-8">Our Premium Collection</h2>
           </div>
           
           <div className="flex flex-col lg:grid lg:grid-cols-2 gap-10 lg:gap-16">
@@ -518,7 +518,7 @@ export default function HomeClient() {
             </div>
 
             <div className="order-1 lg:order-2">
-              <h2 className="text-5xl md:text-6xl font-black text-[#2A2418] mb-10">From Desert to Mountains</h2>
+              <h2 className="text-5xl md:text-6xl font-black text-[#5E4E06] mb-10">From Desert to Mountains</h2>
               
               <div className="space-y-8 mb-12">
                 <p className="text-2xl text-[#2A2418]/70 leading-relaxed font-light">
