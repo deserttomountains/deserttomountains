@@ -247,9 +247,9 @@ export default function HomeClient() {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-20">
             <div className="text-center mb-8">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-[#2A2418] leading-tight tracking-tight">Desert to Mountains</h1>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-[#5E4E06] leading-tight tracking-tight">Desert to Mountains</h1>
             </div>
-            <p className="text-2xl md:text-3xl text-[#5E4E06] font-semibold mb-6">
+            <p className="text-2xl md:text-3xl text-black font-semibold mb-6">
               A Return to the Earth, A Step Toward the Future
             </p>
           </div>

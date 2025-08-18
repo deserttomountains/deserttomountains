@@ -121,81 +121,148 @@ export default function CartPage() {
                 </a>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-2xl shadow-xl bg-white/95 backdrop-blur-sm border border-[#D4AF37] animate-fade-in">
-                <table className="min-w-full divide-y divide-[#D4AF37]">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-[#F5F2E8] to-[#E6DCC0]">
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-[#5E4E06] uppercase">Product</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-[#5E4E06] uppercase">Qty</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-[#5E4E06] uppercase">Price</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-[#5E4E06] uppercase">Total</th>
-                      <th className="px-3 md:px-4 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cart.map(item => (
-                      <tr key={item.id} className="hover:bg-[#F5F2E8]/50 transition-all duration-200">
-                        <td className="flex items-center gap-3 md:gap-4 px-3 md:px-4 py-4">
-                          <img src={item.image} alt={item.name} className="w-12 h-12 md:w-16 md:h-16 object-cover rounded-xl border border-[#D4AF37] shadow-md" />
-                          <div className="min-w-0 flex-1">
-                            <div className="font-bold text-[#5E4E06] text-sm md:text-base truncate">{item.name}</div>
-                            <div className="text-[#8B7A1A] text-xs md:text-sm">{item.subtitle}</div>
-                            {item.shades && item.shades.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                {item.shades.map((shade, idx) => (
-                                  <div key={shade.shadeId} className="flex items-center gap-2 text-xs md:text-sm">
-                                    <span className="inline-block w-4 h-4 rounded-full border border-[#D4AF37]" style={{ backgroundColor: shade.shadeHex }}></span>
-                                    <span className="font-medium">{shade.shadeName}</span>
-                                    <span className="text-[#5E4E06]">x{shade.quantity}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 md:px-4 py-4">
-                          <div className="flex items-center gap-1 md:gap-2">
-                            <button 
-                              onClick={() => handleQuantity(item.id, -1)} 
-                              className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#F5F2E8] text-[#5E4E06] font-bold flex items-center justify-center hover:bg-[#E6C866] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
-                              disabled={quantityMap[item.id] <= 1}
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              min={1}
-                              value={quantityMap[item.id]}
-                              onChange={e => {
-                                const val = Math.max(1, parseInt(e.target.value) || 1);
-                                handleQuantity(item.id, val - (quantityMap[item.id] || 1));
-                              }}
-                              className="w-12 md:w-16 text-center font-bold text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg px-1 md:px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#8B7A1A] transition text-sm"
-                            />
-                            <button 
-                              onClick={() => handleQuantity(item.id, 1)} 
-                              className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#F5F2E8] text-[#5E4E06] font-bold flex items-center justify-center hover:bg-[#E6C866] transition-colors cursor-pointer"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-3 md:px-4 py-4 font-bold text-[#5E4E06] text-sm md:text-base">₹{item.price}</td>
-                        <td className="px-3 md:px-4 py-4 font-bold text-[#5E4E06] text-sm md:text-base">₹{item.price * quantityMap[item.id]}</td>
-                        <td className="px-3 md:px-4 py-4">
+              <>
+                {/* Mobile stacked view (no horizontal scroll) */}
+                <div className="sm:hidden space-y-4 animate-fade-in">
+                  {cart.map(item => (
+                    <div key={item.id} className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-[#D4AF37] p-4">
+                      <div className="flex items-center gap-3">
+                        <img src={item.image} alt={item.name} className="w-14 h-14 object-cover rounded-xl border border-[#D4AF37] shadow-md" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-[#5E4E06] text-base truncate">{item.name}</div>
+                          <div className="text-[#8B7A1A] text-xs">{item.subtitle}</div>
+                        </div>
+                        <button 
+                          onClick={() => handleRemove(item.id)}
+                          className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded-full border border-red-200 shadow-md transition-all duration-200 cursor-pointer"
+                          aria-label="Remove item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {item.shades && item.shades.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          {item.shades.map(shade => (
+                            <div key={shade.shadeId} className="flex items-center gap-2 text-xs">
+                              <span className="inline-block w-4 h-4 rounded-full border border-[#D4AF37]" style={{ backgroundColor: shade.shadeHex }}></span>
+                              <span className="font-medium">{shade.shadeName}</span>
+                              <span className="text-[#5E4E06]">x{shade.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => handleRemove(item.id)} 
-                            className="text-red-500 hover:text-white hover:bg-red-500 p-1.5 md:p-2 rounded-full border border-red-200 shadow-md transition-all duration-200 cursor-pointer" 
-                            aria-label="Remove item"
+                            onClick={() => handleQuantity(item.id, -1)}
+                            className="w-7 h-7 rounded-full bg-[#F5F2E8] text-[#5E4E06] font-bold flex items-center justify-center hover:bg-[#E6C866] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={quantityMap[item.id] <= 1}
                           >
-                            <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                            -
                           </button>
-                        </td>
+                          <input
+                            type="number"
+                            min={1}
+                            value={quantityMap[item.id]}
+                            onChange={e => {
+                              const val = Math.max(1, parseInt(e.target.value) || 1);
+                              handleQuantity(item.id, val - (quantityMap[item.id] || 1));
+                            }}
+                            className="w-14 text-center font-bold text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#8B7A1A] transition text-sm"
+                          />
+                          <button 
+                            onClick={() => handleQuantity(item.id, 1)}
+                            className="w-7 h-7 rounded-full bg-[#F5F2E8] text-[#5E4E06] font-bold flex items-center justify-center hover:bg-[#E6C866] transition-colors cursor-pointer"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-[#5E4E06]">₹{item.price}</div>
+                          <div className="font-bold text-[#5E4E06] text-sm">Total: ₹{item.price * quantityMap[item.id]}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop/tablet table view */}
+                <div className="hidden sm:block overflow-x-auto rounded-2xl shadow-xl bg-white/95 backdrop-blur-sm border border-[#D4AF37] animate-fade-in">
+                  <table className="min-w-full divide-y divide-[#D4AF37]">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-[#F5F2E8] to-[#E6DCC0]">
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-[#5E4E06] uppercase">Product</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-[#5E4E06] uppercase">Qty</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-[#5E4E06] uppercase">Price</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-[#5E4E06] uppercase">Total</th>
+                        <th className="px-3 md:px-4 py-3"></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {cart.map(item => (
+                        <tr key={item.id} className="hover:bg-[#F5F2E8]/50 transition-all duration-200">
+                          <td className="flex items-center gap-3 md:gap-4 px-3 md:px-4 py-4">
+                            <img src={item.image} alt={item.name} className="w-12 h-12 md:w-16 md:h-16 object-cover rounded-xl border border-[#D4AF37] shadow-md" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-[#5E4E06] text-sm md:text-base truncate">{item.name}</div>
+                              <div className="text-[#8B7A1A] text-xs md:text-sm">{item.subtitle}</div>
+                              {item.shades && item.shades.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {item.shades.map((shade, idx) => (
+                                    <div key={shade.shadeId} className="flex items-center gap-2 text-xs md:text-sm">
+                                      <span className="inline-block w-4 h-4 rounded-full border border-[#D4AF37]" style={{ backgroundColor: shade.shadeHex }}></span>
+                                      <span className="font-medium">{shade.shadeName}</span>
+                                      <span className="text-[#5E4E06]">x{shade.quantity}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 md:px-4 py-4">
+                            <div className="flex items-center gap-1 md:gap-2">
+                              <button 
+                                onClick={() => handleQuantity(item.id, -1)} 
+                                className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#F5F2E8] text-[#5E4E06] font-bold flex items-center justify-center hover:bg-[#E6C866] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" 
+                                disabled={quantityMap[item.id] <= 1}
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min={1}
+                                value={quantityMap[item.id]}
+                                onChange={e => {
+                                  const val = Math.max(1, parseInt(e.target.value) || 1);
+                                  handleQuantity(item.id, val - (quantityMap[item.id] || 1));
+                                }}
+                                className="w-12 md:w-16 text-center font-bold text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg px-1 md:px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#8B7A1A] transition text-sm"
+                              />
+                              <button 
+                                onClick={() => handleQuantity(item.id, 1)} 
+                                className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-[#F5F2E8] text-[#5E4E06] font-bold flex items-center justify-center hover:bg-[#E6C866] transition-colors cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-3 md:px-4 py-4 font-bold text-[#5E4E06] text-sm md:text-base">₹{item.price}</td>
+                          <td className="px-3 md:px-4 py-4 font-bold text-[#5E4E06] text-sm md:text-base">₹{item.price * quantityMap[item.id]}</td>
+                          <td className="px-3 md:px-4 py-4">
+                            <button 
+                              onClick={() => handleRemove(item.id)} 
+                              className="text-red-500 hover:text-white hover:bg-red-500 p-1.5 md:p-2 rounded-full border border-red-200 shadow-md transition-all duration-200 cursor-pointer" 
+                              aria-label="Remove item"
+                            >
+                              <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             {/* Discount Code Section */}
