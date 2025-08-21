@@ -12,8 +12,8 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
 
   return (
     <>
-      <Navigation />
-      <div className="pt-20 min-h-[70vh]">{children}</div>
+      {!isAdminPage && <Navigation />}
+      <div className={`${!isAdminPage ? 'pt-20' : ''} min-h-[70vh]`}>{children}</div>
       {!isAdminPage && !isDashboardPage && <Footer />}
       <BackToTop />
     </>

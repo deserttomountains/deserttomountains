@@ -900,7 +900,7 @@ export default function AuraClient() {
               </p>
               <div className="aspect-video bg-gray-200 rounded-xl overflow-hidden">
                 <iframe
-                  src="https://www.youtube.com/embed/jNQXAC9IVRw"
+                  src="https://www.youtube.com/embed/JFsBu5BIw0o"
                   title="Aura Application Guide"
                   className="w-full h-full"
                   frameBorder="0"

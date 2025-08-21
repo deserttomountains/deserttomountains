@@ -105,6 +105,51 @@ export interface Lead {
   createdAt: Date;
   updatedAt: Date;
   createdBy: string; // Admin UID who created the lead
+  quotes?: string[]; // Array of quote IDs associated with this lead
+}
+
+// Quote interface
+export interface Quote {
+  id?: string;
+  quoteNumber: string;
+  version: number;
+  parentQuoteId: string | null;
+  previousVersionId: string | null;
+  
+  // Customer info
+  leadId: string | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerInterest: string;
+  
+  // Quote details
+  items: { productId: string; quantity: number }[];
+  subtotal: number;
+  discount: number;
+  discountType: 'percentage' | 'amount';
+  total: number;
+  validUntil: string;
+  
+  // Payment & company
+  paymentLink: string;
+  companyDetails: {
+    name: string;
+    logo: string;
+    address: string;
+    phone: string;
+    email: string;
+    gst: string;
+  };
+  
+  // Status & tracking
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+  createdAt: Date;
+  createdBy: string;
+  updatedAt: Date;
+  
+  // Auto-expiry
+  isExpired: boolean;
 }
 
 // Deal interface
@@ -377,10 +422,16 @@ export class AuthService {
       const leadsQuery = query(collection(db, 'leads'), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(leadsQuery);
       
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Lead[];
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Convert Firestore Timestamps to JavaScript Date objects
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt
+        };
+      }) as Lead[];
     } catch (error) {
       console.error('Error getting leads:', error);
       throw new Error('Failed to get leads');
@@ -1111,6 +1162,329 @@ export class AuthService {
     } catch (error) {
       console.error('Error getting task by ID:', error);
       throw new Error('Failed to get task');
+    }
+  }
+
+  // QUOTE MANAGEMENT FUNCTIONS
+
+  // Create a new quote
+  static async createQuote(quoteData: Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>, createdBy: string): Promise<string> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { addDoc, collection, updateDoc, doc, arrayUnion } = await import('firebase/firestore');
+      
+      // Prepare quote data
+      const newQuote: Omit<Quote, 'id'> = {
+        ...quoteData,
+        createdBy,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Add quote to collection
+      const quoteRef = await addDoc(collection(db, 'quotes'), newQuote);
+      
+      // If quote is linked to a lead, update the lead with quote reference
+      if (quoteData.leadId) {
+        try {
+          await updateDoc(doc(db, 'leads', quoteData.leadId), {
+            quotes: arrayUnion(quoteRef.id),
+            updatedAt: new Date()
+          });
+        } catch (error) {
+          console.warn('Failed to update lead with quote reference:', error);
+        }
+      }
+
+      return quoteRef.id;
+    } catch (error) {
+      console.error('Error creating quote:', error);
+      throw new Error('Failed to create quote');
+    }
+  }
+
+  // Get all quotes
+  static async getQuotes(): Promise<Quote[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, collection, orderBy, query } = await import('firebase/firestore');
+      const quotesQuery = query(collection(db, 'quotes'), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(quotesQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Quote[];
+    } catch (error) {
+      console.error('Error getting quotes:', error);
+      throw new Error('Failed to get quotes');
+    }
+  }
+
+  // Get quotes by status
+  static async getQuotesByStatus(status: Quote['status']): Promise<Quote[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const quotesQuery = query(
+        collection(db, 'quotes'),
+        where('status', '==', status),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(quotesQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Quote[];
+    } catch (error) {
+      console.error('Error getting quotes by status:', error);
+      throw new Error('Failed to get quotes by status');
+    }
+  }
+
+  // Get quotes by lead ID
+  static async getQuotesByLeadId(leadId: string): Promise<Quote[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const quotesQuery = query(
+        collection(db, 'quotes'),
+        where('leadId', '==', leadId),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(quotesQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Quote[];
+    } catch (error) {
+      console.error('Error getting quotes by lead ID:', error);
+      throw new Error('Failed to get quotes by lead ID');
+    }
+  }
+
+  // Get quote by ID
+  static async getQuoteById(quoteId: string): Promise<Quote | null> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDoc, doc } = await import('firebase/firestore');
+      const quoteDoc = await getDoc(doc(db, 'quotes', quoteId));
+      
+      if (quoteDoc.exists()) {
+        return { id: quoteDoc.id, ...quoteDoc.data() } as Quote;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting quote by ID:', error);
+      throw new Error('Failed to get quote');
+    }
+  }
+
+  // Update quote
+  static async updateQuote(quoteId: string, updateData: Partial<Quote>): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      
+      // Remove undefined values and prepare update data
+      const cleanUpdateData = Object.entries(updateData).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as any);
+
+      await updateDoc(doc(db, 'quotes', quoteId), {
+        ...cleanUpdateData,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating quote:', error);
+      throw new Error('Failed to update quote');
+    }
+  }
+
+  // Update quote status
+  static async updateQuoteStatus(quoteId: string, status: Quote['status']): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      
+      await updateDoc(doc(db, 'quotes', quoteId), {
+        status,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating quote status:', error);
+      throw new Error('Failed to update quote status');
+    }
+  }
+
+  // Delete quote
+  static async deleteQuote(quoteId: string): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { deleteDoc, doc, getDoc, updateDoc, arrayRemove } = await import('firebase/firestore');
+      
+      // First get the quote to check if it's linked to a lead
+      const quoteDoc = await getDoc(doc(db, 'quotes', quoteId));
+      if (quoteDoc.exists()) {
+        const quoteData = quoteDoc.data() as Quote;
+        
+        // If linked to a lead, remove the quote reference from the lead
+        if (quoteData.leadId) {
+          try {
+            await updateDoc(doc(db, 'leads', quoteData.leadId), {
+              quotes: arrayRemove(quoteId),
+              updatedAt: new Date()
+            });
+          } catch (error) {
+            console.warn('Failed to remove quote reference from lead:', error);
+          }
+        }
+      }
+      
+      // Delete the quote
+      await deleteDoc(doc(db, 'quotes', quoteId));
+    } catch (error) {
+      console.error('Error deleting quote:', error);
+      throw new Error('Failed to delete quote');
+    }
+  }
+
+  // Delete multiple quotes (for bulk operations)
+  static async deleteQuotes(quoteIds: string[]): Promise<{ success: number; failed: number; errors: string[] }> {
+    let success = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const quoteId of quoteIds) {
+      try {
+        await this.deleteQuote(quoteId);
+        success++;
+      } catch (error) {
+        failed++;
+        errors.push(`${quoteId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    return { success, failed, errors };
+  }
+
+  // Mark expired quotes
+  static async markExpiredQuotes(): Promise<number> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, updateDoc, doc } = await import('firebase/firestore');
+      
+      // Get all non-expired quotes
+      const quotesQuery = query(
+        collection(db, 'quotes'),
+        where('status', 'in', ['draft', 'sent']),
+        where('isExpired', '==', false)
+      );
+      
+      const querySnapshot = await getDocs(quotesQuery);
+      let updatedCount = 0;
+      const currentDate = new Date();
+
+      for (const quoteDoc of querySnapshot.docs) {
+        const quote = quoteDoc.data() as Quote;
+        const validUntilDate = new Date(quote.validUntil);
+        
+        if (validUntilDate < currentDate) {
+          try {
+            await updateDoc(doc(db, 'quotes', quoteDoc.id), {
+              status: 'expired',
+              isExpired: true,
+              updatedAt: new Date()
+            });
+            updatedCount++;
+          } catch (error) {
+            console.warn(`Failed to mark quote ${quoteDoc.id} as expired:`, error);
+          }
+        }
+      }
+
+      return updatedCount;
+    } catch (error) {
+      console.error('Error marking expired quotes:', error);
+      throw new Error('Failed to mark expired quotes');
+    }
+  }
+
+  // Get quote analytics
+  static async getQuoteAnalytics(): Promise<{
+    total: number;
+    byStatus: Record<Quote['status'], number>;
+    totalValue: number;
+    averageValue: number;
+    conversionRate: number;
+  }> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const quotes = await this.getQuotes();
+      
+      const analytics = {
+        total: quotes.length,
+        byStatus: {
+          draft: 0,
+          sent: 0,
+          accepted: 0,
+          rejected: 0,
+          expired: 0
+        } as Record<Quote['status'], number>,
+        totalValue: 0,
+        averageValue: 0,
+        conversionRate: 0
+      };
+
+      quotes.forEach(quote => {
+        analytics.byStatus[quote.status]++;
+        analytics.totalValue += quote.total;
+      });
+
+      analytics.averageValue = quotes.length > 0 ? analytics.totalValue / quotes.length : 0;
+      
+      const sentQuotes = analytics.byStatus.sent + analytics.byStatus.accepted + analytics.byStatus.rejected + analytics.byStatus.expired;
+      analytics.conversionRate = sentQuotes > 0 ? (analytics.byStatus.accepted / sentQuotes) * 100 : 0;
+
+      return analytics;
+    } catch (error) {
+      console.error('Error getting quote analytics:', error);
+      throw new Error('Failed to get quote analytics');
     }
   }
 }

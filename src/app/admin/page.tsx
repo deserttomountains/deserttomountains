@@ -1,10 +1,10 @@
 "use client";
 
-import { User, Settings, LogOut, Bell, Menu, LayoutDashboard, BarChart3, Users, ShoppingCart, TrendingUp, DollarSign, Calendar, MessageSquare, Phone, UserPlus, Target, Activity, Plus, ArrowUpRight, MoreVertical, FileText, X, Edit, Trash2, Eye as EyeIcon, Search, ArrowLeft, ArrowRight, Mountain, Truck, Package, CheckCircle, Clock, AlertCircle, Star, Filter, SortAsc, SortDesc, CalendarDays, CheckSquare, Square, Tag, UserCheck, Flag, LayoutGrid, List, Database, Repeat } from 'lucide-react';
+import { User, Settings, LogOut, Bell, Menu, LayoutDashboard, BarChart3, Users, ShoppingCart, TrendingUp, DollarSign, Calendar, MessageSquare, Phone, UserPlus, Target, Activity, Plus, ArrowUpRight, ArrowDownRight, Minus, MoreVertical, FileText, X, Edit, Trash2, Eye as EyeIcon, Download, Search, ArrowLeft, ArrowRight, Mountain, Truck, Package, CheckCircle, Clock, AlertCircle, Star, Filter, SortAsc, SortDesc, CalendarDays, CheckSquare, Square, Tag, UserCheck, Flag, LayoutGrid, List, Database, Repeat } from 'lucide-react';
 import MockChatCRM from './MockChatCRM';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { AuthService, auth, db, Lead, UserProfile, Order, Task } from '@/lib/firebase';
+import { useState, useEffect, useMemo } from 'react';
+import { AuthService, auth, db, Lead, UserProfile, Order, Task, Quote } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Fuse from 'fuse.js';
 import CustomerDetailsDrawer from '@/components/CustomerDetailsDrawer';
@@ -13,6 +13,7 @@ import { useToast } from '@/components/ToastContext';
 import { AdminRouteGuard } from '@/components/RouteGuard';
 import app from '@/lib/firebase';
 import { collection, getDocs, Timestamp } from 'firebase/firestore';
+import { downloadQuotePDF, previewQuotePDF } from '@/utils/puppeteerPDFGenerator';
 
 // Helper for date formatting (DD/MM/YY HH:MM 24-hour)
 function formatShortDateTime(date: Date) {
@@ -69,6 +70,166 @@ function AdminDashboardContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<any | null>(null);
 
+  // Lead editing state
+  const [showEditLeadModal, setShowEditLeadModal] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [isEditingLead, setIsEditingLead] = useState(false);
+  const [isDeletingLead, setIsDeletingLead] = useState(false);
+
+  // Direct Call modal state
+  const [showDirectCallModal, setShowDirectCallModal] = useState(false);
+  const [selectedLeadForCall, setSelectedLeadForCall] = useState<Lead | null>(null);
+  const [showCreateQuoteModal, setShowCreateQuoteModal] = useState(false);
+  const [quoteForm, setQuoteForm] = useState({
+    title: '',
+    description: '',
+    items: [{ productId: '', quantity: 1 }],
+    terms: '',
+    validUntil: '',
+    discount: 0,
+    discountType: 'percentage' as 'percentage' | 'amount',
+    paymentLink: '',
+    status: 'draft' as 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired'
+  });
+  const [quoteMode, setQuoteMode] = useState<'existing' | 'new'>('existing');
+  const [selectedLeadForQuote, setSelectedLeadForQuote] = useState<Lead | null>(null);
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    interest: '',
+    source: '',
+    addToLeads: true
+  });
+
+  // Product database for quotes
+  const products = [
+    // Aura Products
+    {
+      id: 'aura-natural',
+      name: 'Aura Natural Wall Plaster',
+      category: 'Aura',
+      price: 499,
+      unit: 'per sq ft',
+      description: 'Natural gypsum and cow dung based plaster'
+    },
+    {
+      id: 'aura-pigmented',
+      name: 'Aura Pigmented Wall Plaster',
+      category: 'Aura',
+      price: 689,
+      unit: 'per sq ft',
+      description: 'Colored natural plaster with custom shades'
+    },
+    // Dhunee Products
+    {
+      id: 'dhunee-100',
+      name: 'Dhunee Organic Incense',
+      category: 'Dhunee',
+      price: 1200,
+      unit: 'per pack (100 sticks)',
+      description: 'Natural organic incense sticks'
+    },
+    {
+      id: 'dhunee-200',
+      name: 'Dhunee Organic Incense',
+      category: 'Dhunee',
+      price: 2000,
+      unit: 'per pack (200 sticks)',
+      description: 'Natural organic incense sticks'
+    }
+  ];
+
+  // Company details for quotes
+  const companyDetails = {
+    name: 'Desert to Mountains',
+    logo: '/images/logo.png',
+    address: 'Jodhpur, Rajasthan, India',
+    phone: '+91 12345 67890',
+    email: 'info@deserttomountains.com',
+    gst: '08DVEPB9224H1ZM'
+  };
+
+  // Remove local Quote interface - use the Firebase one
+  const [leadSearchTerm, setLeadSearchTerm] = useState('');
+  const [leadFilterStatus, setLeadFilterStatus] = useState<string>('all');
+  const [currentLeadPage, setCurrentLeadPage] = useState(1);
+  const [modalLeadsPerPage, setModalLeadsPerPage] = useState(10);
+  
+  // Recent Leads dropdown state
+  const [openLeadDropdown, setOpenLeadDropdown] = useState<string | null>(null);
+
+  // Status filter state
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('All');
+
+  // Real-time age updates for recent leads only
+  const [ageUpdateTrigger, setAgeUpdateTrigger] = useState(0);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [leadsPerPage, setLeadsPerPage] = useState(10);
+  const [showPaginationSettings, setShowPaginationSettings] = useState(false);
+
+  // Update age every minute ONLY for leads created within the last hour
+  useEffect(() => {
+    // Check if we have any recent leads that need real-time updates
+    const hasRecentLeads = leads.some(lead => {
+      const created = getDateFromAny(lead.createdAt);
+      if (!created) return false;
+      
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - created.getTime());
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+      
+      return diffHours < 1; // Only leads created within the last hour
+    });
+
+    // Only start the interval if we have recent leads
+    if (hasRecentLeads) {
+      const interval = setInterval(() => {
+        setAgeUpdateTrigger(prev => prev + 1);
+      }, 60000); // Update every minute
+
+      return () => clearInterval(interval);
+    }
+    
+    // If no recent leads, don't start the interval
+    return () => {};
+  }, [leads]); // Re-run when leads change
+
+  // Filtered leads for search and status
+  const filteredLeads = leads.filter(lead => {
+    // First apply search filter
+    if (searchTerm) {
+      const matchesSearch = 
+        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        lead.phone.includes(searchTerm) ||
+        lead.interest.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (lead.notes && lead.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      if (!matchesSearch) return false;
+    }
+    
+    // Then apply status filter
+    if (selectedStatusFilter !== 'All' && lead.status !== selectedStatusFilter) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredLeads.length / leadsPerPage);
+  const startIndex = (currentPage - 1) * leadsPerPage;
+  const endIndex = startIndex + leadsPerPage;
+  const currentLeads = filteredLeads.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatusFilter]);
+
   // Prevent background scroll when modal is open
   useEffect(() => {
     if (modalOpen) {
@@ -84,6 +245,17 @@ function AdminDashboardContent() {
   // Task Management State
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [selectedQuoteForActions, setSelectedQuoteForActions] = useState<Quote | null>(null);
+  const [showDeleteQuoteModal, setShowDeleteQuoteModal] = useState(false);
+  const [quoteAnalytics, setQuoteAnalytics] = useState<{
+    total: number;
+    byStatus: Record<Quote['status'], number>;
+    totalValue: number;
+    averageValue: number;
+    conversionRate: number;
+  } | null>(null);
+  const [quoteToDelete, setQuoteToDelete] = useState<{ quote: Quote; deleteAllVersions: boolean } | null>(null);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -207,11 +379,57 @@ function AdminDashboardContent() {
   const completedOrdersValue = completedOrders.reduce((sum, order) => sum + order.finalAmount, 0);
   const todayOrdersValue = todayOrders.reduce((sum, order) => sum + order.finalAmount, 0);
 
+  // Calculate month-over-month changes for stats
+  const calculateMonthOverMonthChange = (currentValue: number, previousValue: number): string => {
+    if (previousValue === 0) return currentValue > 0 ? '+100%' : '0%';
+    const change = ((currentValue - previousValue) / previousValue) * 100;
+    return change >= 0 ? `+${change.toFixed(1)}%` : `${change.toFixed(1)}%`;
+  };
+
+  // Get current month and previous month data
+  const currentDate = new Date();
+  const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const currentMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+  const previousMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+  const previousMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0, 23, 59, 59, 999);
+
+  // Filter leads by month
+  const getLeadsInMonth = (startDate: Date, endDate: Date) => {
+    return leads.filter(lead => {
+      const createdDate = getDateFromAny(lead.createdAt);
+      return createdDate && createdDate >= startDate && createdDate <= endDate;
+    });
+  };
+
+  const currentMonthLeads = getLeadsInMonth(currentMonthStart, currentMonthEnd);
+  const previousMonthLeads = getLeadsInMonth(previousMonthStart, previousMonthEnd);
+
+  // Calculate revenue (assuming each Closed Won lead generates ₹50,000 on average)
+  const calculateRevenue = (leadsList: any[]) => {
+    const closedWonLeads = leadsList.filter(lead => lead.status === 'Closed Won').length;
+    const averageDealValue = 50000; // ₹50,000 per deal
+    return closedWonLeads * averageDealValue;
+  };
+
+  const currentMonthRevenue = calculateRevenue(currentMonthLeads);
+  const previousMonthRevenue = calculateRevenue(previousMonthLeads);
+
+  // Format revenue for display
+  const formatRevenue = (amount: number): string => {
+    if (amount >= 100000) {
+      return `₹${(amount / 100000).toFixed(1)}L`;
+    } else if (amount >= 1000) {
+      return `₹${(amount / 1000).toFixed(0)}K`;
+    } else {
+      return `₹${amount}`;
+    }
+  };
+
   const crmStats = [
     {
       title: 'Total Leads',
       value: leads.length.toString(),
-      change: '+12.5%',
+      change: calculateMonthOverMonthChange(leads.length, previousMonthLeads.length),
       icon: UserPlus,
       gradient: 'from-[#D4AF37] to-[#8B7A1A]',
       description: 'from last month'
@@ -219,7 +437,10 @@ function AdminDashboardContent() {
     {
       title: 'Active Deals',
       value: leads.filter(lead => ['Qualified', 'Proposal Sent', 'Negotiation'].includes(lead.status)).length.toString(),
-      change: '+8.2%',
+      change: calculateMonthOverMonthChange(
+        leads.filter(lead => ['Qualified', 'Proposal Sent', 'Negotiation'].includes(lead.status)).length,
+        previousMonthLeads.filter(lead => ['Qualified', 'Proposal Sent', 'Negotiation'].includes(lead.status)).length
+      ),
       icon: Target,
       gradient: 'from-[#8B7A1A] to-[#5E4E06]',
       description: 'in pipeline'
@@ -227,15 +448,18 @@ function AdminDashboardContent() {
     {
       title: 'Conversion Rate',
       value: leads.length > 0 ? `${Math.round((leads.filter(lead => lead.status === 'Closed Won').length / leads.length) * 100)}%` : '0%',
-      change: '+2.1%',
+      change: calculateMonthOverMonthChange(
+        leads.filter(lead => lead.status === 'Closed Won').length,
+        previousMonthLeads.filter(lead => lead.status === 'Closed Won').length
+      ),
       icon: TrendingUp,
       gradient: 'from-[#D4AF37] to-[#8B7A1A]',
       description: 'this month'
     },
     {
       title: 'Revenue',
-      value: '₹2.4L',
-      change: '+15.3%',
+      value: formatRevenue(currentMonthRevenue),
+      change: calculateMonthOverMonthChange(currentMonthRevenue, previousMonthRevenue),
       icon: DollarSign,
       gradient: 'from-[#8B7A1A] to-[#5E4E06]',
       description: 'this month'
@@ -246,6 +470,7 @@ function AdminDashboardContent() {
   const navigation = [
     { name: 'Overview', id: 'overview', icon: BarChart3 },
     { name: 'Leads', id: 'leads', icon: UserPlus },
+    { name: 'Quotes', id: 'quotes', icon: FileText },
     { name: 'Customers', id: 'customers', icon: Users },
     { name: 'Sales', id: 'sales', icon: Target },
     { name: 'Messages', id: 'messages', icon: MessageSquare },
@@ -264,19 +489,181 @@ function AdminDashboardContent() {
     if (val instanceof Date) return val;
     return new Date(val);
   }
+
+  // Generate unique quote number
+  function generateQuoteNumber(): string {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `Q-${year}-${month}-${random}`;
+  }
+
+  // Check if quote is expired
+  function isQuoteExpired(validUntil: string): boolean {
+    return new Date(validUntil) < new Date();
+  }
+
+  // Update quote status
+  const updateQuoteStatus = async (quoteId: string, newStatus: Quote['status']) => {
+    try {
+      await AuthService.updateQuoteStatus(quoteId, newStatus);
+      
+      // Update local state
+      setQuotes(prev => prev.map(quote => 
+        quote.id === quoteId 
+          ? { ...quote, status: newStatus, updatedAt: new Date() }
+          : quote
+      ));
+      
+      // Reload analytics
+      await loadQuoteAnalytics();
+      
+      showToast(`Quote status updated to ${newStatus}`, 'success');
+    } catch (error) {
+      console.error('Error updating quote status:', error);
+      showToast('Failed to update quote status', 'error');
+    }
+  };
+
+  // Create new quote version
+  const createQuoteVersion = (originalQuote: Quote) => {
+    const newVersion: Quote = {
+      ...originalQuote,
+      id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      quoteNumber: `${originalQuote.quoteNumber}-v${originalQuote.version + 1}`,
+      version: originalQuote.version + 1,
+      parentQuoteId: originalQuote.id || null,
+      previousVersionId: originalQuote.id || null,
+      status: 'draft',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isExpired: false
+    };
+    
+    setQuotes(prev => {
+      // Ensure no duplicate temporary IDs
+      const existingQuote = prev.find(q => q.id === newVersion.id);
+      if (existingQuote) {
+        return prev;
+      }
+      return [...prev, newVersion];
+    });
+    showToast(`New version v${newVersion.version} created for ${originalQuote.quoteNumber}`, 'success');
+  };
+
+  // Delete quote functions
+  const deleteQuote = (quote: Quote) => {
+    setQuoteToDelete({ quote, deleteAllVersions: false });
+    setShowDeleteQuoteModal(true);
+  };
+
+  const deleteQuoteWithVersions = (quote: Quote) => {
+    setQuoteToDelete({ quote, deleteAllVersions: true });
+    setShowDeleteQuoteModal(true);
+  };
+
+  const executeDelete = async () => {
+    if (!quoteToDelete) return;
+
+    const { quote, deleteAllVersions } = quoteToDelete;
+
+    try {
+      if (deleteAllVersions) {
+        // Find all related quotes (parent, children, siblings)
+        const relatedQuotes = quotes.filter(q => 
+          q.id === quote.id || 
+          q.parentQuoteId === quote.id || 
+          q.parentQuoteId === quote.parentQuoteId ||
+          q.previousVersionId === quote.id ||
+          (quote.parentQuoteId && (q.id === quote.parentQuoteId || q.parentQuoteId === quote.parentQuoteId))
+        );
+
+        // Delete all related quotes from Firebase
+        const quoteIds = relatedQuotes.map(q => q.id).filter((id): id is string => !!id);
+        const result = await AuthService.deleteQuotes(quoteIds);
+        
+        // Update local state
+        setQuotes(prev => prev.filter(q => 
+          !relatedQuotes.some(rq => rq.id === q.id)
+        ));
+        
+        showToast(`Quote and ${result.success - 1} related version(s) deleted successfully`, 'success');
+        if (result.failed > 0) {
+          console.warn('Some quotes failed to delete:', result.errors);
+        }
+      } else {
+        // Delete single quote
+        if (quote.id) {
+          await AuthService.deleteQuote(quote.id);
+        }
+        
+        // Update local state
+        setQuotes(prev => prev.filter(q => q.id !== quote.id));
+        showToast('Quote deleted successfully', 'success');
+      }
+
+      // Close modal and reset
+      setShowDeleteQuoteModal(false);
+      setQuoteToDelete(null);
+      setSelectedQuoteForActions(null);
+    } catch (error) {
+      console.error('Error deleting quote:', error);
+      showToast('Failed to delete quote', 'error');
+    }
+  };
+
+  // PDF Generation Functions
+  const handleDownloadPDF = async (quote: Quote) => {
+    try {
+      setSelectedQuoteForActions(null);
+      showToast('Generating PDF...', 'success');
+      
+      console.log('Starting PDF generation for quote:', quote.quoteNumber);
+      console.log('Products:', products);
+      console.log('Company details:', companyDetails);
+      
+      await downloadQuotePDF(quote, products, companyDetails);
+      showToast('PDF downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      showToast('Failed to download PDF', 'error');
+    }
+  };
+
+  const handlePreviewPDF = async (quote: Quote) => {
+    try {
+      setSelectedQuoteForActions(null);
+      showToast('Opening PDF preview...', 'success');
+      
+      await previewQuotePDF(quote, products, companyDetails);
+    } catch (error) {
+      console.error('Error previewing PDF:', error);
+      showToast('Failed to preview PDF', 'error');
+    }
+  };
+
+  // Load quote analytics
+  const loadQuoteAnalytics = async () => {
+    try {
+      const analytics = await AuthService.getQuoteAnalytics();
+      setQuoteAnalytics(analytics);
+    } catch (error) {
+      console.error('Error loading quote analytics:', error);
+    }
+  };
   // Filter customers by join date
-  const now = new Date();
+  const customerFilterDate = new Date();
   let dateFilteredCustomers = [];
   if (filterType === 'thisMonth') {
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const firstDay = new Date(customerFilterDate.getFullYear(), customerFilterDate.getMonth(), 1);
+    const lastDay = new Date(customerFilterDate.getFullYear(), customerFilterDate.getMonth() + 1, 0, 23, 59, 59, 999);
     dateFilteredCustomers = customers.filter(c => {
       const d = getDate(c.createdAt);
       return isWithinRange(d, firstDay, lastDay);
     });
   } else if (filterType === 'last30') {
-    const start = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const start = new Date(customerFilterDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+    const end = new Date(customerFilterDate.getFullYear(), customerFilterDate.getMonth(), customerFilterDate.getDate(), 23, 59, 59, 999);
     dateFilteredCustomers = customers.filter(c => {
       const d = getDate(c.createdAt);
       return isWithinRange(d, start, end);
@@ -310,14 +697,36 @@ function AdminDashboardContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [fetchedLeads, fetchedOrders, fetchedTasks] = await Promise.all([
+        const [fetchedLeads, fetchedOrders, fetchedTasks, fetchedQuotes] = await Promise.all([
           AuthService.getLeads(),
           AuthService.getOrders(),
-          AuthService.getTasks()
+          AuthService.getTasks(),
+          AuthService.getQuotes()
         ]);
+        
+        // Debug: Check quotes data
+        console.log('Fetched quotes:', fetchedQuotes);
+        console.log('Quotes with IDs:', fetchedQuotes.filter(q => q && q.id).length);
+        console.log('Quotes without IDs:', fetchedQuotes.filter(q => !q || !q.id).length);
+        
         setLeads(fetchedLeads);
         setOrders(fetchedOrders);
         setTasks(fetchedTasks);
+        // Ensure all quotes have valid IDs and filter out any invalid ones
+        const validQuotes = fetchedQuotes.filter(q => q && q.id && typeof q.id === 'string');
+        
+        // Remove any duplicate IDs
+        const uniqueQuotes = validQuotes.filter((quote, index, self) => 
+          index === self.findIndex(q => q.id === quote.id)
+        );
+        
+        console.log('Valid quotes to set:', validQuotes.length);
+        console.log('Unique quotes after deduplication:', uniqueQuotes.length);
+        setQuotes(uniqueQuotes);
+        
+        // Load quote analytics
+        await loadQuoteAnalytics();
+        
         // Fetch admin profile
         const currentUser = auth.currentUser;
         if (currentUser) {
@@ -340,12 +749,51 @@ function AdminDashboardContent() {
       if (sidebarOpen && !target.closest('.admin-sidebar') && !target.closest('.admin-sidebar-toggle')) {
         setSidebarOpen(false);
       }
+      // Close quote actions dropdown when clicking outside
+      if (selectedQuoteForActions && !target.closest('.quote-actions-dropdown')) {
+        setSelectedQuoteForActions(null);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [sidebarOpen]);
+  }, [sidebarOpen, selectedQuoteForActions]);
+
+  // Auto-expiry functionality for quotes
+  useEffect(() => {
+    const checkExpiredQuotes = async () => {
+      try {
+        // Mark expired quotes in Firebase
+        const expiredCount = await AuthService.markExpiredQuotes();
+        
+        if (expiredCount > 0) {
+          // Reload quotes from Firebase to get updated data
+          const updatedQuotes = await AuthService.getQuotes();
+          setQuotes(updatedQuotes);
+          
+          showToast(`${expiredCount} quote(s) marked as expired`, 'success');
+        }
+      } catch (error) {
+        console.error('Error checking expired quotes:', error);
+        
+        // Fallback to local check if Firebase fails
+        setQuotes(prev => prev.map(quote => ({
+          ...quote,
+          isExpired: isQuoteExpired(quote.validUntil),
+          status: quote.status === 'draft' && isQuoteExpired(quote.validUntil) ? 'expired' : quote.status
+        })));
+      }
+    };
+
+    // Check immediately
+    checkExpiredQuotes();
+    
+    // Check every hour
+    const interval = setInterval(checkExpiredQuotes, 60 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -415,6 +863,368 @@ function AdminDashboardContent() {
     }
   };
 
+  // Handle editing lead
+  const handleEditLead = (lead: Lead) => {
+    setEditingLead(lead);
+    setLeadForm({
+      name: lead.name,
+      email: lead.email || '',
+      phone: lead.phone,
+      source: lead.source,
+      status: lead.status,
+      interest: lead.interest,
+      notes: lead.notes || ''
+    });
+    setShowEditLeadModal(true);
+  };
+
+  // Handle updating lead
+  const handleUpdateLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLead?.id) return;
+    
+    setIsEditingLead(true);
+    setSubmitError(null);
+
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Update lead data
+      const updatedLeadData = {
+        name: leadForm.name,
+        email: leadForm.email || undefined,
+        phone: leadForm.phone,
+        source: leadForm.source,
+        status: leadForm.status,
+        interest: leadForm.interest,
+        notes: leadForm.notes || undefined,
+        updatedAt: new Date()
+      };
+
+      // Update in Firebase
+      await AuthService.updateLead(editingLead.id, updatedLeadData);
+
+      // Update local state
+      setLeads(prev => prev.map(lead => 
+        lead.id === editingLead.id 
+          ? { ...lead, ...updatedLeadData }
+          : lead
+      ));
+
+      // Reset form and close modal
+      setLeadForm({
+        name: '',
+        email: '',
+        phone: '',
+        source: '',
+        status: 'New Lead',
+        interest: '',
+        notes: ''
+      });
+      setShowEditLeadModal(false);
+      setEditingLead(null);
+
+      showToast('Lead updated successfully!', 'success');
+
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to update lead');
+    } finally {
+      setIsEditingLead(false);
+    }
+  };
+
+  // Handle deleting lead
+  const handleDeleteLead = async (leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the lead "${lead.name}"?\n\nThis action cannot be undone and will permanently remove all information about this lead.`
+    );
+    
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeletingLead(true);
+
+    try {
+      // Delete from Firebase
+      await AuthService.deleteLead(leadId);
+
+      // Remove from local state
+      setLeads(prev => prev.filter(l => l.id !== leadId));
+
+      showToast(`Lead "${lead.name}" deleted successfully!`, 'success');
+
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      showToast('Failed to delete lead', 'error');
+    } finally {
+      setIsDeletingLead(false);
+    }
+  };
+
+  // Helper functions for modal lead management
+  const filteredModalLeads = useMemo(() => {
+    let filtered = leads;
+    
+    // Filter by search term
+    if (leadSearchTerm.trim()) {
+      filtered = filtered.filter(lead => 
+        lead.name.toLowerCase().includes(leadSearchTerm.toLowerCase()) ||
+        lead.phone.includes(leadSearchTerm) ||
+        (lead.email && lead.email.toLowerCase().includes(leadSearchTerm.toLowerCase()))
+      );
+    }
+    
+    // Filter by status
+    if (leadFilterStatus !== 'all') {
+      filtered = filtered.filter(lead => lead.status === leadFilterStatus);
+    }
+    
+    return filtered;
+  }, [leads, leadSearchTerm, leadFilterStatus]);
+
+  const getPaginatedModalLeads = () => {
+    const startIndex = (currentLeadPage - 1) * modalLeadsPerPage;
+    const endIndex = startIndex + modalLeadsPerPage;
+    return filteredModalLeads.slice(startIndex, endIndex);
+  };
+
+  const totalModalPages = Math.ceil(filteredModalLeads.length / modalLeadsPerPage);
+
+  // Reset modal pagination when search/filter changes
+  useEffect(() => {
+    setCurrentLeadPage(1);
+  }, [leadSearchTerm, leadFilterStatus]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openLeadDropdown && !(event.target as Element).closest('.dropdown-container')) {
+        setOpenLeadDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openLeadDropdown]);
+
+  // Handle mobile viewport height for modals and layout
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+      
+      // Set safe area inset for mobile
+      const safeAreaTop = getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0px';
+      document.documentElement.style.setProperty('--sat', safeAreaTop);
+      
+      // Set mobile-specific layout variables
+      const isMobile = window.innerWidth < 640;
+      if (isMobile) {
+        const headerHeight = 56; // 3.5rem
+        const safeTop = parseInt(safeAreaTop) || 0;
+        const totalTop = Math.max(80, headerHeight + safeTop);
+        document.documentElement.style.setProperty('--mobile-top', `${totalTop}px`);
+        document.documentElement.style.setProperty('--mobile-height', `calc(100vh - ${totalTop}px)`);
+      }
+    };
+
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+
+    return () => {
+      window.removeEventListener('resize', setVH);
+      window.removeEventListener('orientationchange', setVH);
+    };
+  }, []);
+
+  // Handle recent lead actions
+  const handleRecentLeadAction = (action: string, lead: Lead) => {
+    switch (action) {
+      case 'edit':
+        // Pre-fill the edit form with existing lead data
+        setLeadForm({
+          name: lead.name,
+          email: lead.email || '',
+          phone: lead.phone,
+          source: lead.source,
+          status: lead.status,
+          interest: lead.interest,
+          notes: lead.notes || ''
+        });
+        setEditingLead(lead);
+        setShowEditLeadModal(true);
+        showToast(`Opening edit form for ${lead.name}`, 'info');
+        break;
+      case 'call':
+        // Direct call without opening modal
+        if (lead.phone) {
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          
+          if (isMobile) {
+            window.location.href = `tel:${lead.phone}`;
+            showToast(`Opening phone app to call ${lead.name}...`, 'success');
+          } else {
+            const phoneNumber = lead.phone;
+            const message = `Call ${lead.name} at: ${phoneNumber}\n\nCopy this number and use your phone to call.`;
+            
+            if (confirm(`${message}\n\nClick OK to copy the phone number to clipboard.`)) {
+              try {
+                navigator.clipboard.writeText(phoneNumber);
+                showToast(`Phone number copied to clipboard: ${phoneNumber}`, 'success');
+              } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = phoneNumber;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast(`Phone number copied: ${phoneNumber}`, 'success');
+              }
+            }
+          }
+          
+          // Update lead status to "Contacted" if it's a new lead
+          if (lead.status === 'New Lead') {
+            AuthService.updateLead(lead.id!, {
+              ...lead,
+              status: 'Contacted',
+              updatedAt: new Date()
+            }).then(() => {
+              setLeads(leads.map(l =>
+                l.id === lead.id
+                  ? { ...l, status: 'Contacted', updatedAt: new Date() }
+                  : l
+              ));
+            }).catch(error => {
+              console.error('Error updating lead status:', error);
+            });
+          }
+        } else {
+          showToast('No phone number available for this lead', 'error');
+        }
+        break;
+
+      case 'delete':
+        if (confirm(`Are you sure you want to delete ${lead.name}?\n\nThis action cannot be undone.`)) {
+          handleDeleteLead(lead.id!);
+          showToast(`Deleting ${lead.name}...`, 'info');
+        }
+        break;
+      default:
+        break;
+    }
+    setOpenLeadDropdown(null);
+  };
+
+  // Handle direct call to a lead
+  const handleDirectCall = async (lead: Lead) => {
+    if (!lead.id) {
+      showToast('Lead ID is missing', 'error');
+      return;
+    }
+    
+    try {
+      // Make actual phone call first
+      if (lead.phone) {
+        // Check if we're on a mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+          // On mobile devices, use tel: protocol to open phone app
+          window.location.href = `tel:${lead.phone}`;
+          showToast(`Opening phone app to call ${lead.name}...`, 'success');
+        } else {
+          // On desktop, show phone number and instructions
+          const phoneNumber = lead.phone;
+          const message = `Call ${lead.name} at: ${phoneNumber}\n\nCopy this number and use your phone to call.`;
+          
+          // Show phone number prominently
+          if (confirm(`${message}\n\nClick OK to copy the phone number to clipboard.`)) {
+            try {
+              await navigator.clipboard.writeText(phoneNumber);
+              showToast(`Phone number copied to clipboard: ${phoneNumber}`, 'success');
+            } catch (err) {
+              // Fallback for older browsers
+              const textArea = document.createElement('textarea');
+              textArea.value = phoneNumber;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              showToast(`Phone number copied: ${phoneNumber}`, 'success');
+            }
+          }
+        }
+      } else {
+        showToast('No phone number available for this lead', 'error');
+        return;
+      }
+      
+      // Update lead status to "Contacted" if it's a new lead
+      if (lead.status === 'New Lead') {
+        await AuthService.updateLead(lead.id, {
+          ...lead,
+          status: 'Contacted',
+          updatedAt: new Date()
+        });
+        
+        // Update local state
+        setLeads(leads.map(l => 
+          l.id === lead.id 
+            ? { ...l, status: 'Contacted', updatedAt: new Date() }
+            : l
+        ));
+      }
+
+      // Create a call log entry (as a task)
+      const callTaskData = {
+        title: `Call: ${lead.name}`,
+        description: `Direct call made to ${lead.name} on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
+        status: 'completed' as const,
+        priority: 'medium' as const,
+        category: 'follow_up' as const,
+        dueDate: new Date(),
+        tags: ['call', 'direct', 'completed'],
+        notes: `Call completed successfully\nLead: ${lead.name}\nPhone: ${lead.phone}\nStatus: ${lead.status}`,
+        relatedTo: {
+          type: 'lead' as const,
+          id: lead.id!,
+          name: lead.name
+        },
+        createdBy: auth.currentUser?.uid || ''
+      };
+
+      // Create the call log task
+      await AuthService.createTask(callTaskData, auth.currentUser?.uid || '');
+      
+      // Show success message
+      showToast(`Call logged successfully for ${lead.name}!`, 'success');
+      
+      // Close the modal
+      setShowDirectCallModal(false);
+      setSelectedLeadForCall(null);
+      
+      // Refresh tasks to show the new call log
+      const updatedTasks = await AuthService.getTasks();
+      setTasks(updatedTasks);
+      
+    } catch (error) {
+      console.error('Error logging call:', error);
+      showToast('Failed to log call', 'error');
+    }
+  };
+
   // Helper to format Firestore Timestamp or Date
   function formatDate(date: any) {
     if (!date) return '-';
@@ -424,7 +1234,80 @@ function AdminDashboardContent() {
     if (date instanceof Date) {
       return date.toLocaleDateString();
     }
+    // Handle Firestore Timestamp objects
+    if (date && typeof date === 'object' && date.seconds) {
+      return new Date(date.seconds * 1000).toLocaleDateString();
+    }
+    // Handle ISO string dates
+    if (typeof date === 'string') {
+      const parsedDate = new Date(date);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toLocaleDateString();
+      }
+    }
     return '-';
+  }
+
+  // Helper to get a proper Date object from various date formats
+  function getDateFromAny(date: any): Date | null {
+    if (!date) return null;
+    
+    // Handle Firestore Timestamp
+    if (typeof date.toDate === 'function') {
+      return date.toDate();
+    }
+    
+    // Handle Date object
+    if (date instanceof Date) {
+      return date;
+    }
+    
+    // Handle Firestore Timestamp with seconds
+    if (date && typeof date === 'object' && date.seconds) {
+      return new Date(date.seconds * 1000);
+    }
+    
+    // Handle ISO string
+    if (typeof date === 'string') {
+      const parsedDate = new Date(date);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    }
+    
+    // Handle timestamp number
+    if (typeof date === 'number') {
+      return new Date(date);
+    }
+    
+    return null;
+  }
+
+  // Helper to format lead age in a user-friendly way
+  function formatLeadAge(createdAt: any): string {
+    const created = getDateFromAny(createdAt);
+    if (!created) return 'Date unknown';
+    
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    
+    // Calculate different time units
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+    const diffMonths = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 30));
+    const diffYears = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365));
+    
+    // Show most appropriate time unit
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes} min${diffMinutes === 1 ? '' : 's'} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks === 1 ? '' : 's'} ago`;
+    if (diffMonths < 12) return `${diffMonths} month${diffMonths === 1 ? '' : 's'} ago`;
+    return `${diffYears} year${diffYears === 1 ? '' : 's'} ago`;
   }
 
   async function handleSaveCustomer(updated: UserProfile) {
@@ -1706,6 +2589,277 @@ function AdminDashboardContent() {
     }
   }, [activeTab]);
 
+  // Quote creation functions
+  const handleCreateQuote = (lead?: Lead) => {
+    if (lead) {
+      // Existing lead mode
+      setSelectedLeadForQuote(lead);
+      setQuoteMode('existing');
+      setQuoteForm({
+        title: `Quote for ${lead.name} - ${lead.interest}`,
+        description: `Professional quote for ${lead.name} regarding ${lead.interest}`,
+        items: [{ productId: '', quantity: 1 }],
+        terms: 'Payment terms: 50% advance, 50% on completion\nValid for 30 days\nGST applicable as per government rates',
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        discount: 0,
+        discountType: 'percentage',
+        paymentLink: '',
+        status: 'draft'
+      });
+    } else {
+      // New customer mode
+      setSelectedLeadForQuote(null);
+      setQuoteMode('new');
+      setNewCustomerForm({
+        name: '',
+        email: '',
+        phone: '',
+        interest: '',
+        source: 'Website',
+        addToLeads: true
+      });
+      setQuoteForm({
+        title: '',
+        description: '',
+        items: [{ productId: '', quantity: 1 }],
+        terms: 'Payment terms: 50% advance, 50% on completion\nValid for 30 days\nGST applicable as per government rates',
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        discount: 0,
+        discountType: 'percentage',
+        paymentLink: '',
+        status: 'draft'
+      });
+      
+      // Pre-fill quote form if product is selected
+      if (newCustomerForm.interest) {
+        setQuoteForm(prev => ({
+          ...prev,
+          title: `Quote for Customer - ${newCustomerForm.interest}`,
+          description: `Professional quote for customer regarding ${newCustomerForm.interest}`
+        }));
+      }
+    }
+    setShowCreateQuoteModal(true);
+  };
+
+  const addQuoteItem = () => {
+    setQuoteForm(prev => ({
+      ...prev,
+      items: [...prev.items, { productId: '', quantity: 1 }]
+    }));
+  };
+
+  const removeQuoteItem = (index: number) => {
+    if (quoteForm.items.length > 1) {
+      setQuoteForm(prev => ({
+        ...prev,
+        items: prev.items.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const updateQuoteItem = (index: number, field: 'productId' | 'quantity', value: string | number) => {
+    setQuoteForm(prev => ({
+      ...prev,
+      items: prev.items.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const calculateQuoteTotal = () => {
+    const subtotal = quoteForm.items.reduce((sum, item) => {
+      const product = products.find(p => p.id === item.productId);
+      return sum + (item.quantity * (product?.price || 0));
+    }, 0);
+    
+    let discountAmount = 0;
+    if (quoteForm.discountType === 'percentage') {
+      discountAmount = (subtotal * quoteForm.discount) / 100;
+    } else {
+      discountAmount = Math.min(quoteForm.discount, subtotal); // Can't exceed subtotal
+    }
+    
+    return {
+      subtotal,
+      discountAmount,
+      total: subtotal - discountAmount
+    };
+  };
+
+  const handleSaveQuote = async () => {
+    try {
+      let customerName = '';
+      let customerEmail = '';
+      let customerPhone = '';
+      let customerInterest = '';
+
+      if (quoteMode === 'existing' && selectedLeadForQuote) {
+        // Existing lead mode
+        customerName = selectedLeadForQuote.name;
+        customerEmail = selectedLeadForQuote.email || '';
+        customerPhone = selectedLeadForQuote.phone || '';
+        customerInterest = selectedLeadForQuote.interest;
+      } else if (quoteMode === 'new') {
+        // New customer mode
+        if (!newCustomerForm.name.trim()) {
+          showToast('Customer name is required', 'error');
+          return;
+        }
+        if (!newCustomerForm.interest.trim()) {
+          showToast('Product/Service interest is required', 'error');
+          return;
+        }
+        if (!newCustomerForm.source.trim()) {
+          showToast('Lead source is required', 'error');
+          return;
+        }
+        
+        customerName = newCustomerForm.name;
+        customerEmail = newCustomerForm.email;
+        customerPhone = newCustomerForm.phone;
+        customerInterest = newCustomerForm.interest;
+
+        // Create new lead if checkbox is checked
+        if (newCustomerForm.addToLeads) {
+          try {
+            const newLead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'> = {
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone,
+              source: newCustomerForm.source,
+              status: 'New Lead',
+              interest: customerInterest,
+              notes: `Created from quote generation on ${new Date().toLocaleDateString()}`,
+              createdBy: auth.currentUser?.uid || ''
+            };
+
+            const leadId = await AuthService.createLead(newLead, auth.currentUser?.uid || '');
+            
+            // Create the full lead object for local state
+            const createdLead: Lead = {
+              id: leadId,
+              ...newLead,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            };
+            
+            // Add to local state
+            setLeads(prev => [...prev, createdLead]);
+            
+            showToast(`New lead created for ${customerName}!`, 'success');
+          } catch (error) {
+            console.error('Error creating lead:', error);
+            showToast('Quote created but failed to create lead', 'error');
+          }
+        }
+      }
+
+      const quoteData = {
+        id: '', // Will be set by Firestore
+        quoteNumber: generateQuoteNumber(),
+        version: 1,
+        parentQuoteId: null,
+        previousVersionId: null,
+        
+        // Customer info  
+        leadId: quoteMode === 'existing' ? (selectedLeadForQuote?.id || null) : null,
+        customerName: customerName,
+        customerEmail: customerEmail,
+        customerPhone: customerPhone,
+        customerInterest: customerInterest,
+        
+        // Quote details
+        items: quoteForm.items,
+        subtotal: calculateQuoteTotal().subtotal,
+        discount: quoteForm.discount,
+        discountType: quoteForm.discountType,
+        total: calculateQuoteTotal().total,
+        validUntil: quoteForm.validUntil,
+        
+        // Payment & company
+        paymentLink: quoteForm.paymentLink,
+        companyDetails: companyDetails,
+        
+        // Status & tracking
+        status: 'draft' as const,
+        createdAt: new Date(),
+        createdBy: auth.currentUser?.uid || '',
+        updatedAt: new Date(),
+        
+        // Auto-expiry
+        isExpired: isQuoteExpired(quoteForm.validUntil)
+      };
+
+      // Save quote to Firestore
+      const quoteId = await AuthService.createQuote(quoteData, auth.currentUser?.uid || '');
+      
+      // Add to local state with the generated ID
+      const newQuote: Quote = {
+        ...quoteData,
+        id: quoteId
+      };
+      setQuotes(prev => {
+        // Ensure no duplicate quotes
+        const existingQuote = prev.find(q => q.id === quoteId);
+        if (existingQuote) {
+          return prev;
+        }
+        return [...prev, newQuote];
+      });
+      
+      // Reload analytics
+      await loadQuoteAnalytics();
+      
+      // Show success message
+      showToast(`Quote created successfully for ${customerName}!`, 'success');
+      
+      // Update existing lead status to "Proposal Sent" if applicable
+      if (quoteMode === 'existing' && selectedLeadForQuote && selectedLeadForQuote.status === 'Qualified') {
+        await AuthService.updateLead(selectedLeadForQuote.id!, {
+          ...selectedLeadForQuote,
+          status: 'Proposal Sent',
+          updatedAt: new Date()
+        });
+        
+        // Update local state
+        setLeads(leads.map(l =>
+          l.id === selectedLeadForQuote.id
+            ? { ...l, status: 'Proposal Sent', updatedAt: new Date() }
+            : l
+        ));
+      }
+
+      // Close modal and reset form
+      setShowCreateQuoteModal(false);
+      setSelectedLeadForQuote(null);
+      setQuoteMode('existing');
+      setNewCustomerForm({
+        name: '',
+        email: '',
+        phone: '',
+        interest: '',
+        source: '',
+        addToLeads: true
+      });
+      setQuoteForm({
+        title: '',
+        description: '',
+        items: [{ productId: '', quantity: 1 }],
+        terms: '',
+        validUntil: '',
+        discount: 0,
+        discountType: 'percentage',
+        paymentLink: '',
+        status: 'draft'
+      });
+
+    } catch (error) {
+      console.error('Error creating quote:', error);
+      showToast('Failed to create quote', 'error');
+    }
+  };
+
   if (isLoading) {
   return (
       <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex items-center justify-center">
@@ -1716,50 +2870,20 @@ function AdminDashboardContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0]">
-      {/* Topbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#D4AF37] shadow-sm h-14 sm:h-16 flex items-center px-3 sm:px-4 md:px-6">
-        {/* Mobile Menu Button */}
-        <button 
-          onClick={() => setSidebarOpen(true)}
-          className="md:hidden p-2 rounded-lg bg-[#F5F2E8] text-[#8B7A1A] hover:bg-[#D4AF37] hover:text-white transition-colors mr-2 sm:mr-3"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-        
-        <Link href="/" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-medium text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#D4AF37] hover:text-white transition-colors duration-200 mr-2 sm:mr-4">
-          <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline text-xs sm:text-sm">Back</span>
-              </Link>
-        
-        <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-1">
-          <Mountain className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-[#D4AF37]" />
-          <h1 className="text-base sm:text-lg md:text-2xl font-bold text-[#5E4E06]">Admin</h1>
-              </div>
-              
-        <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
-          <span className="hidden md:flex items-center gap-2 text-[#8B7A1A] font-medium">
-            <div className="w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center text-white font-semibold text-sm">
-              {userProfile?.firstName?.[0]?.toUpperCase() || 'A'}
-            </div>
-            {userProfile?.firstName || 'Admin'}
-          </span>
-          <button onClick={handleLogout} className="p-1.5 sm:p-2 rounded-lg bg-[#F5F2E8] text-[#8B7A1A] hover:bg-[#D4AF37] hover:text-white transition-colors" title="Logout">
-            <LogOut className="w-4 h-4" />
-              </button>
-                </div>
-      </nav>
+            {/* Modern Admin Header */}
 
-      {/* Fixed layout below header */}
-      <div className="fixed top-14 sm:top-16 left-0 w-full h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] flex">
+
+      {/* Main Layout */}
+      <div className="fixed top-0 left-0 w-full h-full flex" style={{ top: 'env(safe-area-inset-top)', height: 'calc(100vh - env(safe-area-inset-top))' }}>
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setSidebarOpen(false)}></div>
         )}
         
         {/* Sidebar */}
-        <aside className={`fixed md:static z-40 left-0 top-14 sm:top-16 w-72 sm:w-80 md:w-60 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] bg-gradient-to-br from-[#FFFBE6] to-[#F5F2E8] border-r-2 border-[#D4AF37] shadow-2xl flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+        <aside className={`fixed md:static z-40 left-0 top-0 w-72 sm:w-80 md:w-60 h-full bg-gradient-to-br from-[#FFFBE6] to-[#F5F2E8] border-r-2 border-[#D4AF37] shadow-2xl flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
           {/* Mobile Header */}
-          <div className="md:hidden flex items-center justify-between p-3 sm:p-4 border-b border-[#D4AF37]">
+          <div className="md:hidden flex items-center justify-between p-3 sm:p-4 pt-6 border-b border-[#D4AF37]">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] flex items-center justify-center shadow-lg border-2 border-white">
                 <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -1771,7 +2895,7 @@ function AdminDashboardContent() {
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 sm:p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B7A1A]" />
             </button>
@@ -1820,6 +2944,17 @@ function AdminDashboardContent() {
             </ul>
           </nav>
           
+          {/* Back to Site Button */}
+          <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-[#D4AF37]">
+            <Link 
+              href="/" 
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#D4AF37] hover:text-white transition-all duration-300 transform hover:scale-105 shadow-md cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm font-semibold">Back to Site</span>
+            </Link>
+          </div>
+          
           {/* Footer */}
           <div className="p-3 sm:p-4 md:px-4 md:mb-6">
             <div className="text-xs text-[#8B7A1A] text-center">Desert to Mountains &copy; {new Date().getFullYear()}</div>
@@ -1827,9 +2962,16 @@ function AdminDashboardContent() {
         </aside>
         
         {/* Main Content */}
-        <main className="flex-1 w-full h-full overflow-y-auto relative z-10 bg-transparent p-2 sm:p-3 md:p-4 lg:p-8">
+        <main className="flex-1 w-full h-full overflow-y-auto relative z-10 bg-transparent p-2 sm:p-3 md:p-4 lg:p-8 pt-20 md:pt-2">
+          {/* Mobile Menu Button - Fixed Position */}
+          <button 
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden fixed top-4 left-4 z-50 p-3 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white hover:from-[#8B7A1A] hover:to-[#5E4E06] transition-all duration-300 transform hover:scale-105 shadow-lg cursor-pointer"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
         {activeTab === 'overview' && (
-          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-8 mt-4 md:mt-0">
             {/* Welcome Section */}
             <div className="bg-gradient-to-r from-[#FFFBE6] to-[#F5F2E8] rounded-xl sm:rounded-2xl lg:rounded-3xl border border-[#D4AF37] p-4 sm:p-6 lg:p-8">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
@@ -1865,8 +3007,20 @@ function AdminDashboardContent() {
                     {stat.title === 'Total Leads' ? leads.length.toString() : stat.value}
                   </p>
                   <div className="flex items-center space-x-1 sm:space-x-2">
-                    <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B7A1A]" />
-                    <span className="text-xs sm:text-sm font-semibold text-[#8B7A1A]">{stat.change}</span>
+                    {stat.change.startsWith('+') ? (
+                      <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                    ) : stat.change.startsWith('-') ? (
+                      <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+                    ) : (
+                      <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B7A1A]" />
+                    )}
+                    <span className={`text-xs sm:text-sm font-semibold ${
+                      stat.change.startsWith('+') ? 'text-green-600' : 
+                      stat.change.startsWith('-') ? 'text-red-600' : 
+                      'text-[#8B7A1A]'
+                    }`}>
+                      {stat.change}
+                    </span>
                     <span className="text-xs sm:text-sm text-[#8B7A1A] hidden sm:inline">{stat.description}</span>
                   </div>
                 </div>
@@ -1881,7 +3035,7 @@ function AdminDashboardContent() {
                   <h3 className="text-lg sm:text-xl font-bold text-[#5E4E06]">Recent Leads</h3>
                   <button 
                     onClick={() => setShowAddLeadModal(true)}
-                    className="flex items-center justify-center sm:justify-start space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg sm:rounded-xl hover:scale-105 transition-all duration-200 text-sm sm:text-base"
+                    className="flex items-center justify-center sm:justify-start space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg sm:rounded-xl hover:scale-105 transition-all duration-200 text-sm sm:text-base cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Lead</span>
@@ -1914,9 +3068,77 @@ function AdminDashboardContent() {
                           <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-[#D4AF37] text-[#5E4E06]">
                             {lead.status}
                           </span>
-                          <button className="p-1 sm:p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors duration-200">
-                            <MoreVertical className="w-4 h-4 text-[#8B7A1A]" />
+                          <div className="relative dropdown-container">
+                            <button 
+                              onClick={() => setOpenLeadDropdown(openLeadDropdown === lead.id ? null : (lead.id || null))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  setOpenLeadDropdown(openLeadDropdown === lead.id ? null : (lead.id || null));
+                                }
+                              }}
+                              aria-label={`More options for ${lead.name}`}
+                              aria-expanded={openLeadDropdown === lead.id}
+                              aria-haspopup="true"
+                              className={`p-1 sm:p-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                                openLeadDropdown === lead.id 
+                                  ? 'bg-[#D4AF37] text-white' 
+                                  : 'hover:bg-[#F5F2E8] text-[#8B7A1A]'
+                              }`}
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            
+                            {/* Dropdown Menu */}
+                            {openLeadDropdown === lead.id && (
+                              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-[#D4AF37] rounded-lg shadow-lg z-50">
+                                <div className="py-1">
+                                  <button
+                                    onClick={() => handleRecentLeadAction('edit', lead)}
+                                    className="w-full text-left px-4 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors duration-200 cursor-pointer flex items-center space-x-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    <span>Edit Lead</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleRecentLeadAction('call', lead)}
+                                    disabled={!lead.phone}
+                                    className={`w-full text-left px-4 py-2 text-sm transition-colors duration-200 cursor-pointer flex items-center space-x-2 ${
+                                      lead.phone 
+                                        ? 'text-[#5E4E06] hover:bg-[#F5F2E8]' 
+                                        : 'text-gray-400 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    <span>{lead.phone ? 'Call Now' : 'No Phone'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleCreateQuote(lead)}
+                                    className="w-full text-left px-4 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors duration-200 cursor-pointer flex items-center space-x-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span>Create Quote</span>
+                                  </button>
+                                  <div className="border-t border-gray-200 my-1"></div>
+                                  <button
+                                    onClick={() => handleRecentLeadAction('delete', lead)}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 cursor-pointer flex items-center space-x-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    <span>Delete Lead</span>
                           </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))
@@ -1930,7 +3152,7 @@ function AdminDashboardContent() {
                 <div className="space-y-3 sm:space-y-4">
                   <button 
                     onClick={() => setShowAddLeadModal(true)}
-                    className="w-full flex items-center space-x-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#FFFBE6] to-[#F5F2E8] border border-[#D4AF37] hover:scale-105 transition-all duration-300"
+                    className="w-full flex items-center space-x-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#FFFBE6] to-[#F5F2E8] border border-[#D4AF37] hover:scale-105 transition-all duration-300 cursor-pointer"
                   >
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-lg sm:rounded-xl flex items-center justify-center">
                       <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -1940,16 +3162,22 @@ function AdminDashboardContent() {
                       <p className="text-xs sm:text-sm text-[#8B7A1A]">Capture potential customer</p>
                     </div>
                   </button>
-                  <button className="w-full flex items-center space-x-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#FFFBE6] to-[#F5F2E8] border border-[#D4AF37] hover:scale-105 transition-all duration-300">
+                  <button 
+                    onClick={() => setShowDirectCallModal(true)}
+                    className="w-full flex items-center space-x-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#FFFBE6] to-[#F5F2E8] border border-[#D4AF37] hover:scale-105 transition-all duration-300 cursor-pointer"
+                  >
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-[#8B7A1A] to-[#5E4E06] rounded-lg sm:rounded-xl flex items-center justify-center">
                       <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
                     <div className="text-left">
-                      <p className="font-semibold text-[#5E4E06] text-sm sm:text-base">Schedule Call</p>
-                      <p className="text-xs sm:text-sm text-[#8B7A1A]">Book customer meeting</p>
+                      <p className="font-semibold text-[#5E4E06] text-sm sm:text-base">Direct Call</p>
+                      <p className="text-xs sm:text-sm text-[#8B7A1A]">Call lead directly now</p>
                     </div>
                   </button>
-                  <button className="w-full flex items-center space-x-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#FFFBE6] to-[#F5F2E8] border border-[#D4AF37] hover:scale-105 transition-all duration-300">
+                  <button 
+                    onClick={() => handleCreateQuote()}
+                    className="w-full flex items-center space-x-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#FFFBE6] to-[#F5F2E8] border border-[#D4AF37] hover:scale-105 transition-all duration-300 cursor-pointer"
+                  >
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-lg sm:rounded-xl flex items-center justify-center">
                       <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
@@ -1969,36 +3197,426 @@ function AdminDashboardContent() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 mb-6 sm:mb-8">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-[#5E4E06] mb-2">Lead Management</h2>
-                <p className="text-sm sm:text-base text-[#8B7A1A]">Track and manage your potential customers effectively.</p>
+                <p className="text-sm sm:text-base text-[#8B7A1A]">
+                  Track and manage your potential customers effectively. 
+                  <span className="ml-2 font-semibold text-[#D4AF37]">{leads.length} total leads</span>
+                </p>
               </div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button 
+                  onClick={async () => {
+                    try {
+                      const updatedLeads = await AuthService.getLeads();
+                      setLeads(updatedLeads);
+                      showToast('Leads refreshed successfully!', 'success');
+                    } catch (error) {
+                      showToast('Failed to refresh leads', 'error');
+                    }
+                  }}
+                  className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 sm:py-3 bg-[#F5F2E8] text-[#8B7A1A] rounded-lg sm:rounded-xl hover:bg-[#E6DCC0] transition-colors duration-200 text-sm sm:text-base cursor-pointer"
+                  title="Refresh leads"
+                >
+                  <Repeat className="w-4 h-4" />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
               <button 
                 onClick={() => setShowAddLeadModal(true)}
-                className="flex items-center justify-center sm:justify-start space-x-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg sm:rounded-xl hover:scale-105 transition-all duration-200 text-sm sm:text-base"
+                  className="flex items-center justify-center sm:justify-start space-x-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg sm:rounded-xl hover:scale-105 transition-all duration-200 text-sm sm:text-base cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Lead</span>
               </button>
             </div>
+            </div>
+                        {/* Lead Search and Filters */}
+            {leads.length > 0 && (
+              <div className="mb-6 space-y-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7A1A]" />
+                  <input
+                    type="text"
+                    className="w-full pl-10 pr-4 py-3 border border-[#D4AF37] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A]"
+                    placeholder="Search leads by name, phone, email, or interest..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-4 h-4 text-[#8B7A1A]" />
+                    </button>
+                  )}
+                </div>
+                
+                {/* Filters */}
+                <div className="p-3 sm:p-4 bg-[#F5F2E8] rounded-lg border border-[#D4AF37]">
+                  {/* Mobile: Stacked layout, Desktop: Side by side */}
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    {/* Filter by Status Section */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                      <span className="text-sm sm:text-base font-semibold text-[#5E4E06]">Filter by Status:</span>
+                      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-2">
+                        {['All', 'New Lead', 'Contacted', 'Qualified', 'Proposal Sent', 'Negotiation', 'Closed Won', 'Closed Lost'].map((status) => {
+                          const count = status === 'All' 
+                            ? leads.length 
+                            : leads.filter(lead => lead.status === status).length;
+                          
+                          return (
+                            <button
+                              key={status}
+                              onClick={() => {
+                                setSelectedStatusFilter(status);
+                                // Clear search when changing status filter for better UX
+                                if (searchTerm) {
+                                  setSearchTerm('');
+                                }
+                              }}
+                              className={`px-3 py-2.5 sm:py-1.5 text-xs sm:text-xs font-medium rounded-full border transition-colors duration-200 cursor-pointer min-h-[40px] sm:min-h-0 ${
+                                selectedStatusFilter === status
+                                  ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-sm'
+                                  : 'border-[#D4AF37] text-[#8B7A1A] hover:bg-[#D4AF37] hover:text-white bg-white/50'
+                              }`}
+                            >
+                              <span className="block sm:inline">{status}</span>
+                              <span className="block sm:inline text-[10px] sm:text-xs opacity-80">({count})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Mobile: Stacked info, Desktop: Side by side */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-3 pt-2 sm:pt-0 border-t border-[#D4AF37]/20 sm:border-t-0">
+                      {/* Left side: Active filter and results count */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        {/* Active Filter Display */}
+                        {selectedStatusFilter !== 'All' && (
+                          <div className="text-xs text-[#8B7A1A] bg-white px-3 py-1.5 rounded-full border border-[#D4AF37] self-start sm:self-auto">
+                            Active: {selectedStatusFilter}
+                          </div>
+                        )}
+                        
+                        {/* Results Count */}
+                        <div className="text-xs sm:text-sm text-[#8B7A1A] self-start sm:self-auto">
+                          Showing {filteredLeads.length} of {leads.length} leads
+                        </div>
+                      </div>
+                      
+                      {/* Right side: Clear filters button */}
+                      {(selectedStatusFilter !== 'All' || searchTerm) && (
+                        <button
+                          onClick={() => {
+                            setSelectedStatusFilter('All');
+                            setSearchTerm('');
+                          }}
+                          className="text-xs sm:text-sm text-[#8B7A1A] hover:text-[#5E4E06] underline cursor-pointer self-start sm:self-auto px-2 py-1 -ml-2 sm:ml-0"
+                        >
+                          Clear All Filters
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Filter Summary */}
+                {(selectedStatusFilter !== 'All' || searchTerm) && (
+                  <div className="p-3 sm:p-4 bg-white rounded-lg border border-[#D4AF37]">
+                    {/* Mobile: Stacked layout, Desktop: Side by side */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                      {/* Left side: Filter info */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-4 h-4 text-[#D4AF37]" />
+                          <span className="font-medium text-[#5E4E06] text-sm sm:text-base">Active Filters:</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 ml-6 sm:ml-0">
+                          {selectedStatusFilter !== 'All' && (
+                            <span className="px-2 py-1.5 bg-[#F5F2E8] text-[#8B7A1A] rounded-full text-xs border border-[#D4AF37]/30">
+                              Status: {selectedStatusFilter}
+                            </span>
+                          )}
+                          {searchTerm && (
+                            <span className="px-2 py-1.5 bg-[#F5F2E8] text-[#8B7A1A] rounded-full text-xs border border-[#D4AF37]/30">
+                              Search: "{searchTerm}"
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Right side: Clear button */}
+                      <button
+                        onClick={() => {
+                          setSelectedStatusFilter('All');
+                          setSearchTerm('');
+                        }}
+                        className="text-[#8B7A1A] hover:text-[#5E4E06] underline text-xs sm:text-sm cursor-pointer self-start sm:self-auto px-2 py-1 -ml-2 sm:ml-0"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pagination Controls */}
+                {filteredLeads.length > 0 && (
+                  <div className="flex flex-col gap-4 p-3 sm:p-4 bg-white rounded-lg border border-[#D4AF37]">
+                    {/* Mobile: Stacked layout, Desktop: Side by side */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-4">
+                      {/* Left side: Page size and results info */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                        {/* Page Size Selector */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs sm:text-sm text-[#8B7A1A]">Show:</span>
+                          <select
+                            value={leadsPerPage}
+                            onChange={(e) => {
+                              setLeadsPerPage(Number(e.target.value));
+                              setCurrentPage(1); // Reset to first page
+                            }}
+                            className="px-2 py-1.5 sm:py-1 text-xs sm:text-sm border border-[#D4AF37] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] cursor-pointer min-h-[36px] sm:min-h-0"
+                          >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                          </select>
+                          <span className="text-xs sm:text-sm text-[#8B7A1A]">leads per page</span>
+                        </div>
+
+                        {/* Results Info */}
+                        <div className="text-xs sm:text-sm text-[#8B7A1A]">
+                          Showing {startIndex + 1}-{Math.min(endIndex, filteredLeads.length)} of {filteredLeads.length} leads
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pagination Navigation */}
+                    {totalPages > 1 && (
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 pt-2 sm:pt-0 border-t border-[#D4AF37]/20 sm:border-t-0">
+                        {/* Mobile: Stacked navigation, Desktop: Horizontal */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2">
+                          {/* First and Previous buttons */}
+                          <div className="flex items-center gap-2 justify-center sm:justify-start">
+                            {/* First Page */}
+                            <button
+                              onClick={() => setCurrentPage(1)}
+                              disabled={currentPage === 1}
+                              className="px-3 py-2 sm:py-1 text-xs sm:text-sm border border-[#D4AF37] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#F5F2E8] transition-colors cursor-pointer min-h-[40px] sm:min-h-0"
+                            >
+                              First
+                            </button>
+
+                            {/* Previous Page */}
+                            <button
+                              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                              disabled={currentPage === 1}
+                              className="px-3 py-2 sm:py-1 text-xs sm:text-sm border border-[#D4AF37] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#F5F2E8] transition-colors cursor-pointer min-h-[40px] sm:min-h-0"
+                            >
+                              Previous
+                            </button>
+                          </div>
+
+                          {/* Page Numbers - Mobile: Grid, Desktop: Flex */}
+                          <div className="grid grid-cols-5 gap-1 sm:flex sm:items-center sm:gap-1 justify-center sm:justify-start">
+                            {(() => {
+                              const pages = [];
+                              const maxVisiblePages = 5;
+                              let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                              let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+                              // Adjust start page if we're near the end
+                              if (endPage - startPage + 1 < maxVisiblePages) {
+                                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                              }
+
+                              // Add ellipsis and first page if needed
+                              if (startPage > 1) {
+                                pages.push(
+                                  <span key="ellipsis-start" className="px-2 py-2 sm:py-1 text-[#8B7A1A] text-center sm:text-left">
+                                    ...
+                                  </span>
+                                );
+                              }
+
+                              for (let i = startPage; i <= endPage; i++) {
+                                pages.push(
+                                  <button
+                                    key={i}
+                                    onClick={() => setCurrentPage(i)}
+                                    className={`px-3 py-2 sm:py-1 text-xs sm:text-sm border rounded-lg transition-colors cursor-pointer min-h-[40px] sm:min-h-0 ${
+                                      currentPage === i
+                                        ? 'bg-[#D4AF37] text-white border-[#D4AF37]'
+                                        : 'border-[#D4AF37] text-[#8B7A1A] hover:bg-[#F5F2E8]'
+                                    }`}
+                                  >
+                                    {i}
+                                  </button>
+                                );
+                              }
+
+                              // Add ellipsis and last page if needed
+                              if (endPage < totalPages) {
+                                pages.push(
+                                  <span key="ellipsis-end" className="px-2 py-2 sm:py-1 text-[#8B7A1A] text-center sm:text-left">
+                                    ...
+                                  </span>
+                                );
+                              }
+
+                              return pages;
+                            })()}
+                          </div>
+
+                          {/* Next and Last buttons */}
+                          <div className="flex items-center gap-2 justify-center sm:justify-start">
+                            {/* Next Page */}
+                            <button
+                              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                              disabled={currentPage === totalPages}
+                              className="px-3 py-2 sm:py-1 text-xs sm:text-sm border border-[#D4AF37] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#F5F2E8] transition-colors cursor-pointer min-h-[40px] sm:min-h-0"
+                            >
+                              Next
+                            </button>
+
+                            {/* Last Page */}
+                            <button
+                              onClick={() => setCurrentPage(totalPages)}
+                              disabled={currentPage === totalPages}
+                              className="px-3 py-2 sm:py-1 text-xs sm:text-sm border border-[#D4AF37] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#F5F2E8] transition-colors cursor-pointer min-h-[40px] sm:min-h-0"
+                            >
+                              Last
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Quick Jump Input for many pages - Mobile: Full width, Desktop: Compact */}
+                        {totalPages > 10 && (
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-3 sm:pt-0 sm:ml-2 border-t border-[#D4AF37]/20 sm:border-t-0">
+                            <span className="text-xs text-[#8B7A1A] text-center sm:text-left">Go to page:</span>
+                            <div className="flex items-center gap-2 justify-center sm:justify-start">
+                              <input
+                                type="number"
+                                min={1}
+                                max={totalPages}
+                                value={currentPage}
+                                onChange={(e) => {
+                                  const page = parseInt(e.target.value);
+                                  if (page >= 1 && page <= totalPages) {
+                                    setCurrentPage(page);
+                                  }
+                                }}
+                                className="w-20 sm:w-16 px-3 sm:px-2 py-2 sm:py-1 text-xs sm:text-sm border border-[#D4AF37] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] cursor-text text-center sm:text-left min-h-[40px] sm:min-h-0"
+                                placeholder="Page"
+                              />
+                              <span className="text-xs text-[#8B7A1A]">of {totalPages}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {leads.length === 0 ? (
               <div className="text-center py-12 sm:py-16">
                 <UserPlus className="w-16 h-16 sm:w-20 sm:h-20 text-[#D4AF37] mx-auto mb-4 sm:mb-6" />
                 <h3 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-2 sm:mb-3">No Leads Yet</h3>
                 <p className="text-sm sm:text-base text-[#8B7A1A] max-w-md mx-auto">Start by adding your first lead using the button above.</p>
               </div>
+            ) : filteredLeads.length === 0 ? (
+              <div className="text-center py-12 sm:py-16">
+                <Search className="w-16 h-16 sm:w-20 sm:h-20 text-[#D4AF37] mx-auto mb-4 sm:mb-6" />
+                <h3 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-2 sm:mb-3">
+                  {searchTerm ? 'No Search Results' : 'No Leads Found'}
+                </h3>
+                <p className="text-sm sm:text-base text-[#8B7A1A] max-w-md mx-auto">
+                  {searchTerm 
+                    ? `No leads found matching "${searchTerm}". Try adjusting your search terms.`
+                    : `No leads found with status "${selectedStatusFilter}". Try selecting a different status.`
+                  }
+                </p>
+                <div className="flex items-center justify-center gap-3 mt-4">
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="px-4 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-colors text-sm"
+                  >
+                    Clear Search
+                  </button>
+                  <button
+                    onClick={() => setSelectedStatusFilter('All')}
+                    className="px-4 py-2 bg-[#F5F2E8] text-[#8B7A1A] rounded-lg hover:bg-[#E6DCC0] transition-colors text-sm"
+                  >
+                    Show All Leads
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="space-y-3 sm:space-y-4">
-                {leads.map((lead) => (
-                  <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 bg-[#FFFBE6] rounded-lg sm:rounded-xl border border-[#D4AF37] hover:shadow-md transition-shadow duration-300 space-y-3 sm:space-y-0">
+                {currentLeads.map((lead) => (
+                  <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 lg:p-6 bg-[#FFFBE6] rounded-lg sm:rounded-xl border border-[#D4AF37] hover:shadow-md transition-shadow duration-300 space-y-3 sm:space-y-0">
                     <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
                         <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                        {/* Mobile: Stacked header, Desktop: Horizontal */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 mb-2 sm:mb-2">
+                          {/* Mobile: Stacked name and badges, Desktop: Horizontal */}
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2">
                           <h3 className="font-semibold text-[#5E4E06] text-base sm:text-lg truncate">{lead.name}</h3>
-                          <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium w-fit ${
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                              <span className="text-xs text-[#8B7A1A] bg-[#F5F2E8] px-2 py-1 rounded-full">
+                                ID: {lead.id?.slice(-8) || 'N/A'}
+                              </span>
+                              <span className="text-xs text-[#8B7A1A] bg-[#F5F2E8] px-2 py-1 rounded-full">
+                                {formatLeadAge(lead.createdAt)}
+                                {/* Only trigger re-render for leads that need real-time updates */}
+                                {(() => {
+                                  const created = getDateFromAny(lead.createdAt);
+                                  if (!created) return null;
+                                  
+                                  const now = new Date();
+                                  const diffTime = Math.abs(now.getTime() - created.getTime());
+                                  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+                                  
+                                  // Only include ageUpdateTrigger for leads less than 1 hour old
+                                  return diffHours < 1 ? <span className="hidden">{ageUpdateTrigger}</span> : null;
+                                })()}
+                              </span>
+                              
+                              {/* Live indicator for very recent leads */}
+                              {(() => {
+                                const created = getDateFromAny(lead.createdAt);
+                                if (!created) return null;
+                                
+                                const now = new Date();
+                                const diffTime = Math.abs(now.getTime() - created.getTime());
+                                const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+                                
+                                // Show live indicator for leads created within the last hour
+                                if (diffHours < 1) {
+                                  return (
+                                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full border border-green-200 animate-pulse">
+                                      Live
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          </div>
+                          <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium w-fit self-start sm:self-auto ${
                             lead.status === 'New Lead' ? 'bg-[#D4AF37] text-[#5E4E06]' :
+                            lead.status === 'Contacted' ? 'bg-blue-500 text-white' :
                             lead.status === 'Qualified' ? 'bg-[#8B7A1A] text-white' :
+                            lead.status === 'Proposal Sent' ? 'bg-purple-500 text-white' :
+                            lead.status === 'Negotiation' ? 'bg-orange-500 text-white' :
                             lead.status === 'Closed Won' ? 'bg-green-500 text-white' :
                             lead.status === 'Closed Lost' ? 'bg-red-500 text-white' :
                             'bg-gray-500 text-white'
@@ -2006,46 +3624,383 @@ function AdminDashboardContent() {
                             {lead.status}
                           </span>
                         </div>
-                        <div className="space-y-1 sm:space-y-0 sm:grid sm:grid-cols-1 md:grid-cols-3 sm:gap-4 text-xs sm:text-sm text-[#8B7A1A]">
+                        {/* Contact Info - Mobile: Stacked, Desktop: Grid */}
+                        <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-1 md:grid-cols-3 sm:gap-4 text-xs sm:text-sm text-[#8B7A1A]">
                           <div>
-                            <span className="font-medium">Phone:</span> {lead.phone}
+                            <span className="font-medium">Phone:</span> 
+                            <a 
+                              href={`tel:${lead.phone}`}
+                              className="inline-flex items-center px-2 py-0.5 bg-[#F5F2E8] text-[#8B7A1A] rounded-full text-xs ml-1 hover:bg-[#D4AF37] hover:text-white transition-colors cursor-pointer"
+                              title="Click to call"
+                            >
+                              {lead.phone}
+                            </a>
                           </div>
                           {lead.email && (
                             <div>
-                              <span className="font-medium">Email:</span> {lead.email}
+                              <span className="font-medium">Email:</span> 
+                              <a 
+                                href={`mailto:${lead.email}`}
+                                className="inline-flex items-center px-2 py-0.5 bg-[#F5F2E8] text-[#8B7A1A] rounded-full text-xs ml-1 hover:bg-[#D4AF37] hover:text-white transition-colors cursor-pointer"
+                                title="Click to email"
+                              >
+                                {lead.email}
+                              </a>
                             </div>
                           )}
                           <div>
-                            <span className="font-medium">Interest:</span> {lead.interest}
+                            <span className="font-medium">Interest:</span> 
+                            <span className="inline-flex items-center px-2 py-0.5 bg-[#D4AF37] text-white rounded-full text-xs ml-1">
+                              {lead.interest}
+                            </span>
                           </div>
                         </div>
-                        <div className="mt-2 text-xs text-[#8B7A1A]">
-                          <span className="font-medium">Source:</span> {lead.source} • 
-                          <span className="font-medium ml-2">Created:</span> {
-                            lead.createdAt instanceof Date 
-                              ? lead.createdAt.toLocaleDateString() 
-                              : new Date(lead.createdAt).toLocaleDateString()
-                          }
+                        {/* Source and Dates - Mobile: Stacked, Desktop: Inline */}
+                        <div className="mt-2 text-xs text-[#8B7A1A] space-y-1 sm:space-y-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                            <span className="font-medium">Source:</span> 
+                            <span className="inline-flex items-center px-2 py-0.5 bg-[#F5F2E8] rounded-full text-[#8B7A1A] self-start sm:self-auto">
+                              {lead.source}
+                            </span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                            <span className="font-medium">Created:</span> 
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F5F2E8] rounded-full text-[#8B7A1A] self-start sm:self-auto">
+                              <Calendar className="w-3 h-3" />
+                              {(() => {
+                                const created = getDateFromAny(lead.createdAt);
+                                if (!created) return 'Unknown';
+                                
+                                // Format as dd/mm/yy for mobile-friendly display
+                                const day = created.getDate().toString().padStart(2, '0');
+                                const month = (created.getMonth() + 1).toString().padStart(2, '0');
+                                const year = created.getFullYear().toString().slice(-2);
+                                return `${day}/${month}/${year}`;
+                              })()}
+                            </span>
+                          </div>
+                          {lead.updatedAt && (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                              <span className="font-medium">Updated:</span> 
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F5F2E8] rounded-full text-[#8B7A1A] self-start sm:self-auto">
+                                <Calendar className="w-3 h-3" />
+                                {(() => {
+                                  const updated = getDateFromAny(lead.updatedAt);
+                                  if (!updated) return 'Unknown';
+                                  
+                                  // Format as dd/mm/yy for mobile-friendly display
+                                  const day = updated.getDate().toString().padStart(2, '0');
+                                  const month = (updated.getMonth() + 1).toString().padStart(2, '0');
+                                  const year = updated.getFullYear().toString().slice(-2);
+                                  return `${day}/${month}/${year}`;
+                                })()}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         {lead.notes && (
-                          <div className="mt-2 text-xs sm:text-sm text-[#8B7A1A] bg-white/50 p-2 rounded-lg">
-                            <span className="font-medium">Notes:</span> {lead.notes}
+                          <div className="mt-2 text-xs sm:text-sm text-[#8B7A1A] bg-white/50 p-2 sm:p-3 rounded-lg border-l-4 border-[#D4AF37] pl-3">
+                            <span className="font-medium text-[#5E4E06]">Notes:</span> 
+                            <p className="mt-1 text-[#8B7A1A] leading-relaxed">{lead.notes}</p>
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center justify-end space-x-2">
-                      <button className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors duration-200" title="Edit">
+                    {/* Action Buttons - Mobile: Stacked, Desktop: Horizontal */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:space-x-2 pt-2 sm:pt-0 border-t border-[#D4AF37]/20 sm:border-t-0">
+                      {/* Last Activity Indicator */}
+                      {(() => {
+                        const created = getDateFromAny(lead.createdAt);
+                        const updated = getDateFromAny(lead.updatedAt);
+                        
+                        if (!created || !updated) return null;
+                        
+                        // Show updated indicator if updated date is different from created date
+                        // Allow for small time differences (within 1 minute) due to Firestore timing
+                        const timeDiff = Math.abs(updated.getTime() - created.getTime());
+                        const oneMinute = 60 * 1000;
+                        
+                        if (timeDiff > oneMinute) {
+                          return (
+                            <div className="text-xs text-[#8B7A1A] bg-[#F5F2E8] px-2 py-1 rounded-full border border-[#D4AF37] self-start sm:self-auto">
+                              <span className="font-medium">Updated</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                      
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 justify-center sm:justify-end">
+                        <button 
+                          onClick={() => handleEditLead(lead)}
+                          disabled={isEditingLead}
+                          className="p-2 sm:p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[40px] sm:min-h-0" 
+                          title="Edit"
+                        >
+                          {isEditingLead ? (
+                            <div className="w-4 h-4 border-2 border-[#8B7A1A] border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
                         <Edit className="w-4 h-4 text-[#8B7A1A]" />
+                          )}
                       </button>
-                      <button className="p-2 hover:bg-red-50 rounded-lg transition-colors duration-200" title="Delete">
+                        <button 
+                          onClick={() => handleDeleteLead(lead.id!)}
+                          disabled={isDeletingLead}
+                          className="p-2 sm:p-2 hover:bg-red-50 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[40px] sm:min-h-0" 
+                          title="Delete"
+                        >
+                          {isDeletingLead ? (
+                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
                         <Trash2 className="w-4 h-4 text-red-500" />
+                          )}
                       </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'quotes' && (
+          <div className="space-y-4 sm:space-y-6">
+            {/* Header */}
+            <div className="bg-white rounded-xl border border-[#D4AF37] p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#D4AF37] rounded-xl flex items-center justify-center">
+                    <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#5E4E06]">Quotes</h2>
+                    <p className="text-[#8B7A1A] text-xs sm:text-sm">Manage your professional quotes</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowCreateQuoteModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg hover:scale-105 transition-all duration-200 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Quote</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quote Analytics */}
+            {quoteAnalytics && (
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <div className="bg-white rounded-xl border border-[#D4AF37] p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-[#5E4E06]">{quoteAnalytics.total}</div>
+                  <div className="text-sm text-[#8B7A1A]">Total Quotes</div>
+                </div>
+                <div className="bg-white rounded-xl border border-[#D4AF37] p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-green-600">{quoteAnalytics.byStatus.accepted}</div>
+                  <div className="text-sm text-[#8B7A1A]">Accepted</div>
+                </div>
+                <div className="bg-white rounded-xl border border-[#D4AF37] p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-[#5E4E06]">₹{quoteAnalytics.totalValue.toLocaleString()}</div>
+                  <div className="text-sm text-[#8B7A1A]">Total Value</div>
+                </div>
+                <div className="bg-white rounded-xl border border-[#D4AF37] p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-[#5E4E06]">₹{Math.round(quoteAnalytics.averageValue).toLocaleString()}</div>
+                  <div className="text-sm text-[#8B7A1A]">Avg Value</div>
+                </div>
+                <div className="bg-white rounded-xl border border-[#D4AF37] p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-blue-600">{Math.round(quoteAnalytics.conversionRate)}%</div>
+                  <div className="text-sm text-[#8B7A1A]">Conversion Rate</div>
+                </div>
+              </div>
+            )}
+
+            {/* Quotes Content */}
+            <div className="bg-white rounded-xl border border-[#D4AF37] shadow-sm p-4 sm:p-6">
+              {quotes.length === 0 ? (
+                <div className="text-center py-16">
+                  <FileText className="w-20 h-20 text-[#D4AF37] mx-auto mb-6 opacity-60" />
+                  <h2 className="text-2xl font-bold text-[#5E4E06] mb-3">No Quotes Yet</h2>
+                  <p className="text-[#8B7A1A] text-lg mb-4 text-center max-w-md">
+                    Create your first professional quote to get started. 
+                    Track versions, manage statuses, and generate PDFs.
+                  </p>
+                  <button 
+                    onClick={() => setShowCreateQuoteModal(true)}
+                    className="px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg hover:scale-105 transition-all duration-200 cursor-pointer"
+                  >
+                    Create Your First Quote
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Quote Status Filter */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {['all', 'draft', 'sent', 'accepted', 'rejected', 'expired'].map((status) => (
+                      <button
+                        key={status}
+                        className={`px-3 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+                          status === 'all' 
+                            ? 'bg-[#D4AF37] text-white' 
+                            : 'bg-[#F5F2E8] text-[#8B7A1A] hover:bg-[#D4AF37] hover:text-white'
+                        }`}
+                      >
+                        {status.charAt(0).toUpperCase() + status.slice(1)} ({quotes.filter(q => status === 'all' || q.status === status).length})
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Quotes List */}
+                  <div className="space-y-3">
+                    {quotes
+                      .filter(quote => quote && quote.id && typeof quote.id === 'string')
+                      .map((quote) => (
+                        <div key={quote.id} className="border border-[#D4AF37] rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="font-bold text-[#5E4E06]">{quote.quoteNumber}</span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                quote.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                                quote.status === 'sent' ? 'bg-blue-100 text-blue-800' :
+                                quote.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                                quote.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                              </span>
+                              {quote.isExpired && (
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  Expired
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-semibold text-[#5E4E06] mb-1">{quote.customerName}</p>
+                            <p className="text-sm text-[#8B7A1A] mb-2">Interested in {quote.customerInterest}</p>
+                            <div className="flex items-center gap-4 text-xs text-[#8B7A1A]">
+                              <span>Total: ₹{quote.total.toLocaleString()}</span>
+                              <span>Valid until: {new Date(quote.validUntil).toLocaleDateString()}</span>
+                              <span>v{quote.version}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => handlePreviewPDF(quote)}
+                              className="p-2 text-[#D4AF37] hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
+                              title="Preview PDF"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDownloadPDF(quote)}
+                              className="p-2 text-[#8B7A1A] hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
+                              title="Download PDF"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            <div className="relative">
+                              <button 
+                                onClick={() => setSelectedQuoteForActions(quote)}
+                                className="p-2 text-[#8B7A1A] hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                              
+                              {selectedQuoteForActions?.id === (quote.id || '') && (
+                                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-[#D4AF37] rounded-lg shadow-lg z-50 quote-actions-dropdown">
+                                  <div className="py-1">
+                                    <button
+                                      onClick={() => {
+                                        if (quote.id) updateQuoteStatus(quote.id, 'sent');
+                                        setSelectedQuoteForActions(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2 text-sm text-[#8B7A1A] hover:bg-[#F5F2E8] cursor-pointer"
+                                    >
+                                      Mark as Sent
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (quote.id) updateQuoteStatus(quote.id, 'accepted');
+                                        setSelectedQuoteForActions(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2 text-sm text-[#8B7A1A] hover:bg-[#F5F2E8] cursor-pointer"
+                                    >
+                                      Mark as Accepted
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (quote.id) updateQuoteStatus(quote.id, 'rejected');
+                                        setSelectedQuoteForActions(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2 text-sm text-[#8B7A1A] hover:bg-[#F5F2E8] cursor-pointer"
+                                    >
+                                      Mark as Rejected
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        createQuoteVersion(quote);
+                                        setSelectedQuoteForActions(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2 text-sm text-[#8B7A1A] hover:bg-[#F5F2E8] cursor-pointer"
+                                    >
+                                      Create New Version
+                                    </button>
+                                    
+                                    {/* PDF Options */}
+                                    <div className="border-t border-[#F5F2E8] my-1"></div>
+                                    
+                                    <button
+                                      onClick={() => handlePreviewPDF(quote)}
+                                      className="w-full text-left px-4 py-2 text-sm text-[#8B7A1A] hover:bg-[#F5F2E8] cursor-pointer"
+                                    >
+                                      Preview PDF
+                                    </button>
+                                    
+                                    <button
+                                      onClick={() => handleDownloadPDF(quote)}
+                                      className="w-full text-left px-4 py-2 text-sm text-[#8B7A1A] hover:bg-[#F5F2E8] cursor-pointer"
+                                    >
+                                      Download PDF
+                                    </button>
+                                    
+                                    {/* Divider */}
+                                    <div className="border-t border-[#F5F2E8] my-1"></div>
+                                    
+                                    {/* Delete Options */}
+                                    <button
+                                      onClick={() => {
+                                        deleteQuote(quote);
+                                        setSelectedQuoteForActions(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
+                                    >
+                                      Delete This Quote
+                                    </button>
+                                    
+                                    {(quote.parentQuoteId || quote.previousVersionId || 
+                                      quotes.some(q => q.parentQuoteId === quote.id || q.previousVersionId === quote.id)) && (
+                                      <button
+                                        onClick={() => {
+                                          deleteQuoteWithVersions(quote);
+                                          setSelectedQuoteForActions(null);
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
+                                      >
+                                        Delete All Versions
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -2951,8 +4906,8 @@ function AdminDashboardContent() {
             )}
             {/* Modal for full message */}
             {modalOpen && modalData && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 relative animate-fade-in-up">
+              <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/40 pt-20 sm:pt-0">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 relative animate-fade-in-up max-h-[calc(100vh-5rem)] sm:max-h-none overflow-y-auto">
                           <button
                     className="absolute top-3 right-3 text-gray-400 hover:text-[#5E4E06] text-2xl font-bold cursor-pointer"
                     onClick={() => setModalOpen(false)}
@@ -2989,8 +4944,8 @@ function AdminDashboardContent() {
         
         {/* Order Status Update Modal */}
         {showStatusUpdateModal && selectedOrderForStatus && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl border-2 border-[#D4AF37] max-w-md w-full">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-4 pt-20 sm:pt-4">
+            <div className="bg-white rounded-2xl shadow-2xl border-2 border-[#D4AF37] max-w-md w-full max-h-[calc(100vh-5rem)] sm:max-h-none overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-[#5E4E06]">Update Order Status</h2>
@@ -3071,8 +5026,8 @@ function AdminDashboardContent() {
         
       {/* Add Lead Modal */}
       {showAddLeadModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-5rem)] sm:max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
               <div className="flex items-center space-x-3 sm:space-x-4">
@@ -3250,10 +5205,191 @@ function AdminDashboardContent() {
         </div>
       )}
 
+      {/* Edit Lead Modal */}
+      {showEditLeadModal && editingLead && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-5rem)] sm:max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl sm:rounded-2xl flex items-center justify-center">
+                  <Edit className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06]">Edit Lead</h3>
+                  <p className="text-xs sm:text-sm text-[#8B7A1A]">Update lead information</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowEditLeadModal(false)}
+                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleUpdateLead} className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+              {/* Personal Information */}
+              <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Personal Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Name *</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={leadForm.name}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
+                      placeholder="Enter full name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Phone *</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={leadForm.phone}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={leadForm.email}
+                      onChange={handleInputChange}
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Lead Details */}
+              <div>
+                <h4 className="text-xl font-semibold text-[#5E4E06] mb-6 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-3 text-[#D4AF37]" />
+                  Lead Details
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-3">Lead Source *</label>
+                    <select
+                      name="source"
+                      value={leadForm.source}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                    >
+                      <option value="" className="text-[#8B7A1A]">Select source</option>
+                      <option value="Website" className="text-[#5E4E06]">Website</option>
+                      <option value="Referral" className="text-[#5E4E06]">Referral</option>
+                      <option value="Social Media" className="text-[#5E4E06]">Social Media</option>
+                      <option value="Cold Call" className="text-[#5E4E06]">Cold Call</option>
+                      <option value="Trade Show" className="text-[#5E4E06]">Trade Show</option>
+                      <option value="Other" className="text-[#5E4E06]">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-3">Status *</label>
+                    <select
+                      name="status"
+                      value={leadForm.status}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                    >
+                      <option value="New Lead" className="text-[#5E4E06]">New Lead</option>
+                      <option value="Contacted" className="text-[#5E4E06]">Contacted</option>
+                      <option value="Qualified" className="text-[#5E4E06]">Qualified</option>
+                      <option value="Proposal Sent" className="text-[#5E4E06]">Proposal Sent</option>
+                      <option value="Negotiation" className="text-[#5E4E06]">Negotiation</option>
+                      <option value="Closed Won" className="text-[#5E4E06]">Closed Won</option>
+                      <option value="Closed Lost" className="text-[#5E4E06]">Closed Lost</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <label className="block text-sm font-semibold text-[#5E4E06] mb-3">Product Interest *</label>
+                  <select
+                    name="interest"
+                    value={leadForm.interest}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                  >
+                    <option value="" className="text-[#8B7A1A]">Select product</option>
+                    <option value="Aura Wall Putty" className="text-[#5E4E06]">Aura Wall Putty</option>
+                    <option value="Dhunee" className="text-[#5E4E06]">Dhunee</option>
+                    <option value="Both" className="text-[#5E4E06]">Both</option>
+                  </select>
+                </div>
+                <div className="mt-6">
+                  <label className="block text-sm font-semibold text-[#5E4E06] mb-3">Notes</label>
+                  <textarea
+                    name="notes"
+                    value={leadForm.notes}
+                    onChange={handleInputChange}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent resize-none text-[#5E4E06] placeholder-[#8B7A1A]"
+                    placeholder="Add any additional notes about this lead..."
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end space-x-4 pt-8 border-t border-[#D4AF37]">
+                {submitError && (
+                  <div className="text-red-600 text-sm mr-auto">
+                    {submitError}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowEditLeadModal(false)}
+                  className="px-6 py-3 text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-xl transition-colors duration-200 font-medium"
+                  disabled={isEditingLead}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isEditingLead}
+                >
+                  {isEditingLead ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4" />
+                      <span>Update Lead</span>
+                      </>
+                    )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Unified Task Modal */}
       {(showAddTaskModal || showEditTaskModal) && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-5rem)] sm:max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
               <div className="flex items-center space-x-3 sm:space-x-4">
@@ -3540,8 +5676,8 @@ function AdminDashboardContent() {
 
       {/* Task Analytics Modal */}
       {showTaskAnalytics && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[calc(100vh-5rem)] sm:max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
               <div className="flex items-center space-x-3 sm:space-x-4">
@@ -3712,6 +5848,947 @@ function AdminDashboardContent() {
                 className="px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-lg font-medium"
               >
                 Close
+                </button>
+              </div>
+          </div>
+        </div>
+      )}
+
+              {/* Direct Call Modal */}
+        {showDirectCallModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-5rem)] sm:max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
+              <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#8B7A1A] to-[#5E4E06] rounded-xl sm:rounded-2xl flex items-center justify-center">
+                  <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06] truncate">Direct Call</h3>
+                  <p className="text-xs sm:text-sm text-[#8B7A1A] truncate">Call a lead directly now</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowDirectCallModal(false);
+                  // Reset modal state
+                  setLeadSearchTerm('');
+                  setLeadFilterStatus('all');
+                  setCurrentLeadPage(1);
+                  setSelectedLeadForCall(null);
+                }}
+                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200 cursor-pointer flex-shrink-0"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
+              </button>
+            </div>
+
+                        {/* Modal Body */}
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+              {/* Lead Selection */}
+              <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                  <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Select Lead to Call
+                </h4>
+                
+                {/* Search and Filter Controls */}
+                <div className="space-y-3 mb-4">
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search leads by name, phone, or email..."
+                      value={leadSearchTerm}
+                      onChange={(e) => setLeadSearchTerm(e.target.value)}
+                      className="w-full px-4 py-3 pl-10 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-[#8B7A1A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Status Filter */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setLeadFilterStatus('all')}
+                      className={`px-3 py-2 text-xs font-medium rounded-full border transition-colors duration-200 cursor-pointer ${
+                        leadFilterStatus === 'all'
+                          ? 'bg-[#D4AF37] text-white border-[#D4AF37]'
+                          : 'bg-white text-[#8B7A1A] border-[#D4AF37] hover:bg-[#F5F2E8]'
+                      }`}
+                    >
+                      All ({leads.length})
+                    </button>
+                    {['New Lead', 'Contacted', 'Qualified', 'Proposal Sent', 'Negotiation', 'Closed Won', 'Closed Lost'].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setLeadFilterStatus(status)}
+                        className={`px-3 py-2 text-xs font-medium rounded-full border transition-colors duration-200 cursor-pointer ${
+                          leadFilterStatus === status
+                            ? 'bg-[#D4AF37] text-white border-[#D4AF37]'
+                            : 'bg-white text-[#8B7A1A] border-[#D4AF37] hover:bg-[#F5F2E8]'
+                        }`}
+                      >
+                        {status} ({leads.filter((l: Lead) => l.status === status).length})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Results Summary */}
+                <div className="flex items-center justify-between mb-3 text-sm text-[#8B7A1A]">
+                  <span>
+                    Showing {getPaginatedModalLeads().length} of {filteredModalLeads.length} leads
+                    {leadSearchTerm && ` matching "${leadSearchTerm}"`}
+                    {leadFilterStatus !== 'all' && ` with status "${leadFilterStatus}"`}
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs">Show:</span>
+                    <select
+                      value={modalLeadsPerPage}
+                      onChange={(e) => {
+                        setModalLeadsPerPage(Number(e.target.value));
+                        setCurrentLeadPage(1);
+                      }}
+                      className="px-2 py-1 text-xs border border-[#D4AF37] rounded focus:outline-none focus:ring-1 focus:ring-[#D4AF37] cursor-pointer"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  {getPaginatedModalLeads().length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.562M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.285 2.285 0 01-2.285 2.285A2.285 2.285 0 0116.715 12 2.285 2.285 0 0119 9.715 2.285 2.285 0 0121.285 12z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No leads found</h3>
+                      <p className="text-gray-500 mb-4">
+                        {leadSearchTerm 
+                          ? `No leads match "${leadSearchTerm}"`
+                          : leadFilterStatus !== 'all'
+                          ? `No leads with status "${leadFilterStatus}"`
+                          : 'No leads available'
+                        }
+                      </p>
+                      <button
+                        onClick={() => {
+                          setLeadSearchTerm('');
+                          setLeadFilterStatus('all');
+                        }}
+                        className="px-4 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-colors cursor-pointer"
+                      >
+                        Clear filters
+                      </button>
+                    </div>
+                  ) : (
+                    getPaginatedModalLeads().map((lead) => (
+                    <div 
+                      key={lead.id}
+                      onClick={() => setSelectedLeadForCall(lead)}
+                      className={`p-4 sm:p-3 border rounded-lg sm:rounded-xl cursor-pointer transition-all duration-200 min-h-[80px] sm:min-h-0 ${
+                        selectedLeadForCall?.id === lead.id
+                          ? 'border-[#D4AF37] bg-[#FFFBE6] shadow-md'
+                          : 'border-gray-200 hover:border-[#D4AF37] hover:bg-[#F5F2E8]'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <div className="w-10 h-10 sm:w-8 sm:h-8 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-base sm:text-sm font-semibold">
+                                {lead.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h5 className="font-semibold text-[#5E4E06] text-base sm:text-sm truncate">{lead.name}</h5>
+                              <p className="text-sm sm:text-xs text-[#8B7A1A] break-all">{lead.phone}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 ml-13 sm:ml-0">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              lead.status === 'New Lead' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                              lead.status === 'Contacted' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                              lead.status === 'Qualified' ? 'bg-green-100 text-green-800 border-green-200' :
+                              lead.status === 'Proposal Sent' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                              lead.status === 'Negotiation' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                              lead.status === 'Closed Won' ? 'bg-green-100 text-green-800 border-green-200' :
+                              lead.status === 'Closed Lost' ? 'bg-red-100 text-red-800 border-red-200' :
+                              'bg-gray-100 text-gray-800 border-gray-200'
+                            } border`}>
+                              {lead.status}
+                            </span>
+                            {lead.email && (
+                              <span className="text-xs text-[#8B7A1A] break-all">• {lead.email}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center sm:justify-end space-x-2 self-center sm:self-auto">
+                          {lead.phone ? (
+                            <>
+                              <Phone className="w-5 h-5 sm:w-4 sm:h-4 text-green-600" />
+                              <span className="text-xs text-green-600 font-medium">📱 Callable</span>
+                            </>
+                          ) : (
+                            <>
+                              <Phone className="w-5 h-5 sm:w-4 sm:h-4 text-red-400" />
+                              <span className="text-xs text-red-400">❌ No phone</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                  )}
+                </div>
+                
+                {/* Pagination Controls */}
+                {totalModalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setCurrentLeadPage(1)}
+                        disabled={currentLeadPage === 1}
+                        className="px-3 py-2 text-xs font-medium text-[#8B7A1A] border border-[#D4AF37] rounded hover:bg-[#F5F2E8] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        First
+                      </button>
+                      <button
+                        onClick={() => setCurrentLeadPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentLeadPage === 1}
+                        className="px-3 py-2 text-xs font-medium text-[#8B7A1A] border border-[#D4AF37] rounded hover:bg-[#F5F2E8] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        Previous
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, totalModalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalModalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentLeadPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentLeadPage >= totalModalPages - 2) {
+                          pageNum = totalModalPages - 4 + i;
+                        } else {
+                          pageNum = currentLeadPage - 2 + i;
+                        }
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentLeadPage(pageNum)}
+                            className={`px-3 py-2 text-xs font-medium rounded ${
+                              currentLeadPage === pageNum
+                                ? 'bg-[#D4AF37] text-white'
+                                : 'text-[#8B7A1A] border border-[#D4AF37] hover:bg-[#F5F2E8]'
+                            } cursor-pointer`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setCurrentLeadPage(prev => Math.min(totalModalPages, prev + 1))}
+                        disabled={currentLeadPage === totalModalPages}
+                        className="px-3 py-2 text-xs font-medium text-[#8B7A1A] border border-[#D4AF37] rounded hover:bg-[#F5F2E8] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        Next
+                      </button>
+                      <button
+                        onClick={() => setCurrentLeadPage(totalModalPages)}
+                        disabled={currentLeadPage === totalModalPages}
+                        className="px-3 py-2 text-xs font-medium text-[#8B7A1A] border border-[#D4AF37] rounded hover:bg-[#F5F2E8] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        Last
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Call Actions */}
+              {selectedLeadForCall && (
+                <div className="border-t border-[#D4AF37] pt-6">
+                                    <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                    <Phone className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                    Call {selectedLeadForCall.name}
+                  </h4>
+                  
+                  {/* Call Instructions */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-4 sm:p-3 mb-4">
+                    <div className="flex items-start space-x-2 sm:space-x-3">
+                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-blue-600 text-sm">ℹ️</span>
+                      </div>
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium mb-1 text-base sm:text-sm">How calling works:</p>
+                        <ul className="space-y-1 text-xs sm:text-xs">
+                          <li>• <strong>Mobile devices:</strong> Click "Call Now" to open your phone app</li>
+                          <li>• <strong>Desktop computers:</strong> Phone number will be copied to clipboard</li>
+                          <li>• <strong>All calls are automatically logged</strong> in your system</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  
+                  
+                                    <div className="bg-[#FFFBE6] border border-[#D4AF37] rounded-lg sm:rounded-xl p-4 sm:p-6 mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 mb-4">
+                      <div className="w-16 h-16 sm:w-12 sm:h-12 bg-gradient-to-br from-[#8B7A1A] to-[#5E4E06] rounded-full flex items-center justify-center self-center sm:self-auto">
+                        <span className="text-white text-2xl sm:text-lg font-bold">
+                          {selectedLeadForCall.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="text-center sm:text-left">
+                        <h5 className="font-bold text-[#5E4E06] text-xl sm:text-lg">{selectedLeadForCall.name}</h5>
+                        <div className="flex items-center justify-center sm:justify-start space-x-2 mb-2 sm:mb-1">
+                          <Phone className="w-5 h-5 sm:w-4 sm:h-4 text-[#8B7A1A]" />
+                          <p className="text-[#8B7A1A] font-medium text-base sm:text-sm">{selectedLeadForCall.phone}</p>
+                          <button
+                            onClick={() => {
+                              if (selectedLeadForCall.phone) {
+                                navigator.clipboard.writeText(selectedLeadForCall.phone);
+                                showToast('Phone number copied!', 'success');
+                              }
+                            }}
+                            className="ml-2 p-2 sm:p-1 hover:bg-[#D4AF37]/20 rounded transition-colors cursor-pointer"
+                            title="Copy phone number"
+                          >
+                            📋
+                          </button>
+                        </div>
+                        <p className="text-base sm:text-sm text-[#8B7A1A]">Status: {selectedLeadForCall.status}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <Phone className="w-5 h-5 text-[#8B7A1A]" />
+                        <span className="text-[#5E4E06] font-medium">Ready to call this lead?</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Clock className="w-5 h-5 text-[#8B7A1A]" />
+                        <span className="text-[#8B7A1A] text-sm">Call will be logged in your system</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:gap-4">
+                    <button
+                      onClick={() => handleDirectCall(selectedLeadForCall)}
+                      disabled={!selectedLeadForCall.phone}
+                      className={`w-full flex items-center justify-center space-x-2 px-6 py-4 sm:py-3 rounded-lg sm:rounded-xl transition-all duration-200 font-medium shadow-lg cursor-pointer ${
+                        selectedLeadForCall.phone
+                          ? 'bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white hover:scale-105'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <span className="font-semibold text-base sm:text-sm">
+                        {selectedLeadForCall.phone 
+                          ? `Call ${selectedLeadForCall.phone}`
+                          : '❌ No phone number'
+                        }
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedLeadForCall(null)}
+                      className="w-full sm:w-auto px-6 py-3 bg-[#F5F2E8] text-[#8B7A1A] rounded-lg sm:rounded-xl hover:bg-[#E6DCC0] transition-colors duration-200 font-medium cursor-pointer"
+                    >
+                      Change Lead
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-center sm:justify-end p-4 sm:p-6 lg:p-8 border-t border-[#D4AF37]">
+              <button
+                onClick={() => {
+                  setShowDirectCallModal(false);
+                  // Reset modal state
+                  setLeadSearchTerm('');
+                  setLeadFilterStatus('all');
+                  setCurrentLeadPage(1);
+                  setSelectedLeadForCall(null);
+                }}
+                className="w-full sm:w-auto px-6 py-3 bg-[#F5F2E8] text-[#8B7A1A] rounded-lg sm:rounded-xl hover:bg-[#E6DCC0] transition-colors duration-200 font-medium cursor-pointer"
+              >
+                Close
+                </button>
+              </div>
+          </div>
+        </div>
+      )}
+
+              {/* Delete Quote Confirmation Modal */}
+        {showDeleteQuoteModal && quoteToDelete && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl border border-[#D4AF37] shadow-2xl max-w-md w-full mx-4">
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#5E4E06]">
+                      {quoteToDelete.deleteAllVersions ? 'Delete All Quote Versions' : 'Delete Quote'}
+                    </h3>
+                    <p className="text-sm text-[#8B7A1A]">This action cannot be undone</p>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="mb-6">
+                  <div className="bg-[#F5F2E8] rounded-lg p-4 mb-4">
+                    <p className="text-sm font-medium text-[#5E4E06] mb-2">Quote Details:</p>
+                    <div className="space-y-1 text-sm text-[#8B7A1A]">
+                      <p><span className="font-medium">Quote Number:</span> {quoteToDelete.quote.quoteNumber}</p>
+                      <p><span className="font-medium">Customer:</span> {quoteToDelete.quote.customerName}</p>
+                      <p><span className="font-medium">Total:</span> ₹{quoteToDelete.quote.total.toLocaleString()}</p>
+                      <p><span className="font-medium">Status:</span> {quoteToDelete.quote.status.charAt(0).toUpperCase() + quoteToDelete.quote.status.slice(1)}</p>
+                    </div>
+                  </div>
+
+                  {quoteToDelete.deleteAllVersions && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <p className="text-sm text-red-800">
+                        <span className="font-medium">Warning:</span> This will delete ALL versions of this quote and cannot be undone.
+                        All related quote versions will be permanently removed.
+                      </p>
+                    </div>
+                  )}
+
+                  {!quoteToDelete.deleteAllVersions && (
+                    <p className="text-sm text-[#8B7A1A]">
+                      Are you sure you want to delete this quote? This action cannot be undone.
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowDeleteQuoteModal(false);
+                      setQuoteToDelete(null);
+                    }}
+                    className="px-4 py-2 text-[#8B7A1A] hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={executeDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+                  >
+                    {quoteToDelete.deleteAllVersions ? 'Delete All Versions' : 'Delete Quote'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Quote Modal */}
+        {showCreateQuoteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[calc(100vh-5rem)] sm:max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
+              <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl sm:rounded-2xl flex items-center justify-center">
+                  <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06] truncate">Create Quote</h3>
+                  <p className="text-xs sm:text-sm text-[#8B7A1A] truncate">
+                    {quoteMode === 'existing' && selectedLeadForQuote 
+                      ? `Generate professional quote for ${selectedLeadForQuote.name}`
+                      : 'Generate professional quote for new or existing customer'
+                    }
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowCreateQuoteModal(false);
+                  setSelectedLeadForQuote(null);
+                  setQuoteMode('existing');
+                  setNewCustomerForm({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    interest: '',
+                    source: '',
+                    addToLeads: true
+                  });
+                  setQuoteForm({
+                    title: '',
+                    description: '',
+                    items: [{ productId: '', quantity: 1 }],
+                    terms: '',
+                    validUntil: '',
+                    discount: 0,
+                    discountType: 'percentage',
+                    paymentLink: '',
+                    status: 'draft'
+                  });
+                }}
+                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200 cursor-pointer flex-shrink-0"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+              {/* Customer Selection */}
+              <div className="bg-[#F5F2E8] rounded-lg sm:rounded-xl p-4 sm:p-6 border border-[#D4AF37]">
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-3 sm:mb-4">Customer Selection</h4>
+                
+                {/* Mode Toggle */}
+                <div className="flex space-x-2 mb-4">
+                  <button
+                    onClick={() => setQuoteMode('existing')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer ${
+                      quoteMode === 'existing'
+                        ? 'bg-[#D4AF37] text-white'
+                        : 'bg-white text-[#8B7A1A] hover:bg-[#F5F2E8]'
+                    }`}
+                  >
+                    Existing Lead
+                  </button>
+                  <button
+                    onClick={() => setQuoteMode('new')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer ${
+                      quoteMode === 'new'
+                        ? 'bg-[#D4AF37] text-white'
+                        : 'bg-white text-[#8B7A1A] hover:bg-[#F5F2E8]'
+                    }`}
+                  >
+                    New Customer
+                  </button>
+                </div>
+
+                {quoteMode === 'existing' ? (
+                  /* Existing Lead Selection */
+                  <div>
+                    <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Select Lead</label>
+                    <select
+                      value={selectedLeadForQuote?.id || ''}
+                      onChange={(e) => {
+                        if (e.target.value === 'new-aura') {
+                          setQuoteMode('new');
+                          setSelectedLeadForQuote(null);
+                          setNewCustomerForm(prev => ({ ...prev, interest: 'Aura' }));
+                          // Auto-generate quote title and description
+                          setQuoteForm(prev => ({
+                            ...prev,
+                            title: `Quote for Customer - Aura`,
+                            description: `Professional quote for customer regarding Aura`
+                          }));
+                        } else if (e.target.value === 'new-dhunee') {
+                          setQuoteMode('new');
+                          setSelectedLeadForQuote(null);
+                          setNewCustomerForm(prev => ({ ...prev, interest: 'Dhunee' }));
+                          // Auto-generate quote title and description
+                          setQuoteForm(prev => ({
+                            ...prev,
+                            title: `Quote for Customer - Dhunee`,
+                            description: `Professional quote for customer regarding Dhunee`
+                          }));
+                        } else {
+                          const selectedLead = leads.find(lead => lead.id === e.target.value);
+                          setSelectedLeadForQuote(selectedLead || null);
+                          setQuoteMode('existing');
+                          if (selectedLead) {
+                            setQuoteForm(prev => ({
+                              ...prev,
+                              title: `Quote for ${selectedLead.name} - ${selectedLead.interest}`,
+                              description: `Professional quote for ${selectedLead.name} regarding ${selectedLead.interest}`
+                            }));
+                          }
+                        }
+                      }}
+                      className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                    >
+                      <option value="">Select a lead...</option>
+                      {leads.map((lead) => (
+                        <option key={lead.id} value={lead.id}>
+                          {lead.name} - {lead.interest} ({lead.status})
+                        </option>
+                      ))}
+                      <option value="new-aura">+ New Customer - Aura</option>
+                      <option value="new-dhunee">+ New Customer - Dhunee</option>
+                    </select>
+                    
+                    {selectedLeadForQuote && (
+                      <div className="mt-4 p-3 bg-white rounded-lg border border-[#D4AF37]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-[#8B7A1A]">Name</p>
+                            <p className="text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.name}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[#8B7A1A]">Interest</p>
+                            <p className="text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.interest}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[#8B7A1A]">Email</p>
+                            <p className="text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.email || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[#8B7A1A]">Phone</p>
+                            <p className="text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.phone || 'Not provided'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* New Customer Form */
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Customer Name *</label>
+                        <input
+                          type="text"
+                          value={newCustomerForm.name}
+                          onChange={(e) => {
+                            setNewCustomerForm(prev => ({ ...prev, name: e.target.value }));
+                            // Auto-generate quote title and description when name changes
+                            if (newCustomerForm.interest) {
+                              setQuoteForm(prev => ({
+                                ...prev,
+                                title: `Quote for ${e.target.value} - ${newCustomerForm.interest}`,
+                                description: `Professional quote for ${e.target.value} regarding ${newCustomerForm.interest}`
+                              }));
+                            }
+                          }}
+                          className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A]"
+                          placeholder="Enter customer name"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Product/Service Interest *</label>
+                        <select
+                          value={newCustomerForm.interest}
+                          onChange={(e) => {
+                            setNewCustomerForm(prev => ({ ...prev, interest: e.target.value }));
+                            // Auto-generate quote title and description when interest changes
+                            if (newCustomerForm.name) {
+                              setQuoteForm(prev => ({
+                                ...prev,
+                                title: `Quote for ${newCustomerForm.name} - ${e.target.value}`,
+                                description: `Professional quote for ${newCustomerForm.name} regarding ${e.target.value}`
+                              }));
+                            }
+                          }}
+                          className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                          required
+                        >
+                          <option value="">Select a product...</option>
+                          <option value="Aura">Aura - Natural Plaster Solutions</option>
+                          <option value="Dhunee">Dhunee - Organic Incense</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Email</label>
+                        <input
+                          type="email"
+                          value={newCustomerForm.email}
+                          onChange={(e) => setNewCustomerForm(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A]"
+                          placeholder="customer@email.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Phone</label>
+                        <input
+                          type="tel"
+                          value={newCustomerForm.phone}
+                          onChange={(e) => setNewCustomerForm(prev => ({ ...prev, phone: e.target.value }))}
+                          className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A]"
+                          placeholder="+91 12345 67890"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Lead Source *</label>
+                        <select
+                          value={newCustomerForm.source}
+                          onChange={(e) => setNewCustomerForm(prev => ({ ...prev, source: e.target.value }))}
+                          required
+                          className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                        >
+                          <option value="" className="text-[#8B7A1A]">Select source</option>
+                          <option value="Website" className="text-[#5E4E06]">Website</option>
+                          <option value="Referral" className="text-[#5E4E06]">Referral</option>
+                          <option value="Social Media" className="text-[#5E4E06]">Social Media</option>
+                          <option value="Cold Call" className="text-[#5E4E06]">Cold Call</option>
+                          <option value="Trade Show" className="text-[#5E4E06]">Trade Show</option>
+                          <option value="Other" className="text-[#5E4E06]">Other</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center">
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newCustomerForm.addToLeads}
+                            onChange={(e) => setNewCustomerForm(prev => ({ ...prev, addToLeads: e.target.checked }))}
+                            className="w-4 h-4 text-[#D4AF37] border-[#D4AF37] rounded focus:ring-[#D4AF37] focus:ring-2"
+                          />
+                          <span className="text-sm font-medium text-[#5E4E06]">Add to Leads automatically</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Quote Details & Items - Combined Section */}
+              <div className="bg-[#F5F2E8] rounded-lg sm:rounded-xl p-4 sm:p-6 border border-[#D4AF37]">
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4">Quote Details & Items</h4>
+                
+                {/* Valid Until */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Valid Until</label>
+                  <input
+                    type="date"
+                    value={quoteForm.validUntil}
+                    onChange={(e) => setQuoteForm(prev => ({ ...prev, validUntil: e.target.value }))}
+                    className="w-full max-w-xs px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                  />
+                </div>
+
+                {/* Payment Link */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Payment Link *</label>
+                  <input
+                    type="url"
+                    value={quoteForm.paymentLink}
+                    onChange={(e) => setQuoteForm(prev => ({ ...prev, paymentLink: e.target.value }))}
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                    placeholder="https://razorpay.com/pay/..."
+                    required
+                  />
+                  <p className="text-xs text-[#8B7A1A] mt-1">
+                    Create a Razorpay payment link for the quote amount and paste it here
+                  </p>
+                </div>
+
+                {/* Items Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h5 className="text-base font-semibold text-[#5E4E06]">Quote Items</h5>
+                  <button
+                    onClick={addQuoteItem}
+                    className="px-4 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-colors duration-200 cursor-pointer text-sm font-medium"
+                  >
+                    + Add Item
+                  </button>
+                </div>
+                
+                {/* Items Grid */}
+                <div className="space-y-4">
+                  {quoteForm.items.map((item, index) => {
+                    const selectedProduct = products.find(p => p.id === item.productId);
+                    return (
+                      <div key={index} className="bg-white rounded-lg border border-[#D4AF37] p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Product *</label>
+                            <select
+                              value={item.productId}
+                              onChange={(e) => updateQuoteItem(index, 'productId', e.target.value)}
+                              className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                              required
+                            >
+                              <option value="">Select a product...</option>
+                              {products.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                  {product.name} - ₹{product.price.toLocaleString()} {product.unit}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Quantity</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateQuoteItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                              className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                              placeholder="1"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="flex-1">
+                              <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Unit Price</label>
+                              <div className="px-3 py-3 bg-[#F5F2E8] border border-[#D4AF37] rounded-lg text-[#5E4E06] text-sm font-medium">
+                                ₹{selectedProduct?.price || 0} {selectedProduct?.unit || ''}
+                              </div>
+                            </div>
+                            {quoteForm.items.length > 1 && (
+                              <button
+                                onClick={() => removeQuoteItem(index)}
+                                className="px-3 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200 cursor-pointer text-sm"
+                                title="Remove item"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Pricing & Totals - Redesigned */}
+              <div className="bg-[#F5F2E8] rounded-lg sm:rounded-xl p-4 sm:p-6 border border-[#D4AF37]">
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4">Pricing & Totals</h4>
+                
+                {/* Discount Section */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-[#8B7A1A] mb-3">Discount</label>
+                  <div className="flex space-x-2 mb-3">
+                    <button
+                      onClick={() => {
+                        setQuoteForm(prev => ({ 
+                          ...prev, 
+                          discountType: 'percentage',
+                          discount: 0
+                        }));
+                      }}
+                      className={`px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 cursor-pointer ${
+                        quoteForm.discountType === 'percentage'
+                          ? 'bg-[#D4AF37] text-white shadow-lg scale-105'
+                          : 'bg-white text-[#8B7A1A] hover:bg-[#F5F2E8] border border-[#D4AF37]'
+                      }`}
+                    >
+                      Percentage (%)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setQuoteForm(prev => ({ 
+                          ...prev, 
+                          discountType: 'amount',
+                          discount: 0
+                        }));
+                      }}
+                      className={`px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 cursor-pointer ${
+                        quoteForm.discountType === 'amount'
+                          ? 'bg-[#D4AF37] text-white shadow-lg scale-105'
+                          : 'bg-white text-[#8B7A1A] hover:bg-[#F5F2E8] border border-[#D4AF37]'
+                      }`}
+                    >
+                      Amount (₹)
+                    </button>
+                  </div>
+                  
+                  {/* Discount Input */}
+                  <input
+                    type="number"
+                    min="0"
+                    max={quoteForm.discountType === 'percentage' ? 100 : calculateQuoteTotal().subtotal}
+                    step={quoteForm.discountType === 'percentage' ? 1 : 0.01}
+                    value={quoteForm.discount}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      const maxValue = quoteForm.discountType === 'percentage' ? 100 : calculateQuoteTotal().subtotal;
+                      setQuoteForm(prev => ({ 
+                        ...prev, 
+                        discount: Math.min(value, maxValue)
+                      }));
+                    }}
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                    placeholder={quoteForm.discountType === 'percentage' ? '0' : '0.00'}
+                  />
+                </div>
+
+                {/* Total Display */}
+                <div className="p-4 bg-white rounded-lg sm:rounded-xl border border-[#D4AF37]">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#8B7A1A]">Subtotal:</span>
+                      <span className="font-semibold text-[#5E4E06]">₹{calculateQuoteTotal().subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#8B7A1A]">Discount ({quoteForm.discountType === 'percentage' ? `${quoteForm.discount}%` : `₹${quoteForm.discount}`}):</span>
+                      <span className="font-semibold text-[#5E4E06]">₹{calculateQuoteTotal().discountAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="border-t border-[#D4AF37] pt-3">
+                      <div className="flex justify-between text-lg font-bold">
+                        <span className="text-[#5E4E06]">Total:</span>
+                        <span className="text-[#D4AF37]">₹{calculateQuoteTotal().total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-center sm:justify-end p-4 sm:p-6 lg:p-8 border-t border-[#D4AF37] space-x-3 sm:space-x-4">
+              <button
+                onClick={() => {
+                  setShowCreateQuoteModal(false);
+                  setSelectedLeadForQuote(null);
+                  setQuoteForm({
+                    title: '',
+                    description: '',
+                    items: [{ productId: '', quantity: 1 }],
+                    terms: '',
+                    validUntil: '',
+                    discount: 0,
+                    discountType: 'percentage',
+                    paymentLink: '',
+                    status: 'draft'
+                  });
+                }}
+                className="px-6 py-3 bg-[#F5F2E8] text-[#8B7A1A] rounded-lg sm:rounded-xl hover:bg-[#E6DCC0] transition-colors duration-200 font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveQuote}
+                disabled={
+                  (quoteMode === 'existing' && !selectedLeadForQuote) ||
+                  (quoteMode === 'new' && (!newCustomerForm.name.trim() || !newCustomerForm.interest.trim() || !newCustomerForm.source.trim()))
+                }
+                className={`px-6 py-3 rounded-lg sm:rounded-xl font-medium transition-all duration-200 ${
+                  (quoteMode === 'existing' && !selectedLeadForQuote) ||
+                  (quoteMode === 'new' && (!newCustomerForm.name.trim() || !newCustomerForm.interest.trim() || !newCustomerForm.source.trim()))
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white hover:scale-105 cursor-pointer'
+                }`}
+              >
+                {quoteMode === 'new' ? 'Create Quote & Lead' : 'Create Quote'}
                 </button>
               </div>
           </div>
