@@ -33,7 +33,7 @@ export const useAuth = () => {
             uid: user.uid, 
             role, 
             hasProfile: !!profile,
-            profileEmail: profile?.email 
+            profileEmail: profile?.email
           });
           
           setAuthState({

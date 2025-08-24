@@ -193,6 +193,9 @@ export default function LoginClient() {
     setIsSubmitting(true);
     
     try {
+      // Set persistence before phone verification
+      await AuthService.setPersistence(formData.rememberMe);
+      
       const userCredential = await confirmationResult.confirm(verificationCode);
       
       // Create user profile if it doesn't exist (for phone login)
@@ -215,6 +218,9 @@ export default function LoginClient() {
     setIsSubmitting(true);
     
     try {
+      // Set persistence before Google authentication
+      await AuthService.setPersistence(formData.rememberMe);
+      
       const userCredential = await AuthService.signInWithGoogle();
       
       // Create user profile if it doesn't exist (for Google login)

@@ -1,8 +1,6 @@
 "use client";
 
-import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
-import { CheckCircle, Package, Truck, Clock, MapPin, Phone, Mail, ArrowRight, Home, ShoppingBag } from 'lucide-react';
+import { CheckCircle, Package, Truck, Clock, MapPin, Phone, Mail, ArrowRight, Home, ShoppingBag, Star, Shield, Leaf, Heart } from 'lucide-react';
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -44,7 +42,7 @@ function OrderConfirmationContent() {
           month: 'long',
           day: 'numeric'
         }),
-        estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+        estimatedDelivery: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
@@ -75,77 +73,78 @@ function OrderConfirmationContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-amber-100 via-white to-orange-100">
-        <Navigation />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-            <p className="text-amber-700 font-semibold">Loading order details...</p>
-          </div>
-        </main>
-        <Footer />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8F6F0] via-white to-[#F0EDE4]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#5E4E06] mx-auto mb-6"></div>
+          <p className="text-[#5E4E06] font-semibold text-lg">Loading order details...</p>
+        </div>
       </div>
     );
   }
 
   if (!orderDetails) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-amber-100 via-white to-orange-100">
-        <Navigation />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-amber-700 font-semibold">Order not found</p>
-            <Link href="/" className="text-amber-600 hover:underline">Return to home</Link>
-          </div>
-        </main>
-        <Footer />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8F6F0] via-white to-[#F0EDE4]">
+        <div className="text-center">
+          <p className="text-[#5E4E06] font-semibold text-lg mb-4">Order not found</p>
+          <Link href="/" className="text-[#8B7A1A] hover:underline font-medium">Return to home</Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-amber-100 via-white to-orange-100 font-sans">
-      <Navigation />
-      
-      <main className="flex-1 flex flex-col items-center py-12 px-4 md:px-0">
-        <div className="w-full max-w-4xl mx-auto">
-          {/* Success Header */}
-          <div className="text-center mb-12">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-12 h-12 text-green-600" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-amber-900 mb-4">
-              Order Confirmed!
-            </h1>
-            <p className="text-xl text-amber-600 mb-2">
-              Thank you for your order. We're excited to bring natural beauty to your space.
-            </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold">
-              <span>Order ID: {orderDetails.orderId}</span>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-white to-[#F0EDE4] font-sans">
+      {/* Hero Section */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] opacity-90"></div>
+        <div className="absolute inset-0 bg-[url('/images/deserttomountains-4-scaled-1.webp')] bg-cover bg-center opacity-20"></div>
+        
+        <div className="relative max-w-6xl mx-auto px-6 text-center">
+          <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-8">
+            <CheckCircle className="w-14 h-14 text-white" />
           </div>
+          
+          <h1 className="text-5xl md:text-6xl font-black text-white mb-6 leading-tight">
+            Order Confirmed!
+          </h1>
+          
+          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
+            Thank you for choosing Desert to Mountains! We're excited to bring natural beauty and sustainability to your space.
+          </p>
+          
+          <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-full text-lg font-bold border border-white/30">
+            <span>Order ID: {orderDetails.orderId}</span>
+          </div>
+        </div>
+      </section>
 
+      {/* Main Content */}
+      <section className="py-16 -mt-8">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Order Details */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Order Summary */}
-              <div className="bg-white/90 rounded-3xl shadow-2xl border border-amber-200 p-8">
-                <h2 className="text-2xl font-bold text-amber-900 mb-6 flex items-center gap-2">
-                  <Package className="w-6 h-6" />
-                  Order Summary
-                </h2>
+            {/* Order Details - Left Column */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Order Summary Card */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
+                    <Package className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-3xl font-black text-gray-900">Order Summary</h2>
+                </div>
                 
                 <div className="space-y-4">
                   {orderDetails.items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 bg-amber-50 rounded-xl">
-                      <div className="w-12 h-12 bg-amber-200 rounded-lg flex items-center justify-center">
-                        <span className="text-amber-700 font-bold text-sm">
+                    <div key={index} className="flex items-center gap-4 p-6 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
+                      <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">
                           {item.type === 'wallputty' ? 'WP' : 'SP'}
                         </span>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{item.name}</h4>
-                        <p className="text-gray-600 text-sm">
+                        <h4 className="font-bold text-gray-900 text-lg">{item.name}</h4>
+                        <p className="text-gray-600">
                           {item.type === 'wallputty' && item.variant === 'pigmented' && item.shades
                             ? `${item.totalQuantity} × 25kg`
                             : item.type === 'sample'
@@ -155,149 +154,168 @@ function OrderConfirmationContent() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-amber-700">₹{item.price}</p>
+                        <p className="font-black text-2xl text-[#5E4E06]">₹{item.price}</p>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-amber-200">
-                  <div className="flex justify-between text-lg font-bold text-amber-900">
-                    <span>Total Amount</span>
-                    <span>₹{orderDetails.totalAmount}</span>
-                  </div>
-                </div>
-                
-                {/* Shipping Information */}
-                <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200">
-                  <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
-                    <Truck className="w-4 h-4" />
-                    Shipping Information
-                  </h4>
-                  <div className="space-y-2 text-sm text-amber-700">
-                    <p>• Shipping charges will be calculated separately and collected as cash on delivery</p>
-                    <p>• We negotiate with multiple transport companies to provide you the best rates</p>
-                    <p>• You will be informed of the exact shipping cost before delivery</p>
+                <div className="mt-8 pt-8 border-t-2 border-[#E8E4D8]">
+                  <div className="flex justify-between items-center">
+                    <span className="text-2xl font-bold text-gray-900">Total Amount</span>
+                    <span className="text-3xl font-black text-[#5E4E06]">₹{orderDetails.totalAmount}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Delivery Information */}
-              <div className="bg-white/90 rounded-3xl shadow-2xl border border-amber-200 p-8">
-                <h2 className="text-2xl font-bold text-amber-900 mb-6 flex items-center gap-2">
-                  <Truck className="w-6 h-6" />
-                  Delivery Information
-                </h2>
+              {/* Delivery Information Card */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
+                    <Truck className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-3xl font-black text-gray-900">Delivery Information</h2>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Clock className="w-5 h-5 text-amber-600" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl">
+                      <Clock className="w-6 h-6 text-[#5E4E06]" />
                       <div>
-                        <p className="font-semibold text-gray-900">Order Date</p>
+                        <p className="font-bold text-gray-900">Order Date</p>
                         <p className="text-gray-600">{orderDetails.orderDate}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Truck className="w-5 h-5 text-amber-600" />
+                    
+                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl">
+                      <Truck className="w-6 h-6 text-[#5E4E06]" />
                       <div>
-                        <p className="font-semibold text-gray-900">Estimated Delivery</p>
+                        <p className="font-bold text-gray-900">Estimated Delivery</p>
                         <p className="text-gray-600">{orderDetails.estimatedDelivery}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Package className="w-5 h-5 text-amber-600" />
+                    
+                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl">
+                      <Package className="w-6 h-6 text-[#5E4E06]" />
                       <div>
-                        <p className="font-semibold text-gray-900">Payment Method</p>
+                        <p className="font-bold text-gray-900">Payment Method</p>
                         <p className="text-gray-600">{orderDetails.paymentMethod}</p>
                       </div>
                     </div>
                   </div>
                   
-                  <div>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-amber-600 mt-1" />
+                  <div className="p-6 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
+                    <div className="flex items-start gap-4">
+                      <MapPin className="w-6 h-6 text-[#5E4E06] mt-1 flex-shrink-0" />
                       <div>
-                        <p className="font-semibold text-gray-900 mb-2">Shipping Address</p>
-                        <div className="text-gray-600 text-sm space-y-1">
-                          <p>{orderDetails.shippingAddress.fullName}</p>
+                        <p className="font-bold text-gray-900 mb-3">Shipping Address</p>
+                        <div className="text-gray-600 space-y-2">
+                          <p className="font-medium">{orderDetails.shippingAddress.fullName}</p>
                           <p>{orderDetails.shippingAddress.address}</p>
                           <p>{orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state} {orderDetails.shippingAddress.pincode}</p>
-                          <p>Phone: {orderDetails.shippingAddress.phone}</p>
+                          <p className="font-medium">Phone: {orderDetails.shippingAddress.phone}</p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Shipping Information Card */}
+              <div className="bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-3xl border-2 border-[#E8E4D8] p-8">
+                <h3 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                  <Truck className="w-6 h-6 text-[#5E4E06]" />
+                  Shipping Information
+                </h3>
+                <div className="space-y-4 text-gray-700">
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-[#5E4E06] rounded-full mt-2 flex-shrink-0"></div>
+                    <p>Shipping charges will be calculated separately and collected as cash on delivery</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-[#5E4E06] rounded-full mt-2 flex-shrink-0"></div>
+                    <p>We negotiate with multiple transport companies to provide you the best rates</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-[#5E4E06] rounded-full mt-2 flex-shrink-0"></div>
+                    <p>You will be informed of the exact shipping cost before delivery</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Next Steps */}
+            {/* Right Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-white/90 rounded-3xl shadow-2xl border border-amber-200 p-8 sticky top-32">
-                <h2 className="text-2xl font-bold text-amber-900 mb-6">What's Next?</h2>
-                
-                <div className="space-y-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-amber-700 font-bold text-sm">1</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Order Processing</h4>
-                      <p className="text-gray-600 text-sm">We'll process your order within 24 hours</p>
-                    </div>
-                  </div>
+              <div className="sticky top-32 space-y-8">
+                {/* Next Steps Card */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8">
+                  <h2 className="text-2xl font-black text-gray-900 mb-8">What's Next?</h2>
                   
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-amber-700 font-bold text-sm">2</span>
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-lg">1</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900">Order Processing</h4>
+                        <p className="text-gray-600 text-sm">We'll process your order within 24 hours</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Shipping Calculation</h4>
-                      <p className="text-gray-600 text-sm">We'll calculate shipping costs and inform you before delivery</p>
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-lg">2</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900">Shipping Calculation</h4>
+                        <p className="text-gray-600 text-sm">We'll calculate shipping costs and inform you before delivery</p>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-amber-700 font-bold text-sm">3</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Delivery</h4>
-                      <p className="text-gray-600 text-sm">Your order will be delivered within 5-7 days with shipping charges collected as cash on delivery</p>
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-lg">3</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900">Delivery</h4>
+                        <p className="text-gray-600 text-sm">Your order will be delivered within 7-10 days with shipping charges collected as cash on delivery</p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-8 space-y-4">
-                  <Link 
-                    href="/"
-                    className="w-full px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold rounded-xl shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2"
-                  >
-                    <Home className="w-5 h-5" />
-                    Continue Shopping
-                  </Link>
-                  
-                  <Link 
-                    href="/aura"
-                    className="w-full px-6 py-3 bg-white border-2 border-amber-300 text-amber-700 font-bold rounded-xl hover:bg-amber-50 transition-all duration-300 flex items-center justify-center gap-2"
-                  >
-                    <ShoppingBag className="w-5 h-5" />
-                    Shop More Products
-                  </Link>
+                {/* Action Buttons */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8">
+                  <div className="space-y-4">
+                    <Link 
+                      href="/"
+                      className="w-full px-6 py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-2xl shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 text-lg"
+                    >
+                      <Home className="w-6 h-6" />
+                      Continue Shopping
+                    </Link>
+                    
+                    <Link 
+                      href="/aura"
+                      className="w-full px-6 py-4 bg-white border-2 border-[#8B7A1A] text-[#5E4E06] font-bold rounded-2xl hover:bg-[#F8F6F0] transition-all duration-300 flex items-center justify-center gap-3 text-lg"
+                    >
+                      <ShoppingBag className="w-6 h-6" />
+                      Shop More Products
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Contact Support */}
-                <div className="mt-8 p-4 bg-amber-50 rounded-xl">
-                  <h4 className="font-semibold text-amber-900 mb-3">Need Help?</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-amber-600" />
-                      <span className="text-gray-700">+91 98765 43210</span>
+                <div className="bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-3xl border-2 border-[#E8E4D8] p-8">
+                  <h4 className="font-bold text-gray-900 mb-6 text-lg">Need Help?</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-5 h-5 text-[#5E4E06]" />
+                      <span className="text-gray-700 font-medium">+91 98765 43210</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-amber-600" />
-                      <span className="text-gray-700">support@deserttomountains.com</span>
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 text-[#5E4E06]" />
+                      <span className="text-gray-700 font-medium">support@deserttomountains.com</span>
                     </div>
                   </div>
                 </div>
@@ -305,24 +323,60 @@ function OrderConfirmationContent() {
             </div>
           </div>
         </div>
-      </main>
-      
-      <Footer />
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-12 text-center">Why Choose Desert to Mountains?</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-8 bg-white rounded-3xl shadow-lg border border-gray-100">
+              <Leaf className="w-16 h-16 text-[#5E4E06] mx-auto mb-6" />
+              <h3 className="text-xl font-bold text-gray-900 mb-4">100% Natural</h3>
+              <p className="text-gray-600">Pure, eco-friendly materials from nature's bounty</p>
+            </div>
+            <div className="text-center p-8 bg-white rounded-3xl shadow-lg border border-gray-100">
+              <Shield className="w-16 h-16 text-[#5E4E06] mx-auto mb-6" />
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Quality Guaranteed</h3>
+              <p className="text-gray-600">Premium materials with rigorous quality control</p>
+            </div>
+            <div className="text-center p-8 bg-white rounded-3xl shadow-lg border border-gray-100">
+              <Heart className="w-16 h-16 text-[#5E4E06] mx-auto mb-6" />
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Health First</h3>
+              <p className="text-gray-600">Toxin-free solutions for healthier living spaces</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A]">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-6">Transform Your Space Today!</h2>
+          <p className="text-xl text-gray-100 mb-8">
+            Join thousands of happy customers who have already experienced the natural beauty and health benefits of our products.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/aura" className="px-8 py-4 bg-white text-gray-900 font-bold rounded-2xl hover:shadow-lg transition-all duration-300 hover:scale-105">
+              Shop Aura Plaster
+            </Link>
+            <Link href="/contact" className="px-8 py-4 border-2 border-white text-white font-bold rounded-2xl hover:bg-white hover:text-gray-900 transition-all duration-300">
+              Get Consultation
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-amber-100 via-white to-orange-100">
-      <Navigation />
-      <main className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-amber-700 font-semibold">Loading order details...</p>
-        </div>
-      </main>
-      <Footer />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8F6F0] via-white to-[#F0EDE4]">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#5E4E06] mx-auto mb-6"></div>
+        <p className="text-[#5E4E06] font-semibold text-lg">Loading order details...</p>
+      </div>
     </div>
   );
 }

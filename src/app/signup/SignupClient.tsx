@@ -23,7 +23,8 @@ export default function SignupClient() {
     confirmPassword: '',
     phone: '',
     agreeToTerms: false,
-    newsletter: true
+    newsletter: true,
+    rememberMe: false
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -133,6 +134,9 @@ export default function SignupClient() {
     if (validateForm()) {
       setIsSubmitting(true);
       try {
+        // Set persistence before creating user
+        await AuthService.setPersistence(formData.rememberMe);
+        
         const userCredential = await AuthService.createUserWithEmail(
           formData.email, 
           formData.password,
@@ -155,6 +159,9 @@ export default function SignupClient() {
     if (validateForm()) {
       setIsSubmitting(true);
       try {
+        // Set persistence before phone authentication
+        await AuthService.setPersistence(formData.rememberMe);
+        
         const result = await AuthService.signInWithPhone(formData.phone, recaptchaVerifierRef.current!);
         setConfirmationResult(result);
         setPhoneVerificationSent(true);
@@ -192,6 +199,9 @@ export default function SignupClient() {
   const handleGoogleSignup = async () => {
     setIsSubmitting(true);
     try {
+      // Set persistence before Google authentication
+      await AuthService.setPersistence(formData.rememberMe);
+      
       const userCredential = await AuthService.signInWithGoogle();
       
       // Create user profile for Google signup
@@ -424,6 +434,20 @@ export default function SignupClient() {
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
+                        id="rememberMe"
+                        name="rememberMe"
+                        checked={formData.rememberMe}
+                        onChange={handleInputChange}
+                        className="w-5 h-5 rounded border-2 border-[#D4AF37] focus:ring-2 focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] cursor-pointer"
+                      />
+                      <label htmlFor="rememberMe" className="text-[#8B7A1A] font-semibold cursor-pointer">
+                        Remember me
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
                         id="agreeToTerms"
                         name="agreeToTerms"
                         checked={formData.agreeToTerms}
@@ -508,6 +532,20 @@ export default function SignupClient() {
                         We'll send you a verification code via SMS
                       </p>
                     </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="rememberMePhone"
+                        name="rememberMe"
+                        checked={formData.rememberMe}
+                        onChange={handleInputChange}
+                        className="w-5 h-5 rounded border-2 border-[#D4AF37] focus:ring-2 focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] cursor-pointer"
+                      />
+                      <label htmlFor="rememberMePhone" className="text-[#8B7A1A] font-semibold cursor-pointer">
+                        Remember me
+                      </label>
+                    </div>
+
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"

@@ -27,6 +27,34 @@ import {
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
+// Utility function to safely convert Firestore dates
+const convertFirestoreDate = (date: any): Date | null => {
+  if (!date) return null;
+  
+  try {
+    // If it's already a Date object
+    if (date instanceof Date) return date;
+    
+    // If it's a Firestore Timestamp
+    if (date && typeof date === 'object' && date.toDate) {
+      return date.toDate();
+    }
+    
+    // If it's a string or number
+    if (typeof date === 'string' || typeof date === 'number') {
+      const converted = new Date(date);
+      if (!isNaN(converted.getTime())) {
+        return converted;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error converting date:', error, date);
+    return null;
+  }
+};
+
 // Your Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'demo-api-key',
@@ -98,6 +126,7 @@ export interface Lead {
   name: string;
   email?: string;
   phone: string;
+  countryCode?: string;
   source: string;
   status: string;
   interest: string;
@@ -112,12 +141,10 @@ export interface Lead {
 export interface Quote {
   id?: string;
   quoteNumber: string;
-  version: number;
-  parentQuoteId: string | null;
-  previousVersionId: string | null;
   
   // Customer info
   leadId: string | null;
+  customerId: string; // Link to customer profile
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -128,6 +155,8 @@ export interface Quote {
   subtotal: number;
   discount: number;
   discountType: 'percentage' | 'amount';
+  shippingCharges: number;
+  includeShipping: boolean;
   total: number;
   validUntil: string;
   
@@ -150,6 +179,18 @@ export interface Quote {
   
   // Auto-expiry
   isExpired: boolean;
+  
+  // Quote type and editing
+  quoteType: 'initial' | 'revision' | 'alternative' | 'followup';
+  isEditable: boolean;
+  lastEditedAt?: Date;
+  editHistory?: Array<{
+    field: string;
+    oldValue: any;
+    newValue: any;
+    editedAt: Date;
+    editedBy: string;
+  }>;
 }
 
 // Deal interface
@@ -396,6 +437,42 @@ export class AuthService {
     }
 
     try {
+      // Check for duplicate leads based on email or phone
+      const { getDocs, query, where, collection: firestoreCollection } = await import('firebase/firestore');
+      
+      // Build query conditions for duplicate check
+      const duplicateConditions = [];
+      
+      if (leadData.email) {
+        duplicateConditions.push(where('email', '==', leadData.email));
+      }
+      if (leadData.phone) {
+        duplicateConditions.push(where('phone', '==', leadData.phone));
+      }
+      
+      // If we have conditions to check, query for duplicates
+      if (duplicateConditions.length > 0) {
+        // Check for exact email match
+        if (leadData.email) {
+          const emailQuery = query(firestoreCollection(db, 'leads'), where('email', '==', leadData.email));
+          const emailSnapshot = await getDocs(emailQuery);
+          if (!emailSnapshot.empty) {
+            const existingLead = emailSnapshot.docs[0].data();
+            throw new Error(`A lead with email "${leadData.email}" already exists (${existingLead.name})`);
+          }
+        }
+        
+        // Check for exact phone match
+        if (leadData.phone) {
+          const phoneQuery = query(firestoreCollection(db, 'leads'), where('phone', '==', leadData.phone));
+          const phoneSnapshot = await getDocs(phoneQuery);
+          if (!phoneSnapshot.empty) {
+            const existingLead = phoneSnapshot.docs[0].data();
+            throw new Error(`A lead with phone "${leadData.phone}" already exists (${existingLead.name})`);
+          }
+        }
+      }
+
       const lead: Lead = {
         ...leadData,
         createdAt: new Date(),
@@ -408,7 +485,7 @@ export class AuthService {
       return leadRef.id;
     } catch (error) {
       console.error('Error creating lead:', error);
-      throw new Error('Failed to create lead');
+      throw new Error(error instanceof Error ? error.message : 'Failed to create lead');
     }
   }
 
@@ -465,6 +542,60 @@ export class AuthService {
     } catch (error) {
       console.error('Error deleting lead:', error);
       throw new Error('Failed to delete lead');
+    }
+  }
+
+  // Check for duplicate leads before creation
+  static async checkDuplicateLead(email?: string, phone?: string): Promise<{ isDuplicate: boolean; existingLead?: Lead; reason?: string }> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, where, collection: firestoreCollection } = await import('firebase/firestore');
+      
+      // Check for exact email match
+      if (email) {
+        const emailQuery = query(firestoreCollection(db, 'leads'), where('email', '==', email));
+        const emailSnapshot = await getDocs(emailQuery);
+        if (!emailSnapshot.empty) {
+          const existingLead = emailSnapshot.docs[0].data();
+          return {
+            isDuplicate: true,
+            existingLead: {
+              id: emailSnapshot.docs[0].id,
+              ...existingLead,
+              createdAt: existingLead.createdAt?.toDate ? existingLead.createdAt.toDate() : existingLead.createdAt,
+              updatedAt: existingLead.updatedAt?.toDate ? existingLead.updatedAt.toDate() : existingLead.updatedAt
+            } as Lead,
+            reason: `Email "${email}" already exists`
+          };
+        }
+      }
+      
+      // Check for exact phone match
+      if (phone) {
+        const phoneQuery = query(firestoreCollection(db, 'leads'), where('phone', '==', phone));
+        const phoneSnapshot = await getDocs(phoneQuery);
+        if (!phoneSnapshot.empty) {
+          const existingLead = phoneSnapshot.docs[0].data();
+          return {
+            isDuplicate: true,
+            existingLead: {
+              id: phoneSnapshot.docs[0].id,
+              ...existingLead,
+              createdAt: existingLead.createdAt?.toDate ? existingLead.createdAt.toDate() : existingLead.createdAt,
+              updatedAt: existingLead.updatedAt?.toDate ? existingLead.updatedAt.toDate() : existingLead.updatedAt
+            } as Lead,
+            reason: `Phone "${phone}" already exists`
+          };
+        }
+      }
+      
+      return { isDuplicate: false };
+    } catch (error) {
+      console.error('Error checking for duplicate leads:', error);
+      throw new Error('Failed to check for duplicate leads');
     }
   }
 
@@ -698,10 +829,19 @@ export class AuthService {
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(ordersQuery);
-      return querySnapshot.docs.map(doc => ({
+      const orders = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Order[];
+      
+      // Sort locally to avoid index requirement
+      orders.sort((a, b) => {
+        const dateA = convertFirestoreDate(a.createdAt)?.getTime() || 0;
+        const dateB = convertFirestoreDate(b.createdAt)?.getTime() || 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
+      
+      return orders;
     } catch (error) {
       console.error('Error getting orders:', error);
       throw new Error('Failed to get orders');
@@ -729,6 +869,61 @@ export class AuthService {
     } catch (error) {
       console.error('Error getting orders by status:', error);
       throw new Error('Failed to get orders by status');
+    }
+  }
+
+  // Get orders for a specific user
+  static async getUserOrders(userId: string): Promise<Order[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where } = await import('firebase/firestore');
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        where('customerId', '==', userId)
+        // Removed orderBy to avoid index requirement
+      );
+      const querySnapshot = await getDocs(ordersQuery);
+      const orders = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      
+      // Sort locally to avoid index requirement
+      orders.sort((a, b) => {
+        const dateA = convertFirestoreDate(a.createdAt)?.getTime() || 0;
+        const dateB = convertFirestoreDate(b.createdAt)?.getTime() || 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
+      
+      return orders;
+    } catch (error) {
+      console.error('Error getting user orders:', error);
+      throw new Error('Failed to get user orders');
+    }
+  }
+
+  // Get order by ID
+  static async getOrderById(orderId: string): Promise<Order | null> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDoc, doc } = await import('firebase/firestore');
+      const orderDoc = await getDoc(doc(db, 'orders', orderId));
+      if (orderDoc.exists()) {
+        return {
+          id: orderDoc.id,
+          ...orderDoc.data()
+        } as Order;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting order by ID:', error);
+      throw new Error('Failed to get order');
     }
   }
 
@@ -777,25 +972,6 @@ export class AuthService {
     }
   }
 
-  // Get order by ID
-  static async getOrderById(orderId: string): Promise<Order | null> {
-    if (!this.isFirebaseConfigured()) {
-      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
-    }
-
-    try {
-      const { getDoc, doc } = await import('firebase/firestore');
-      const orderDoc = await getDoc(doc(db, 'orders', orderId));
-      if (orderDoc.exists()) {
-        return { id: orderDoc.id, ...orderDoc.data() } as Order;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting order by ID:', error);
-      throw new Error('Failed to get order');
-    }
-  }
-
   // Get orders for a specific customer
   static async getCustomerOrders(customerId: string): Promise<Order[]> {
     if (!this.isFirebaseConfigured()) {
@@ -839,7 +1015,30 @@ export class AuthService {
     }
     try {
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      console.log(`Auth persistence set to: ${rememberMe ? 'local' : 'session'}`);
     } catch (error) {
+      console.error('Error setting auth persistence:', error);
+      throw this.handleAuthError(error as AuthError);
+    }
+  }
+
+  // Enhanced sign out with session cleanup
+  static async signOut(): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+    try {
+      await auth.signOut();
+      
+      // Clear any stored auth data
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('firebase:authUser:');
+        sessionStorage.removeItem('firebase:authUser:');
+      }
+      
+      console.log('User signed out successfully');
+    } catch (error) {
+      console.error('Error signing out:', error);
       throw this.handleAuthError(error as AuthError);
     }
   }
@@ -1181,7 +1380,9 @@ export class AuthService {
         ...quoteData,
         createdBy,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        isEditable: true,
+        lastEditedAt: new Date()
       };
 
       // Add quote to collection
@@ -1304,7 +1505,42 @@ export class AuthService {
     }
 
     try {
-      const { updateDoc, doc } = await import('firebase/firestore');
+      const { updateDoc, doc, getDoc, arrayUnion } = await import('firebase/firestore');
+      
+      // Get current quote data to track changes
+      const currentQuoteDoc = await getDoc(doc(db, 'quotes', quoteId));
+      if (!currentQuoteDoc.exists()) {
+        throw new Error('Quote not found');
+      }
+      
+      const currentQuote = currentQuoteDoc.data() as Quote;
+      
+      // Track changes for edit history
+      const changes: Array<{
+        field: string;
+        oldValue: any;
+        newValue: any;
+        editedAt: Date;
+        editedBy: string;
+      }> = [];
+      
+      // Compare fields and track changes
+      Object.keys(updateData).forEach(key => {
+        if (key !== 'updatedAt' && key !== 'lastEditedAt' && key !== 'editHistory') {
+          const oldValue = currentQuote[key as keyof Quote];
+          const newValue = updateData[key as keyof Quote];
+          
+          if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+            changes.push({
+              field: key,
+              oldValue,
+              newValue,
+              editedAt: new Date(),
+              editedBy: updateData.createdBy || 'unknown'
+            });
+          }
+        }
+      });
       
       // Remove undefined values and prepare update data
       const cleanUpdateData = Object.entries(updateData).reduce((acc, [key, value]) => {
@@ -1316,7 +1552,9 @@ export class AuthService {
 
       await updateDoc(doc(db, 'quotes', quoteId), {
         ...cleanUpdateData,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        lastEditedAt: new Date(),
+        editHistory: arrayUnion(...changes)
       });
     } catch (error) {
       console.error('Error updating quote:', error);
@@ -1375,6 +1613,31 @@ export class AuthService {
     } catch (error) {
       console.error('Error deleting quote:', error);
       throw new Error('Failed to delete quote');
+    }
+  }
+
+  // Get quotes by customer ID (for multiple quotes per customer)
+  static async getQuotesByCustomerId(customerId: string): Promise<Quote[]> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, collection, where, orderBy } = await import('firebase/firestore');
+      const quotesQuery = query(
+        collection(db, 'quotes'),
+        where('customerId', '==', customerId),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(quotesQuery);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Quote[];
+    } catch (error) {
+      console.error('Error getting quotes by customer ID:', error);
+      throw new Error('Failed to get quotes by customer ID');
     }
   }
 

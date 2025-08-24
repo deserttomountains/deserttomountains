@@ -15,6 +15,8 @@ interface Quote {
   subtotal: number;
   discount: number;
   discountType: 'percentage' | 'amount';
+  shippingCharges: number;
+  includeShipping: boolean;
   total: number;
   validUntil: string;
   paymentLink: string;
@@ -80,11 +82,20 @@ const generateQuoteHTML = (
 
   // Format date
   const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) {
+        return 'N/A';
+      }
+      return dateObj.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch (error) {
+      console.warn('Date formatting error:', error, 'Date value:', date);
+      return 'N/A';
+    }
   };
 
   return `
@@ -95,6 +106,8 @@ const generateQuoteHTML = (
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Quote - ${quote.quoteNumber}</title>
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
         * {
           margin: 0;
           padding: 0;
@@ -102,254 +115,310 @@ const generateQuoteHTML = (
         }
         
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          background: #fff;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          line-height: 1.4;
+          color: #1f2937;
+          background: #ffffff;
+          font-size: 12px;
         }
         
         .page {
           width: 210mm;
           min-height: 297mm;
-          padding: 20mm;
           margin: 0 auto;
           background: white;
         }
         
+        /* Header Section - Full Width */
         .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 30px;
-          padding-bottom: 20px;
-          border-bottom: 3px solid #D4AF37;
-        }
-        
-        .company-info h1 {
-          font-size: 24px;
-          font-weight: bold;
-          color: #5E4E06;
-          margin-bottom: 10px;
-        }
-        
-        .company-details {
-          font-size: 12px;
-          color: #8B7A1A;
-          line-height: 1.4;
-        }
-        
-        .logo {
-          width: 120px;
-          height: 60px;
-          object-fit: contain;
-        }
-        
-        .quote-header {
-          background: #F8F6F0;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 25px;
+          background: #d4af37;
+          padding: 35px 50px;
+          margin: 0;
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
         
-        .quote-title {
-          font-size: 28px;
-          font-weight: bold;
-          color: #5E4E06;
-          margin-bottom: 5px;
+        .company-info {
+          display: flex;
+          align-items: center;
         }
         
-        .quote-number {
-          font-size: 14px;
-          color: #8B7A1A;
-          font-weight: bold;
+        .company-details h1 {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1f2937;
+          margin-bottom: 2px;
         }
         
-        .quote-info {
+        .company-details p {
+          font-size: 11px;
+          color: #374151;
+          margin: 0;
+        }
+        
+        .company-contact {
           text-align: right;
-          font-size: 12px;
-          color: #8B7A1A;
+          font-size: 11px;
+          color: #374151;
+          line-height: 1.3;
         }
         
-        .valid-until {
-          background: #FFF2E8;
-          padding: 15px;
-          border: 2px solid #FFB366;
-          border-radius: 8px;
+        /* Ensure text doesn't overflow */
+        .company-details, .company-contact {
+          max-width: 100%;
+          word-wrap: break-word;
+        }
+        
+        /* Main Title Section */
+        .main-title {
           margin-bottom: 20px;
-          text-align: center;
         }
         
-        .valid-until-text {
-          font-size: 14px;
-          color: #D46B08;
-          font-weight: bold;
-        }
-        
-        .section-title {
-          font-size: 16px;
-          font-weight: bold;
-          color: #5E4E06;
-          margin-bottom: 15px;
-          padding-bottom: 8px;
-          border-bottom: 2px solid #D4AF37;
-        }
-        
-        .customer-info {
-          background: #FFFBE6;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 25px;
-        }
-        
-        .customer-name {
-          font-size: 16px;
-          font-weight: bold;
-          color: #5E4E06;
-          margin-bottom: 8px;
-        }
-        
-        .customer-details {
-          font-size: 12px;
-          color: #8B7A1A;
+        .title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #1f2937;
           margin-bottom: 5px;
         }
         
+        .created-date {
+          font-size: 12px;
+          color: #6b7280;
+        }
+        
+        /* Quote Details Section - Two Columns */
+        .quote-details-section {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 20px;
+        }
+        
+        .quote-details {
+          flex: 1;
+        }
+        
+        .prepared-for {
+          flex: 1;
+          text-align: right;
+        }
+        
+        .section-label {
+          font-size: 11px;
+          color: #6b7280;
+          margin-bottom: 5px;
+        }
+        
+        .section-value {
+          font-size: 12px;
+          color: #1f2937;
+          font-weight: 500;
+          margin-bottom: 3px;
+        }
+        
+        /* Items Table - Compact */
         .items-table {
-          margin-bottom: 25px;
+          margin-bottom: 20px;
         }
         
         .table-header {
-          background: #D4AF37;
-          color: white;
-          padding: 12px;
-          border-radius: 8px 8px 0 0;
+          background: #d4af37;
+          color: #1f2937;
+          padding: 8px 12px;
+          font-weight: 600;
+          font-size: 11px;
           display: grid;
-          grid-template-columns: 5% 45% 15% 15% 20%;
+          grid-template-columns: 3fr 1fr 1fr 1fr;
           gap: 10px;
-          font-weight: bold;
-          font-size: 12px;
+          align-items: center;
         }
         
         .table-row {
           display: grid;
-          grid-template-columns: 5% 45% 15% 15% 20%;
+          grid-template-columns: 3fr 1fr 1fr 1fr;
           gap: 10px;
-          padding: 12px;
-          border-bottom: 1px solid #F5F2E8;
+          padding: 8px 12px;
+          border-bottom: 1px solid #e5e7eb;
           align-items: center;
+          font-size: 11px;
         }
         
         .table-row:nth-child(even) {
-          background: #FFFBE6;
+          background: #f9fafb;
         }
         
-        .cell-text {
-          font-size: 11px;
-          color: #5E4E06;
+        .product-name {
+          font-weight: 500;
+          color: #1f2937;
         }
         
-        .cell-text-bold {
-          font-size: 11px;
-          color: #5E4E06;
-          font-weight: bold;
+        .product-description {
+          font-size: 10px;
+          color: #6b7280;
+          margin-top: 2px;
         }
         
-        .totals-section {
-          margin-top: 20px;
-          margin-bottom: 25px;
-          display: flex;
-          justify-content: flex-end;
+        .text-right {
+          text-align: right;
         }
         
-        .totals-table {
-          width: 300px;
-          background: #F8F6F0;
-          border-radius: 8px;
-          overflow: hidden;
+        .text-center {
+          text-align: center;
         }
         
-        .total-row {
+        /* Financial Summary - Two Columns */
+        .financial-section {
           display: flex;
           justify-content: space-between;
-          padding: 10px 15px;
-          border-bottom: 1px solid #F5F2E8;
+          gap: 30px;
+          margin-bottom: 20px;
         }
         
-        .total-row-final {
-          background: #D4AF37;
-          color: white;
-          font-weight: bold;
+        .terms-section {
+          flex: 1;
+        }
+        
+        .financial-summary {
+          flex: 1;
+          max-width: 250px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        
+        /* Ensure Total row container is properly sized */
+        .financial-summary .financial-row.total {
+          margin-top: 8px !important;
+          margin-bottom: 8px !important;
+        }
+        
+        .terms-title {
+          font-size: 12px;
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 8px;
+        }
+        
+        .terms-list {
+          list-style: none;
+          padding: 0;
+        }
+        
+        .terms-list li {
+          font-size: 10px;
+          color: #6b7280;
+          margin-bottom: 4px;
+          padding-left: 15px;
+          position: relative;
+        }
+        
+        .terms-list li::before {
+          content: '•';
+          color: #d4af37;
+          position: absolute;
+          left: 0;
+        }
+        
+        .financial-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 6px 0;
+          font-size: 11px;
+          border-bottom: 1px solid #f3f4f6;
+          align-items: center;
+          min-height: 20px;
+          box-sizing: border-box;
+        }
+        
+        .financial-row:last-child {
           border-bottom: none;
         }
         
+        .financial-row.total {
+          background: #d4af37 !important;
+          color: #1f2937 !important;
+          font-weight: 700 !important;
+          font-size: 12px !important;
+          padding: 8px 12px !important;
+          margin: 8px -12px !important;
+          border-radius: 4px !important;
+          border: none !important;
+          line-height: 1.4 !important;
+          box-sizing: border-box !important;
+          display: flex !important;
+          justify-content: space-between !important;
+          align-items: center !important;
+          min-height: 24px !important;
+          position: relative !important;
+        }
+        
+        /* Force vertical centering for Total row text */
+        .financial-row.total > div {
+          display: flex !important;
+          align-items: center !important;
+          height: 100% !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        
+        /* Payment Section - Redesigned for QR Focus */
         .payment-section {
-          background: #E6F7FF;
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+          border: 2px solid #0ea5e9;
           padding: 20px;
-          border-radius: 8px;
-          border: 2px solid #91D5FF;
-          margin-bottom: 25px;
+          border-radius: 12px;
+          margin-bottom: 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 4px 16px rgba(14, 165, 233, 0.1);
+        }
+        
+        .payment-info {
+          flex: 1;
+          margin-right: 20px;
         }
         
         .payment-title {
           font-size: 14px;
-          font-weight: bold;
-          color: #1890FF;
-          margin-bottom: 15px;
-          text-align: center;
+          font-weight: 700;
+          color: #0c4a6e;
+          margin-bottom: 8px;
         }
         
-        .payment-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        
-        .payment-link {
-          font-size: 12px;
-          color: #1890FF;
-          text-decoration: underline;
-          word-break: break-all;
-          max-width: 70%;
-        }
+
         
         .qr-code {
-          width: 80px;
-          height: 80px;
+          width: 120px;
+          height: 120px;
+          border-radius: 12px;
+          border: 3px solid white;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          background: white;
+          padding: 8px;
         }
         
-        .terms-section {
-          margin-bottom: 20px;
-        }
-        
-        .terms-text {
-          font-size: 10px;
-          color: #8B7A1A;
-          line-height: 1.5;
-          background: #F8F6F0;
-          padding: 15px;
-          border-radius: 8px;
-        }
-        
+        /* Footer Section */
         .footer {
-          margin-top: 30px;
+          margin-top: 20px;
           text-align: center;
           font-size: 10px;
-          color: #8B7A1A;
-          border-top: 2px solid #F5F2E8;
+          color: #6b7280;
+          border-top: 1px solid #e5e7eb;
           padding-top: 15px;
         }
         
+        /* Responsive Design */
         @media print {
           .page {
             width: 100%;
             height: 100%;
             margin: 0;
-            padding: 20mm;
+            padding: 15mm;
           }
         }
+        
+
       </style>
     </head>
     <body>
@@ -357,144 +426,147 @@ const generateQuoteHTML = (
         <!-- Header -->
         <div class="header">
           <div class="company-info">
-            <h1>${companyDetails.name}</h1>
             <div class="company-details">
-              <div>${companyDetails.address}</div>
-              <div>Phone: ${companyDetails.phone}</div>
-              <div>Email: ${companyDetails.email}</div>
-              <div>GST: ${companyDetails.gst}</div>
+              <h1>${companyDetails.name}</h1>
             </div>
           </div>
-          <img src="${companyDetails.logo}" alt="Company Logo" class="logo" onerror="this.style.display='none'">
-        </div>
-
-        <!-- Quote Header -->
-        <div class="quote-header">
-          <div>
-            <div class="quote-title">QUOTATION</div>
-            <div class="quote-number">${quote.quoteNumber}</div>
-            ${quote.version > 1 ? `<div class="quote-number">Version: ${quote.version}</div>` : ''}
-          </div>
-          <div class="quote-info">
-            <div>Date: ${formatDate(quote.createdAt)}</div>
-            <div>Status: ${quote.status.toUpperCase()}</div>
+          <div class="company-contact">
+            <div>${companyDetails.address}</div>
+            <div>Phone: ${companyDetails.phone}</div>
+            <div>Email: ${companyDetails.email}</div>
+            <div>GST: ${companyDetails.gst}</div>
           </div>
         </div>
 
-        <!-- Valid Until Notice -->
-        <div class="valid-until">
-          <div class="valid-until-text">
-            Valid Until: ${formatDate(quote.validUntil)}
-          </div>
+        <!-- Main Title -->
+        <div class="main-title" style="padding: 0 15mm;">
+          <div class="title">Sales Quote</div>
+          <div class="created-date">Created Date: ${formatDate(quote.createdAt)}</div>
         </div>
 
-        <!-- Customer Information -->
-        <div class="customer-info">
-          <div class="section-title">CUSTOMER DETAILS</div>
-          <div class="customer-name">${quote.customerName}</div>
-          ${quote.customerEmail ? `<div class="customer-details">Email: ${quote.customerEmail}</div>` : ''}
-          ${quote.customerPhone ? `<div class="customer-details">Phone: ${quote.customerPhone}</div>` : ''}
-          <div class="customer-details">Interest: ${quote.customerInterest}</div>
+                         <!-- Quote Details Section -->
+        <div class="quote-details-section" style="padding: 0 15mm;">
+           <div class="quote-details">
+             <div class="section-label">Quote No.:</div>
+             <div class="section-value">${quote.quoteNumber}</div>
+             ${quote.version > 1 ? `<div class="section-value">Version: ${quote.version}</div>` : ''}
+             <div class="section-label">Exp. Date:</div>
+             <div class="section-value">${formatDate(quote.validUntil)}</div>
+           </div>
+          <div class="prepared-for">
+            <div class="section-label">Prepared for:</div>
+            <div class="section-value">${quote.customerName}</div>
+            ${quote.customerEmail ? `<div class="section-value">${quote.customerEmail}</div>` : ''}
+            ${quote.customerPhone ? `<div class="section-value">${quote.customerPhone}</div>` : ''}
+            <div class="section-value">Interest: ${quote.customerInterest}</div>
+          </div>
         </div>
 
         <!-- Items Table -->
-        <div class="items-table">
-          <div class="section-title">QUOTE ITEMS</div>
-          
-          <!-- Table Header -->
+        <div class="items-table" style="padding: 0 15mm;">
           <div class="table-header">
-            <div>#</div>
-            <div>Product & Description</div>
-            <div>Quantity</div>
-            <div>Unit Price</div>
-            <div>Total</div>
+            <div>Product Name</div>
+            <div class="text-right">Price</div>
+            <div class="text-center">QTY</div>
+            <div class="text-right">Amount</div>
           </div>
-
-          <!-- Table Rows -->
+          
           ${quote.items.map((item, index) => {
             const product = products.find(p => p.id === item.productId);
             const lineTotal = getLineTotal(item);
             
             return `
               <div class="table-row">
-                <div class="cell-text">${index + 1}</div>
                 <div>
-                  <div class="cell-text-bold">${product?.name || 'Unknown Product'}</div>
-                  <div class="cell-text">${product?.description || ''}</div>
-                  <div class="cell-text">(${product?.unit || 'unit'})</div>
+                  <div class="product-name">${product?.name || 'Unknown Product'}</div>
+                  <div class="product-description">${product?.description || ''} (${product?.unit || 'unit'})</div>
                 </div>
-                <div class="cell-text">${item.quantity}</div>
-                <div class="cell-text">${formatCurrency(product?.price || 0)}</div>
-                <div class="cell-text-bold">${formatCurrency(lineTotal)}</div>
+                <div class="text-right">${formatCurrency(product?.price || 0)}</div>
+                <div class="text-center">${item.quantity}</div>
+                <div class="text-right">${formatCurrency(lineTotal)}</div>
               </div>
             `;
           }).join('')}
         </div>
 
-        <!-- Totals Section -->
-        <div class="totals-section">
-          <div class="totals-table">
-            <div class="total-row">
-              <div>Subtotal:</div>
-              <div>${formatCurrency(quote.subtotal)}</div>
-            </div>
-            
-            ${quote.discount > 0 ? `
-              <div class="total-row">
-                <div>Discount (${quote.discountType === 'percentage' ? `${quote.discount}%` : 'Amount'}):</div>
-                <div>-${formatCurrency(
-                  quote.discountType === 'percentage' 
-                    ? (quote.subtotal * quote.discount) / 100
-                    : quote.discount
-                )}</div>
-              </div>
-            ` : ''}
-            
-            <div class="total-row total-row-final">
-              <div>TOTAL:</div>
-              <div>${formatCurrency(quote.total)}</div>
-            </div>
+        <!-- Financial Summary Section -->
+        <div class="financial-section" style="padding: 0 15mm;">
+          <div class="terms-section">
+            <div class="terms-title">This quotation is subject to the following terms and conditions:</div>
+                         <ul class="terms-list">
+               <li>100% advance payment required</li>
+               <li>All prices quoted are inclusive of GST (Goods and Services Tax)</li>
+               <li>This quotation remains valid until ${formatDate(quote.validUntil)}</li>
+               ${quote.includeShipping ? 
+                 '<li>Shipping charges of ' + formatCurrency(quote.shippingCharges) + ' are included in the total</li>' : 
+                 '<li>Shipping charges are not included in this quotation</li>'
+               }
+
+               <li>Professional installation services available upon request at additional cost</li>
+               <li>Any modifications to the project scope may affect the quoted price</li>
+               <li>Materials used are eco-friendly and sustainable as per company standards</li>
+             </ul>
           </div>
+          
+                     <div class="financial-summary">
+             <div class="financial-row">
+               <div>Subtotal:</div>
+               <div>${formatCurrency(quote.subtotal)}</div>
+             </div>
+             
+             ${quote.discount > 0 ? `
+               <div class="financial-row">
+                 <div>Discount (${quote.discountType === 'percentage' ? `${quote.discount}%` : 'Amount'}):</div>
+                 <div>-${formatCurrency(
+                   quote.discountType === 'percentage' 
+                     ? (quote.subtotal * quote.discount) / 100
+                     : quote.discount
+                 )}</div>
+               </div>
+             ` : ''}
+             ${quote.includeShipping ? `
+               <div class="financial-row">
+                 <div>Shipping Charges:</div>
+                 <div>${formatCurrency(quote.shippingCharges)}</div>
+               </div>
+             ` : `
+               <div class="financial-row">
+                 <div>Shipping Charges:</div>
+                 <div style="color: #9ca3af; font-style: italic;">Not included</div>
+               </div>
+             `}
+             
+             <div class="financial-row total">
+               <div>Total:</div>
+               <div>${formatCurrency(quote.total)}</div>
+             </div>
+           </div>
         </div>
 
         <!-- Payment Section -->
         ${quote.paymentLink ? `
-          <div class="payment-section">
-            <div class="payment-title">💳 PAYMENT INFORMATION</div>
+          <div class="payment-section" style="margin: 0 15mm 20px 15mm;">
             <div class="payment-info">
-              <div>
-                <div class="cell-text">Pay securely online using the link below:</div>
-                <div class="payment-link">${quote.paymentLink}</div>
-                <div class="cell-text">Or scan the QR code →</div>
-              </div>
-              ${qrCodeDataUrl ? `<img src="${qrCodeDataUrl}" alt="QR Code" class="qr-code">` : ''}
+                             <div class="payment-title">💳 Payment Information</div>
+               <div style="font-size: 11px; color: #0c4a6e; font-weight: 600; margin-bottom: 12px;">Scan QR code to access payment page</div>
             </div>
+            ${qrCodeDataUrl ? `<img src="${qrCodeDataUrl}" alt="QR Code" class="qr-code">` : ''}
           </div>
         ` : ''}
 
-        <!-- Terms & Conditions -->
-        <div class="terms-section">
-          <div class="section-title">TERMS & CONDITIONS</div>
-          <div class="terms-text">
-            • Payment terms: 50% advance, 50% on completion<br>
-            • All prices are inclusive of GST<br>
-            • This quotation is valid until ${formatDate(quote.validUntil)}<br>
-            • Delivery charges may apply based on location<br>
-            • Installation services available on request<br>
-            • Any changes to the scope of work may affect the quoted price
-          </div>
-        </div>
-
         <!-- Footer -->
-        <div class="footer">
-          <div>Thank you for choosing ${companyDetails.name}! For any queries, contact us at ${companyDetails.email} or ${companyDetails.phone}</div>
-          <div style="margin-top: 10px;">This is a computer-generated quotation and does not require a signature.</div>
+        <div class="footer" style="padding: 0 15mm;">
+          <div style="margin-bottom: 8px; font-weight: 500; color: #5e4e06;">Thank you for choosing ${companyDetails.name}!</div>
+          <div style="margin-bottom: 5px;">For any queries, contact us at ${companyDetails.email} or ${companyDetails.phone}</div>
+          <div style="font-style: italic; color: #9ca3af;">This is a computer-generated quotation and does not require a signature.</div>
         </div>
       </div>
     </body>
     </html>
   `;
 };
+
+
 
 // Generate PDF using Puppeteer (server-side) with client-side fallback
 export const generateQuotePDF = async (
