@@ -23,17 +23,22 @@ import {
   TrendingUp,
   Heart
 } from 'lucide-react';
-import { AuthService, auth, UserProfile } from '@/lib/firebase';
+import { AuthService, auth, UserProfile, Order } from '@/lib/firebase';
 import DashboardLayout from './DashboardLayout';
 import { CustomerRouteGuard } from '@/components/RouteGuard';
+import { onSnapshot, query, collection, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 function DashboardPageContent() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [totalOrders, setTotalOrders] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
     const loadUserData = async () => {
       try {
         const currentUser = auth.currentUser;
@@ -41,18 +46,56 @@ function DashboardPageContent() {
           const profile = await AuthService.getUserProfile(currentUser.uid);
           setUserProfile(profile);
           
-          // Load recent orders from localStorage
-          const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-          setRecentOrders(orders.slice(0, 3)); // Show last 3 orders
+          // Set up real-time listener for orders from Firestore
+          const ordersQuery = query(
+            collection(db, 'orders'),
+            where('customerId', '==', currentUser.uid)
+          );
+
+          unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+            const userOrders = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            })) as Order[];
+            
+            // Sort by creation date (newest first)
+            userOrders.sort((a, b) => {
+              const dateA = (a.createdAt && typeof a.createdAt === 'object' && 'toDate' in a.createdAt) ? 
+                (a.createdAt as any).toDate() : new Date(a.createdAt || 0);
+              const dateB = (b.createdAt && typeof b.createdAt === 'object' && 'toDate' in b.createdAt) ? 
+                (b.createdAt as any).toDate() : new Date(b.createdAt || 0);
+              return dateB.getTime() - dateA.getTime();
+            });
+            
+            setRecentOrders(userOrders.slice(0, 3)); // Show last 3 orders
+            setTotalOrders(userOrders.length); // Set total count
+          }, (error) => {
+            console.error('Error listening to orders:', error);
+            // Fallback to localStorage if Firestore fails
+            const fallbackOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+            setRecentOrders(fallbackOrders.slice(0, 3));
+            setTotalOrders(fallbackOrders.length);
+          });
         }
       } catch (error) {
         console.error('Error loading user profile:', error);
+        // Fallback to localStorage if profile loading fails
+        const fallbackOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        setRecentOrders(fallbackOrders.slice(0, 3));
+        setTotalOrders(fallbackOrders.length);
       } finally {
         setLoading(false);
       }
     };
 
     loadUserData();
+
+    // Cleanup function
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -65,22 +108,51 @@ function DashboardPageContent() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+  const formatDate = (dateInput: any) => {
+    if (!dateInput) return 'N/A';
+    
+    try {
+      let date;
+      // Handle Firestore Timestamp
+      if (dateInput && typeof dateInput === 'object' && dateInput.toDate) {
+        date = dateInput.toDate();
+      } else if (typeof dateInput === 'string' || typeof dateInput === 'number') {
+        date = new Date(dateInput);
+      } else {
+        date = new Date(dateInput);
+      }
+      
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      return date.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, dateInput);
+      return 'N/A';
+    }
   };
 
   const getOrderStatusColor = (status: string) => {
+    if (!status) return 'text-gray-600 bg-gray-100';
+    
     switch (status.toLowerCase()) {
       case 'delivered':
         return 'text-green-600 bg-green-100';
+      case 'out_for_delivery':
+        return 'text-blue-600 bg-blue-100';
       case 'shipped':
         return 'text-blue-600 bg-blue-100';
       case 'processing':
         return 'text-yellow-600 bg-yellow-100';
+      case 'confirmed':
+        return 'text-blue-600 bg-blue-100';
+      case 'pending':
+        return 'text-orange-600 bg-orange-100';
+      case 'cancelled':
+        return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
     }
@@ -142,7 +214,7 @@ function DashboardPageContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[#8B7A1A] text-sm font-medium">Total Orders</p>
-                <p className="text-3xl font-bold text-[#5E4E06]">{recentOrders.length}</p>
+                <p className="text-3xl font-bold text-[#5E4E06]">{totalOrders}</p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
                 <ShoppingBag className="w-6 h-6 text-white" />
@@ -187,20 +259,20 @@ function DashboardPageContent() {
           {recentOrders.length > 0 ? (
             <div className="space-y-4">
               {recentOrders.map((order, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border border-[#D4AF37]/30">
+                <div key={order.id || index} className="flex items-center justify-between p-4 bg-gradient-to-r from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border border-[#D4AF37]/30">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center">
                       <Package className="w-6 h-6 text-white" />
                     </div>
                   <div>
-                      <p className="font-semibold text-[#5E4E06]">Order #{order.orderId || `ORD-${Date.now()}`}</p>
+                      <p className="font-semibold text-[#5E4E06]">Order #{order.orderId || `ORD-${order.id?.slice(-8) || Date.now()}`}</p>
                       <p className="text-[#8B7A1A] text-sm">
-                        {order.items?.length || 0} items • {formatDate(order.orderDate || new Date().toISOString())}
+                        {order.items?.length || 0} items • {formatDate(order.createdAt || order.orderDate || new Date().toISOString())}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-[#5E4E06]">₹{order.totalAmount || '0'}</p>
+                    <p className="font-bold text-[#5E4E06]">₹{order.finalAmount || order.totalAmount || '0'}</p>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getOrderStatusColor(order.status || 'Processing')}`}> 
                       {order.status || 'Processing'}
                     </span>

@@ -213,15 +213,15 @@ function CustomersPageContent() {
             </div>
                          <div className="bg-white rounded-xl border border-[#D4AF37] p-4 shadow-sm">
                <div className="text-2xl font-bold text-blue-600">
-                 {customers.filter(c => {
-                   try {
-                     const date = c.createdAt && typeof c.createdAt === 'object' && c.createdAt.toDate ? 
-                       c.createdAt.toDate() : new Date(c.createdAt);
-                     return date > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-                   } catch {
-                     return false;
-                   }
-                 }).length}
+                                 {customers.filter(c => {
+                  try {
+                    const date = c.createdAt && typeof c.createdAt === 'object' && 'toDate' in c.createdAt ? 
+                      (c.createdAt as any).toDate() : new Date(c.createdAt);
+                    return date > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                  } catch {
+                    return false;
+                  }
+                }).length}
                </div>
                <div className="text-sm text-[#8B7A1A]">New This Month</div>
              </div>

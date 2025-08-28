@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { FileText, Shield, Truck, Undo2 } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -21,7 +20,7 @@ export default function Footer() {
               }}
             />
             <p className="text-[#F5F2E8] leading-relaxed text-sm max-w-xs mx-auto">
-              Traditional knowledge meets modern living through natural wall plaster and organic incense.
+              From ancient roots to a sustainable future, embracing timeless traditions and innovative solutions for a greener tomorrow.
             </p>
           </div>
           

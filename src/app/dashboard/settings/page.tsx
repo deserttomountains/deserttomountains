@@ -5,11 +5,12 @@ import { getAuth, updateProfile, updateEmail, sendPasswordResetEmail, deleteUser
 import app from '@/lib/firebase';
 import { AuthService } from '@/lib/firebase';
 import DashboardLayout from '../DashboardLayout';
-import { User as UserIcon, Trash2, Loader2, Save, AlertCircle } from 'lucide-react';
+import { User as UserIcon, Trash2, Loader2, Save, AlertCircle, Phone } from 'lucide-react';
 import { useToast } from '@/components/ToastContext';
 // Import country list from UniversalAddressForm
 import { COUNTRIES } from '@/components/UniversalAddressForm';
 import { Globe } from 'lucide-react';
+import AccountMerger from '@/components/AccountMerger';
 
 export default function AccountSettingsPage() {
   const auth = getAuth(app);
@@ -32,6 +33,10 @@ export default function AccountSettingsPage() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   
+  // Account merger state
+  const [showAccountMerger, setShowAccountMerger] = useState(false);
+  const [duplicateCredentials, setDuplicateCredentials] = useState<{ email?: string; phone?: string }>({});
+  
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -42,6 +47,33 @@ export default function AccountSettingsPage() {
   
   // Ref for the country dropdown container
   const countryDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Phone input state
+  const [selectedCountryCode, setSelectedCountryCode] = useState('+91'); // Default to India
+  const [showPhoneCountryDropdown, setShowPhoneCountryDropdown] = useState(false);
+  const [phoneCountrySearch, setPhoneCountrySearch] = useState('');
+  
+
+  
+  // Filter countries for phone input (focus on common ones first)
+  const commonPhoneCountries = [
+    { code: 'IN', name: 'India', dialCode: '+91', flag: '🇮🇳' },
+    { code: 'US', name: 'United States', dialCode: '+1', flag: '🇺🇸' },
+    { code: 'GB', name: 'United Kingdom', dialCode: '+44', flag: '🇬🇧' },
+    { code: 'CA', name: 'Canada', dialCode: '+1', flag: '🇨🇦' },
+    { code: 'AU', name: 'Australia', dialCode: '+61', flag: '🇦🇺' },
+    { code: 'DE', name: 'Germany', dialCode: '+49', flag: '🇩🇪' },
+    { code: 'FR', name: 'France', dialCode: '+33', flag: '🇫🇷' },
+    { code: 'JP', name: 'Japan', dialCode: '+81', flag: '🇯🇵' },
+    { code: 'SG', name: 'Singapore', dialCode: '+65', flag: '🇸🇬' },
+    { code: 'AE', name: 'UAE', dialCode: '+971', flag: '🇦🇪' },
+  ];
+  
+  const filteredPhoneCountries = commonPhoneCountries.filter(c => 
+    c.name.toLowerCase().includes(phoneCountrySearch.toLowerCase()) || 
+    c.dialCode.includes(phoneCountrySearch) ||
+    c.code.toLowerCase().includes(phoneCountrySearch.toLowerCase())
+  );
 
   // Load Firestore profile for all fields
   useEffect(() => {
@@ -61,7 +93,38 @@ export default function AccountSettingsPage() {
               setEmail(profile.email);
             }
             if (profile.phone) {
-              setPhone(profile.phone);
+              // Simple extraction: remove country code and show only phone number
+              if (profile.phone.startsWith('+91')) {
+                setSelectedCountryCode('+91');
+                setPhone(profile.phone.substring(3)); // Remove +91
+              } else if (profile.phone.startsWith('+1')) {
+                setSelectedCountryCode('+1');
+                setPhone(profile.phone.substring(2)); // Remove +1
+              } else if (profile.phone.startsWith('+44')) {
+                setSelectedCountryCode('+44');
+                setPhone(profile.phone.substring(3)); // Remove +44
+              } else if (profile.phone.startsWith('+61')) {
+                setSelectedCountryCode('+61');
+                setPhone(profile.phone.substring(3)); // Remove +61
+              } else if (profile.phone.startsWith('+49')) {
+                setSelectedCountryCode('+49');
+                setPhone(profile.phone.substring(3)); // Remove +49
+              } else if (profile.phone.startsWith('+33')) {
+                setSelectedCountryCode('+33');
+                setPhone(profile.phone.substring(3)); // Remove +33
+              } else if (profile.phone.startsWith('+81')) {
+                setSelectedCountryCode('+81');
+                setPhone(profile.phone.substring(3)); // Remove +81
+              } else if (profile.phone.startsWith('+65')) {
+                setSelectedCountryCode('+65');
+                setPhone(profile.phone.substring(3)); // Remove +65
+              } else if (profile.phone.startsWith('+971')) {
+                setSelectedCountryCode('+971');
+                setPhone(profile.phone.substring(4)); // Remove +971
+              } else {
+                // Unknown country code, just show the full number
+                setPhone(profile.phone);
+              }
             }
             
             // Load address fields
@@ -104,8 +167,31 @@ export default function AccountSettingsPage() {
     };
   }, [showCountryDropdown]);
 
-  const isPhonePrimary = !!user?.phoneNumber && (!user?.email || user.providerData.some(p => p.providerId === 'phone'));
-  const isEmailPrimary = !!user?.email && (!user?.phoneNumber || user.providerData.some(p => p.providerId === 'password' || p.providerId === 'google.com'));
+  // Handle click outside to close phone country dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target?.closest('.phone-country-dropdown')) {
+        setShowPhoneCountryDropdown(false);
+        setPhoneCountrySearch('');
+      }
+    };
+
+    if (showPhoneCountryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPhoneCountryDropdown]);
+
+  // For Google sign-in users, email is always primary, phone is always editable
+  const isPhonePrimary = !!user?.phoneNumber && user.providerData.some(p => p.providerId === 'phone');
+  const isEmailPrimary = !!user?.email && user.providerData.some(p => p.providerId === 'password' || p.providerId === 'google.com');
+  
+  // For Google sign-in users, always allow phone editing
+  const canEditPhone = !isPhonePrimary || user?.providerData.some(p => p.providerId === 'google.com');
 
   // Form validation
   const validateForm = () => {
@@ -123,9 +209,11 @@ export default function AccountSettingsPage() {
       newErrors.email = 'Please enter a valid email address';
     }
     
-    // Phone validation (basic)
-    if (phone && !/^[\+]?[1-9][\d]{0,15}$/.test(phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Please enter a valid phone number';
+    // Phone validation - simple length check
+    if (phone) {
+      if (phone.length < 7 || phone.length > 15) {
+        newErrors.phone = 'Phone number must be between 7-15 digits';
+      }
     }
     
     // Pincode validation (6 digits for India)
@@ -139,6 +227,44 @@ export default function AccountSettingsPage() {
 
   const clearErrors = () => {
     setErrors({});
+  };
+
+  // Simple phone number handling - just numbers, no formatting
+  const handlePhoneChange = (value: string) => {
+    // Only allow digits
+    const cleaned = value.replace(/\D/g, '');
+    setPhone(cleaned);
+    if (errors.phone) clearErrors();
+  };
+
+  const handleCountryCodeChange = (countryCode: string) => {
+    setSelectedCountryCode(countryCode);
+    setShowPhoneCountryDropdown(false);
+    setPhoneCountrySearch('');
+    
+    // Don't modify the phone number when changing country code
+    // Let the user manually enter the number
+  };
+
+  const handleDuplicateCredentials = (email?: string, phone?: string) => {
+    setDuplicateCredentials({ email, phone });
+    setShowAccountMerger(true);
+  };
+
+  const handleAccountMergerClose = () => {
+    setShowAccountMerger(false);
+    setDuplicateCredentials({});
+  };
+
+  const handleAccountMergerSuccess = (message: string) => {
+    showToast(message, 'success');
+    setShowAccountMerger(false);
+    setDuplicateCredentials({});
+  };
+
+  const resetPhoneInput = () => {
+    setPhone('');
+    setSelectedCountryCode('+91');
   };
 
   async function handleSave() {
@@ -163,6 +289,24 @@ export default function AccountSettingsPage() {
       
       // Update Firestore profile with all data
       if (user) {
+        // Check for duplicate credentials before updating
+        const duplicateCheck = await AuthService.checkDuplicateCredentialsForUpdate(
+          user.uid,
+          email,
+          selectedCountryCode + phone.replace(/\s/g, '')
+        );
+        
+        if (duplicateCheck.hasDuplicates) {
+          if (duplicateCheck.duplicates.phone) {
+            handleDuplicateCredentials(email, selectedCountryCode + phone.replace(/\s/g, ''));
+            return;
+          }
+          if (duplicateCheck.duplicates.email) {
+            handleDuplicateCredentials(email, selectedCountryCode + phone.replace(/\s/g, ''));
+            return;
+          }
+        }
+
         const firestoreProfile = await AuthService.getUserProfile(user.uid);
         const updatedProfile = {
           ...firestoreProfile,
@@ -170,7 +314,7 @@ export default function AccountSettingsPage() {
           role: (firestoreProfile?.role ?? 'customer') as 'customer' | 'admin', // Always a valid UserRole
           firstName: name.split(' ')[0] || '',
           lastName: name.split(' ').slice(1).join(' '),
-          phone: phone,
+          phone: selectedCountryCode + phone.replace(/\s/g, ''), // Remove spaces for storage
           email: email,
           address: {
             street,
@@ -292,75 +436,138 @@ export default function AccountSettingsPage() {
                       </div>
                     )}
                   </div>
-                  {isPhonePrimary ? (
-                    <>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Phone (Primary)</label>
-                        <input
-                          className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-gray-100 text-[#5E4E06] cursor-not-allowed"
-                          value={phone}
-                          disabled
-                        />
+                  {/* Email field - always editable for Google users */}
+                  <div>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">
+                      {isPhonePrimary ? 'Email (Secondary)' : 'Email (Primary)'}
+                    </label>
+                    {isPhonePrimary ? (
+                      <input
+                        className={`w-full border rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:outline-none ${
+                          errors.email 
+                            ? 'border-red-500 focus:ring-red-500' 
+                            : 'border-[#E6DCC0] focus:ring-[#D4AF37]'
+                        }`}
+                        value={email}
+                        onChange={e => {
+                          setEmail(e.target.value);
+                          if (errors.email) clearErrors();
+                        }}
+                        placeholder="Add your email"
+                      />
+                    ) : (
+                      <input
+                        className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-gray-100 text-[#5E4E06] cursor-not-allowed"
+                        value={email}
+                        disabled
+                      />
+                    )}
+                    {errors.email && (
+                      <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.email}
                       </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Email (Secondary)</label>
+                    )}
+                  </div>
+
+                  {/* Phone field - always editable for Google users */}
+                  <div>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">
+                      {isPhonePrimary ? 'Phone (Primary)' : 'Phone Number'}
+                    </label>
+                    {isPhonePrimary ? (
+                      <input
+                        className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-gray-100 text-[#5E4E06] cursor-not-allowed"
+                        value={phone}
+                        disabled
+                      />
+                    ) : (
+                      <div className="relative">
+                        {/* Country Code Dropdown */}
+                        <div className="absolute inset-y-0 left-0 z-10">
+                          <button
+                            type="button"
+                            onClick={() => setShowPhoneCountryDropdown(!showPhoneCountryDropdown)}
+                            className="h-full px-3 flex items-center gap-2 bg-[#F5F2E8] border-r border-[#E6DCC0] rounded-l-xl hover:bg-[#E6DCC0] transition-colors"
+                          >
+                            <span className="text-sm font-medium text-[#5E4E06]">{selectedCountryCode}</span>
+                            <svg className="w-4 h-4 text-[#8B7A1A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          
+                          {/* Country Code Dropdown Menu */}
+                          {showPhoneCountryDropdown && (
+                            <div className="phone-country-dropdown absolute top-full left-0 mt-1 w-64 bg-white border border-[#D4AF37] rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto">
+                              {/* Search */}
+                              <div className="p-3 border-b border-[#D4AF37]/30">
+                                <input
+                                  type="text"
+                                  value={phoneCountrySearch}
+                                  onChange={(e) => setPhoneCountrySearch(e.target.value)}
+                                  placeholder="Search countries..."
+                                  className="w-full px-3 py-2 text-sm border border-[#E6DCC0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] bg-white text-[#5E4E06] placeholder:text-[#8B7A1A]"
+                                />
+                              </div>
+                              
+                              {/* Country List */}
+                              <div className="py-2">
+                                {filteredPhoneCountries.map((country) => (
+                                  <button
+                                    key={country.code}
+                                    type="button"
+                                    onClick={() => handleCountryCodeChange(country.dialCode)}
+                                    className="w-full px-3 py-2 text-left hover:bg-[#F5F2E8] transition-colors flex items-center gap-3"
+                                  >
+                                    <span className="text-lg">{country.flag}</span>
+                                    <span className="text-sm font-medium text-[#5E4E06]">{country.name}</span>
+                                    <span className="text-sm text-[#8B7A1A] ml-auto">{country.dialCode}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Phone Input */}
                         <input
-                          className={`w-full border rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:outline-none ${
-                            errors.email 
-                              ? 'border-red-500 focus:ring-red-500' 
-                              : 'border-[#E6DCC0] focus:ring-[#D4AF37]'
-                          }`}
-                          value={email}
-                          onChange={e => {
-                            setEmail(e.target.value);
-                            if (errors.email) clearErrors();
-                          }}
-                          placeholder="Add your email"
-                        />
-                        {errors.email && (
-                          <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
-                            <AlertCircle className="w-4 h-4" />
-                            {errors.email}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Email (Primary)</label>
-                        <input
-                          className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-gray-100 text-[#5E4E06] cursor-not-allowed"
-                          value={email}
-                          disabled
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Phone (Secondary)</label>
-                        <input
-                          className={`w-full border rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:outline-none ${
+                          className={`w-full border rounded-xl py-3 pl-24 pr-3 bg-white text-[#5E4E06] focus:ring-2 focus:outline-none ${
                             errors.phone 
                               ? 'border-red-500 focus:ring-red-500' 
-                              : 'border-[#E6DCC0] focus:ring-[#D4AF37]'
+                              : 'border-[#E6DCC0] focus:border-[#D4AF37] focus:ring-[#D4AF37]/20'
                           }`}
                           value={phone}
-                          onChange={e => {
-                            setPhone(e.target.value);
-                            if (errors.phone) clearErrors();
-                          }}
-                          placeholder="Add your phone number"
-                          disabled
+                          onChange={(e) => handlePhoneChange(e.target.value)}
+                          placeholder="Enter phone number"
                         />
-                        {errors.phone && (
-                          <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
-                            <AlertCircle className="w-4 h-4" />
-                            {errors.phone}
-                          </div>
+                        
+                        {/* Reset Button */}
+                        {phone && (
+                          <button
+                            type="button"
+                            onClick={resetPhoneInput}
+                            className="absolute inset-y-0 right-0 px-3 text-[#8B7A1A] hover:text-[#5E4E06] transition-colors"
+                            title="Reset phone number"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         )}
-                        <div className="text-xs text-[#8B7A1A] mt-1">To change your phone, please use the phone number change flow.</div>
                       </div>
-                    </>
-                  )}
+                    )}
+                    {errors.phone && (
+                      <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.phone}
+                      </div>
+                    )}
+                    {!isPhonePrimary && (
+                      <div className="text-xs text-[#8B7A1A] mt-1">
+                        💡 <strong>Tip:</strong> Select your country code and enter your phone number. The system will automatically format it for you. This will be used for account verification and communications.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               {/* Address Section */}
@@ -554,6 +761,16 @@ export default function AccountSettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Account Merger Modal */}
+      {showAccountMerger && (
+        <AccountMerger
+          email={duplicateCredentials.email}
+          phone={duplicateCredentials.phone}
+          onClose={handleAccountMergerClose}
+          onSuccess={handleAccountMergerSuccess}
+        />
+      )}
     </DashboardLayout>
   );
 } 

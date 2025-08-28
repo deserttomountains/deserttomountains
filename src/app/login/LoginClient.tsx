@@ -11,6 +11,7 @@ import 'react-phone-input-2/lib/style.css';
 import styles from './PhoneInputCustom.module.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
+import DuplicateAccountHandler from '@/components/DuplicateAccountHandler';
 
 export default function LoginClient() {
   const { user, role, loading, redirectBasedOnRole } = useAuth();
@@ -29,6 +30,8 @@ export default function LoginClient() {
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [deviceInfo, setDeviceInfo] = useState<any>(null);
+  const [showDuplicateHandler, setShowDuplicateHandler] = useState(false);
+  const [duplicateCredentials, setDuplicateCredentials] = useState<{ email?: string; phone?: string }>({});
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const router = useRouter();
@@ -251,6 +254,11 @@ export default function LoginClient() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCloseDuplicateHandler = () => {
+    setShowDuplicateHandler(false);
+    setDuplicateCredentials({});
   };
 
   useEffect(() => {
@@ -726,6 +734,14 @@ export default function LoginClient() {
         </div>
       </div>
 
+      {/* Duplicate Account Handler Modal */}
+      {showDuplicateHandler && (
+        <DuplicateAccountHandler
+          email={duplicateCredentials.email}
+          phone={duplicateCredentials.phone}
+          onClose={handleCloseDuplicateHandler}
+        />
+      )}
     </div>
   );
 } 

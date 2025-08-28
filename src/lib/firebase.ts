@@ -306,7 +306,7 @@ export class AuthService {
            process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key';
   }
 
-  // Create user profile in Firestore
+  // Check if user profile exists, create if not
   static async createUserProfile(user: User, additionalData?: { firstName?: string; lastName?: string; phone?: string; address?: Address }): Promise<void> {
     if (!this.isFirebaseConfigured()) {
       throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
@@ -332,6 +332,211 @@ export class AuthService {
     } catch (error) {
       console.error('Error creating user profile:', error);
       throw new Error('Failed to create user profile');
+    }
+  }
+
+  // Check if user exists by email
+  static async checkUserExistsByEmail(email: string): Promise<{ exists: boolean; uid?: string }> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, where, collection } = await import('firebase/firestore');
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
+        return { exists: true, uid: userDoc.id };
+      }
+      
+      return { exists: false };
+    } catch (error) {
+      console.error('Error checking user by email:', error);
+      throw new Error('Failed to check user existence');
+    }
+  }
+
+  // Normalize phone number for comparison (remove spaces, dashes, parentheses)
+  static normalizePhoneNumber(phone: string): string {
+    // Remove all non-digit characters except +
+    return phone.replace(/[^\d+]/g, '');
+  }
+
+  // Verify phone number with SMS code
+  static async verifyPhoneNumber(verificationId: string, code: string): Promise<boolean> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { PhoneAuthProvider, signInWithCredential } = await import('firebase/auth');
+      const auth = getAuth(app);
+      
+      // Create credential
+      const credential = PhoneAuthProvider.credential(verificationId, code);
+      
+      // Sign in with credential
+      await signInWithCredential(auth, credential);
+      
+      return true;
+    } catch (error) {
+      console.error('Error verifying phone number:', error);
+      return false;
+    }
+  }
+
+  // Check if user exists by phone
+  static async checkUserExistsByPhone(phone: string): Promise<{ exists: boolean; uid?: string }> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const { getDocs, query, where, collection } = await import('firebase/firestore');
+      const usersRef = collection(db, 'users');
+      
+      // Normalize the input phone number
+      const normalizedInputPhone = this.normalizePhoneNumber(phone);
+      
+      // Get all users and check for normalized phone match
+      const usersSnapshot = await getDocs(usersRef);
+      
+      for (const userDoc of usersSnapshot.docs) {
+        const userData = userDoc.data();
+        if (userData.phone) {
+          const normalizedStoredPhone = this.normalizePhoneNumber(userData.phone);
+          if (normalizedStoredPhone === normalizedInputPhone) {
+            return { exists: true, uid: userDoc.id };
+          }
+        }
+      }
+      
+      return { exists: false };
+    } catch (error) {
+      console.error('Error checking user by phone:', error);
+      throw new Error('Failed to check user existence');
+    }
+  }
+
+  // Check for duplicate credentials before signup
+  static async checkDuplicateCredentials(email?: string, phone?: string): Promise<{ hasDuplicates: boolean; duplicates: { email?: string; phone?: string } }> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const duplicates: { email?: string; phone?: string } = {};
+      let hasDuplicates = false;
+
+      // Check email if provided
+      if (email) {
+        const emailCheck = await this.checkUserExistsByEmail(email);
+        if (emailCheck.exists) {
+          duplicates.email = 'An account with this email already exists.';
+          hasDuplicates = true;
+        }
+      }
+
+      // Check phone if provided
+      if (phone) {
+        const phoneCheck = await this.checkUserExistsByPhone(phone);
+        if (phoneCheck.exists) {
+          duplicates.phone = 'An account with this phone number already exists.';
+          hasDuplicates = true;
+        }
+      }
+
+      return { hasDuplicates, duplicates };
+    } catch (error) {
+      console.error('Error checking duplicate credentials:', error);
+      throw new Error('Failed to check for duplicate credentials');
+    }
+  }
+
+  // Check for duplicate credentials when updating profile (excludes current user)
+  static async checkDuplicateCredentialsForUpdate(
+    currentUid: string, 
+    email?: string, 
+    phone?: string
+  ): Promise<{ hasDuplicates: boolean; duplicates: { email?: string; phone?: string } }> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const duplicates: { email?: string; phone?: string } = {};
+      let hasDuplicates = false;
+
+      // Check email if provided
+      if (email) {
+        const emailCheck = await this.checkUserExistsByEmail(email);
+        if (emailCheck.exists && emailCheck.uid !== currentUid) {
+          duplicates.email = 'This email is already associated with another account.';
+          hasDuplicates = true;
+        }
+      }
+
+      // Check phone if provided
+      if (phone) {
+        const phoneCheck = await this.checkUserExistsByPhone(phone);
+        if (phoneCheck.exists && phoneCheck.uid !== currentUid) {
+          duplicates.phone = 'This phone number is already associated with another account.';
+          hasDuplicates = true;
+        }
+      }
+
+      return { hasDuplicates, duplicates };
+    } catch (error) {
+      console.error('Error checking duplicate credentials for update:', error);
+      throw new Error('Failed to check for duplicate credentials');
+    }
+  }
+
+  // Get existing account information for duplicate credentials (useful for account recovery)
+  static async getExistingAccountInfo(email?: string, phone?: string): Promise<{ 
+    email?: { uid: string; createdAt: Date }; 
+    phone?: { uid: string; createdAt: Date } 
+  }> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      const result: { email?: { uid: string; createdAt: Date }; phone?: { uid: string; createdAt: Date } } = {};
+
+      if (email) {
+        const emailCheck = await this.checkUserExistsByEmail(email);
+        if (emailCheck.exists) {
+          const userProfile = await this.getUserProfile(emailCheck.uid!);
+          if (userProfile) {
+            result.email = {
+              uid: emailCheck.uid!,
+              createdAt: userProfile.createdAt
+            };
+          }
+        }
+      }
+
+      if (phone) {
+        const phoneCheck = await this.checkUserExistsByPhone(phone);
+        if (phoneCheck.exists) {
+          const userProfile = await this.getUserProfile(phoneCheck.uid!);
+          if (userProfile) {
+            result.phone = {
+              uid: phoneCheck.uid!,
+              createdAt: userProfile.createdAt
+            };
+          }
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error getting existing account info:', error);
+      throw new Error('Failed to get existing account information');
     }
   }
 
@@ -384,10 +589,22 @@ export class AuthService {
     }
 
     try {
+      // Check for duplicate credentials before updating
+      const duplicateCheck = await this.checkDuplicateCredentialsForUpdate(
+        uid, 
+        updatedProfile.email, 
+        updatedProfile.phone
+      );
+      
+      if (duplicateCheck.hasDuplicates) {
+        const errorMessages = Object.values(duplicateCheck.duplicates).filter(Boolean).join(' ');
+        throw new Error(errorMessages);
+      }
+      
       await setDoc(doc(db, 'users', uid), updatedProfile);
     } catch (error) {
       console.error('Error updating user profile:', error);
-      throw new Error('Failed to update user profile');
+      throw new Error(error instanceof Error ? error.message : 'Failed to update user profile');
     }
   }
 
@@ -638,21 +855,22 @@ export class AuthService {
     }
   }
 
-  // Sign out
-  static async signOut(): Promise<void> {
-    try {
-      await auth.signOut();
-    } catch (error) {
-      throw this.handleAuthError(error as AuthError);
-    }
-  }
+
 
   // Email/Password signup
   static async createUserWithEmail(email: string, password: string, additionalData?: { firstName?: string; lastName?: string; phone?: string }): Promise<UserCredential> {
     if (!this.isFirebaseConfigured()) {
       throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
     }
+    
     try {
+      // Check for duplicate credentials before creating the account
+      const duplicateCheck = await this.checkDuplicateCredentials(email, additionalData?.phone);
+      if (duplicateCheck.hasDuplicates) {
+        const errorMessages = Object.values(duplicateCheck.duplicates).filter(Boolean).join(' ');
+        throw new Error(errorMessages);
+      }
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Create user profile in Firestore

@@ -1,0 +1,5 @@
+1. Remove step on Aura page and add mock sample as separate popup, and Make Plaster type to Tabs instead of buttons
+2. Clear the default from the cart in below sticky bar, and disable the button until the product is added
+3. On Contact Page add secondary mail
+4. Download Brochure button on Aura Page.
+5. Make Pigmented price show default

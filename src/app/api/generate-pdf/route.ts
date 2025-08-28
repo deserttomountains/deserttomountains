@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       });
       
       // Wait a bit more for any dynamic content to render
-      await page.waitForTimeout(1000);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Generate high-quality PDF
       const pdfBuffer = await page.pdf({
@@ -62,15 +62,7 @@ export async function POST(request: NextRequest) {
         displayHeaderFooter: false,
         scale: 1.0,
         landscape: false,
-        pageRanges: '',
-        // Ensure high quality
-        quality: 100,
-        // Better color handling
-        color: true,
-        // Optimize for print
-        printBackground: true,
-        // Wait for all content
-        waitForNetworkIdle: true
+        pageRanges: ''
       });
 
       // Close browser

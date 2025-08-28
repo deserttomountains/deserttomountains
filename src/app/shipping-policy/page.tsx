@@ -54,21 +54,8 @@ const sections = [
     icon: <Undo2 className="w-7 h-7 text-[#E6C866]" />, title: 'Returns',
     content: (
       <>
-        <h4 className="font-semibold mt-0 mb-1">Return Due To Change Of Mind</h4>
-        <p>DESERT TO MOUNTAINS will happily accept returns due to change of mind as long as a request to return is received by us within 2 days of receipt of item and are returned to us in original packaging, unused and in resellable condition. Return shipping will be paid at the customers expense and will be required to arrange their own shipping. Once returns are received and accepted, refunds will be processed to store credit for a future purchase. We will notify you once this has been completed through email.</p>
-        <p>DESERT TO MOUNTAINS will refund the value of the goods returned but will NOT refund the value of any shipping paid.</p>
-        <h4 className="font-semibold mt-4 mb-1">Warranty Returns</h4>
-        <ul className="list-disc ml-6">
-          <li>DESERT TO MOUNTAINS will happily honor any valid warranty claims, provided a claim is submitted within 90 days of receipt of items.</li>
-          <li>Customers will be required to pre-pay the return shipping, however we will reimburse you upon successful warranty claim.</li>
-          <li>Upon return receipt of items for warranty claim, you can expect DESERT TO MOUNTAINS to process your warranty claim within 7 days.</li>
-        </ul>
-        <p>Once warranty claim is confirmed, you will receive the choice of:</p>
-        <ol className="list-decimal ml-6">
-          <li>refund to your payment method</li>
-          <li>a refund in store credit</li>
-          <li>a replacement item sent to you (if stock is available)</li>
-        </ol>
+        <h4 className="font-semibold mt-0 mb-1">Return Policy</h4>
+        <p><strong>DESERT TO MOUNTAINS does not accept returns.</strong> All sales are final. We encourage customers to carefully review product descriptions, specifications, and images before placing an order.</p>
       </>
     )
   },
@@ -78,7 +65,7 @@ const sections = [
       <ul className="list-disc ml-6">
         <li><strong>Transit Time Domestically:</strong> In general, domestic shipments are in transit for 2 – 7 days</li>
         <li><strong>Transit time Internationally:</strong> Generally, orders shipped internationally are in transit for 4 – 22 days. This varies greatly depending on the courier you have selected. We are able to offer a more specific estimate when you are choosing your courier at checkout.</li>
-        <li><strong>Change Of Delivery Address:</strong> Orders placed before 10 PM – SGT (UTC+08) will be dispatched the same day, otherwise, within the next business day. Our warehouse operates on Monday – Friday during standard business hours, except on national holidays at which time the warehouse will be closed. In these instances, we take steps to ensure shipment delays will be kept to a minimum.</li>
+        <li><strong>Change Of Delivery Address:</strong> Orders placed before 10 PM – IST (UTC+05:30) will be dispatched the same day, otherwise, within the next business day. Our warehouse operates on Monday – Friday during standard business hours, except on national holidays at which time the warehouse will be closed. In these instances, we take steps to ensure shipment delays will be kept to a minimum.</li>
         <li><strong>Change Of Delivery Address:</strong> For change of delivery address requests, we are able to change the address at any time before the order has been dispatched.</li>
         <li><strong>P.O. Box Shipping:</strong> DESERT TO MOUNTAINS will ship to P.O. box addresses using postal services only. We are unable to offer couriers services to these locations.</li>
         <li><strong>Military Address Shipping:</strong> We are able to ship to military addresses using USPS. We are unable to offer this service using courier services.</li>

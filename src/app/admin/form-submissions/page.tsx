@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, Tag, User, CheckCircle, AlertCircle, Clock as ClockIcon, Calendar as CalendarIcon, Tag as TagIcon, User as UserIcon, Activity, TrendingUp, BarChart3, FileText, Settings, Repeat, X, Edit, Target, Flag, Truck, UserCheck, Phone, SortAsc, SortDesc, Download, Eye, Mail, Building } from 'lucide-react';
-import { AuthService, auth, db } from '@/lib/firebase';
+import { Plus, Search, Filter, Calendar, Clock, Tag, User, CheckCircle, AlertCircle, Clock as ClockIcon, Calendar as CalendarIcon, Tag as TagIcon, User as UserIcon, Activity, TrendingUp, BarChart3, FileText, Settings, Repeat, X, Edit, Target, Flag, Truck, UserCheck, Phone, SortAsc, SortDesc, Download, Eye, Mail, Building, UserPlus, Users, MessageSquare } from 'lucide-react';
+import { AuthService, auth, db, Lead } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, where, limit } from 'firebase/firestore';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useToast } from '@/components/ToastContext';
@@ -61,6 +61,22 @@ function FormSubmissionsPageContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<any>(null);
   
+  // Add Lead Modal State
+  const [showAddLeadModal, setShowAddLeadModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ isDuplicate: boolean; existingLead?: Lead; reason?: string } | null>(null);
+  const [leadForm, setLeadForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    countryCode: '+91',
+    source: 'Website',
+    status: 'New Lead' as Lead['status'],
+    interest: 'Aura Natural Wall Plaster',
+    notes: ''
+  });
+  
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDateFilter, setSelectedDateFilter] = useState<'all' | 'today' | 'this_week' | 'this_month'>('all');
@@ -81,6 +97,26 @@ function FormSubmissionsPageContent() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedDateFilter, sortBy, sortOrder]);
+
+  // Check for duplicate leads when email or phone changes
+  useEffect(() => {
+    const checkDuplicate = async () => {
+      if (leadForm.email || leadForm.phone) {
+        try {
+          const duplicateCheck = await AuthService.checkDuplicateLead(leadForm.email, leadForm.phone);
+          setDuplicateWarning(duplicateCheck);
+        } catch (error) {
+          console.error('Error checking duplicate:', error);
+          setDuplicateWarning(null);
+        }
+      } else {
+        setDuplicateWarning(null);
+      }
+    };
+
+    const timeoutId = setTimeout(checkDuplicate, 500); // Debounce
+    return () => clearTimeout(timeoutId);
+  }, [leadForm.email, leadForm.phone]);
 
   const loadFranchiseSubmissions = async () => {
     try {
@@ -262,6 +298,92 @@ function FormSubmissionsPageContent() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Handle Add to Lead functionality
+  const handleAddToLead = (submissionData: any) => {
+    // Pre-fill the lead form with submission data
+    setLeadForm({
+      name: submissionData.name || '',
+      email: submissionData.email || '',
+      phone: submissionData.phone || '',
+      countryCode: '+91', // Default to India
+      source: 'Website', // Default as requested
+      status: 'New Lead',
+      interest: 'Aura Natural Wall Plaster', // Default as requested
+      notes: submissionData.type === 'contact' 
+        ? `Contact form submission - Subject: ${submissionData.subject || 'N/A'}\n\nMessage: ${submissionData.message || ''}`
+        : `Franchise application from ${submissionData.city || ''}, ${submissionData.state || ''}\n\nMessage: ${submissionData.message || ''}`
+    });
+    
+    // Close the view modal and open the add lead modal
+    setModalOpen(false);
+    setShowAddLeadModal(true);
+    setSubmitError(null);
+    setDuplicateWarning(null);
+  };
+
+  const handleSubmitLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setDuplicateWarning(null);
+
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      // Check for duplicates one more time before submission
+      if (leadForm.email || leadForm.phone) {
+        const duplicateCheck = await AuthService.checkDuplicateLead(leadForm.email, leadForm.phone);
+        if (duplicateCheck.isDuplicate) {
+          setDuplicateWarning(duplicateCheck);
+          setSubmitError(`Cannot create lead: ${duplicateCheck.reason}`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Create lead data
+      const leadData = {
+        name: leadForm.name,
+        email: leadForm.email || undefined,
+        phone: leadForm.phone,
+        countryCode: leadForm.countryCode,
+        source: leadForm.source,
+        status: leadForm.status,
+        interest: leadForm.interest,
+        notes: leadForm.notes || undefined,
+        createdBy: currentUser.uid
+      };
+
+      // Save to Firebase
+      await AuthService.createLead(leadData, currentUser.uid);
+
+      // Reset form and close modal
+      setLeadForm({
+        name: '',
+        email: '',
+        phone: '',
+        countryCode: '+91',
+        source: 'Website',
+        status: 'New Lead',
+        interest: 'Aura Natural Wall Plaster',
+        notes: ''
+      });
+      setShowAddLeadModal(false);
+      setDuplicateWarning(null);
+
+      showToast('Lead created successfully!', 'success');
+
+    } catch (error) {
+      console.error('Error creating lead:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to create lead');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!user) {
@@ -620,7 +742,310 @@ function FormSubmissionsPageContent() {
                   {modalData.message}
                 </div>
               </div>
+              
+              {/* Add to Lead Button - Show for both contact and franchise submissions */}
+              <div className="pt-4 border-t border-[#E6C866] mt-4">
+                <button
+                  onClick={() => handleAddToLead(modalData)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 cursor-pointer font-semibold shadow-lg"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Add to Lead
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Lead Modal */}
+      {showAddLeadModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 pt-16 sm:pt-4 sm:items-center sm:p-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-lg sm:max-w-2xl max-h-[calc(100vh-4rem)] sm:max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header - Fixed Top */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[#D4AF37] bg-gradient-to-r from-[#F5F2E8] to-[#F0EAD6]">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <UserPlus className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg sm:text-xl font-bold text-[#5E4E06] truncate">Add New Lead</h3>
+                  <p className="text-xs sm:text-sm text-[#8B7A1A] truncate">Convert submission to lead</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowAddLeadModal(false);
+                  setLeadForm({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    countryCode: '+91',
+                    source: 'Website',
+                    status: 'New Lead',
+                    interest: 'Aura Natural Wall Plaster',
+                    notes: ''
+                  });
+                  setSubmitError(null);
+                  setDuplicateWarning(null);
+                }}
+                className="p-2 hover:bg-[#E6DCC0] rounded-lg transition-colors duration-200 flex-shrink-0 touch-manipulation"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5 text-[#8B7A1A]" />
+              </button>
+            </div>
+
+            {/* Modal Body - Scrollable Content */}
+            <form onSubmit={handleSubmitLead} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
+              {/* Error Display */}
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" />
+                    <p className="text-red-700 text-sm font-medium">{submitError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Duplicate Warning */}
+              {duplicateWarning && duplicateWarning.isDuplicate && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-5 h-5 text-yellow-500 mr-2 flex-shrink-0" />
+                    <p className="text-yellow-700 text-sm font-medium">{duplicateWarning.reason}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Personal Information Section */}
+              <div className="space-y-4">
+                <h4 className="text-base sm:text-lg font-semibold text-[#5E4E06] flex items-center">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-[#D4AF37] flex-shrink-0" />
+                  <span>Personal Information</span>
+                </h4>
+                
+                {/* Name Field - Full Width */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-[#5E4E06]">
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={leadForm.name}
+                    onChange={(e) => setLeadForm(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-base touch-manipulation"
+                    placeholder="Enter full name"
+                    autoComplete="name"
+                  />
+                </div>
+
+                {/* Phone Field - Full Width with Country Code */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-[#5E4E06]">Phone</label>
+                  <div className="flex gap-2 w-full">
+                    <select
+                      value={leadForm.countryCode}
+                      onChange={(e) => setLeadForm(prev => ({ ...prev, countryCode: e.target.value }))}
+                      className="px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-base touch-manipulation cursor-pointer appearance-none bg-white flex-shrink-0"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23D4AF37' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                        backgroundPosition: 'right 0.75rem center',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: '1.5em 1.5em',
+                        paddingRight: '2.5rem',
+                        minWidth: 'fit-content'
+                      }}
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+61">🇦🇺 +61</option>
+                      <option value="+86">🇨🇳 +86</option>
+                      <option value="+81">🇯🇵 +81</option>
+                      <option value="+49">🇩🇪 +49</option>
+                      <option value="+33">🇫🇷 +33</option>
+                      <option value="+39">🇮🇹 +39</option>
+                      <option value="+34">🇪🇸 +34</option>
+                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+966">🇸🇦 +966</option>
+                      <option value="+65">🇸🇬 +65</option>
+                      <option value="+60">🇲🇾 +60</option>
+                      <option value="+66">🇹🇭 +66</option>
+                    </select>
+                    <input
+                      type="tel"
+                      value={leadForm.phone}
+                      onChange={(e) => setLeadForm(prev => ({ ...prev, phone: e.target.value }))}
+                      className="flex-1 min-w-0 px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-base touch-manipulation"
+                      placeholder="Enter phone number"
+                      autoComplete="tel"
+                      inputMode="numeric"
+                    />
+                  </div>
+                </div>
+
+                {/* Email Field - Full Width */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-[#5E4E06]">Email</label>
+                  <input
+                    type="email"
+                    value={leadForm.email}
+                    onChange={(e) => setLeadForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-base touch-manipulation"
+                    placeholder="Enter email address"
+                    autoComplete="email"
+                    inputMode="email"
+                  />
+                </div>
+              </div>
+
+              {/* Lead Details Section */}
+              <div className="space-y-4">
+                <h4 className="text-base sm:text-lg font-semibold text-[#5E4E06] flex items-center">
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-[#D4AF37] flex-shrink-0" />
+                  <span>Lead Details</span>
+                </h4>
+                
+                {/* Lead Source */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-[#5E4E06]">
+                    Lead Source <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={leadForm.source}
+                    onChange={(e) => setLeadForm(prev => ({ ...prev, source: e.target.value }))}
+                    required
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-base touch-manipulation appearance-none bg-white"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23D4AF37' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: 'right 0.75rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em',
+                      paddingRight: '2.5rem'
+                    }}
+                  >
+                    <option value="" className="text-[#8B7A1A]">Select source</option>
+                    <option value="Website" className="text-[#5E4E06]">Website</option>
+                    <option value="Referral" className="text-[#5E4E06]">Referral</option>
+                    <option value="Social Media" className="text-[#5E4E06]">Social Media</option>
+                    <option value="Cold Call" className="text-[#5E4E06]">Cold Call</option>
+                    <option value="Trade Show" className="text-[#5E4E06]">Trade Show</option>
+                    <option value="Other" className="text-[#5E4E06]">Other</option>
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-[#5E4E06]">
+                    Status <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={leadForm.status}
+                    onChange={(e) => setLeadForm(prev => ({ ...prev, status: e.target.value }))}
+                    required
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-base touch-manipulation appearance-none bg-white"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23D4AF37' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: 'right 0.75rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em',
+                      paddingRight: '2.5rem'
+                    }}
+                  >
+                    <option value="New Lead" className="text-[#5E4E06]">New Lead</option>
+                    <option value="Contacted" className="text-[#5E4E06]">Contacted</option>
+                    <option value="Qualified" className="text-[#5E4E06]">Qualified</option>
+                    <option value="Proposal Sent" className="text-[#5E4E06]">Proposal Sent</option>
+                    <option value="Negotiation" className="text-[#5E4E06]">Negotiation</option>
+                    <option value="Closed Won" className="text-[#5E4E06]">Closed Won</option>
+                    <option value="Closed Lost" className="text-[#5E4E06]">Closed Lost</option>
+                  </select>
+                </div>
+
+                {/* Product Interest */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-[#5E4E06]">
+                    Product Interest <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={leadForm.interest}
+                    onChange={(e) => setLeadForm(prev => ({ ...prev, interest: e.target.value }))}
+                    required
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-base touch-manipulation appearance-none bg-white"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23D4AF37' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: 'right 0.75rem center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '1.5em 1.5em',
+                      paddingRight: '2.5rem'
+                    }}
+                  >
+                    <option value="" className="text-[#8B7A1A]">Select product</option>
+                    <option value="Aura Natural Wall Plaster" className="text-[#5E4E06]">Aura Natural Wall Plaster</option>
+                    <option value="Dhunee" className="text-[#5E4E06]">Dhunee</option>
+                    <option value="Both Products" className="text-[#5E4E06]">Both Products</option>
+                    <option value="Other" className="text-[#5E4E06]">Other</option>
+                  </select>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-[#5E4E06]">Notes</label>
+                  <textarea
+                    value={leadForm.notes}
+                    onChange={(e) => setLeadForm(prev => ({ ...prev, notes: e.target.value }))}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-base touch-manipulation resize-none"
+                    placeholder="Additional notes about the lead..."
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer - Fixed Bottom */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 border-t border-[#E6DCC0]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddLeadModal(false);
+                    setLeadForm({
+                      name: '',
+                      email: '',
+                      phone: '',
+                      countryCode: '+91',
+                      source: 'Website',
+                      status: 'New Lead',
+                      interest: 'Aura Natural Wall Plaster',
+                      notes: ''
+                    });
+                    setSubmitError(null);
+                    setDuplicateWarning(null);
+                  }}
+                  className="w-full sm:w-auto px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors duration-200 cursor-pointer touch-manipulation"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || (duplicateWarning?.isDuplicate ?? false)}
+                  className="w-full sm:flex-1 px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl font-semibold hover:scale-105 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 touch-manipulation flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Creating Lead...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-5 h-5" />
+                      Create Lead
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

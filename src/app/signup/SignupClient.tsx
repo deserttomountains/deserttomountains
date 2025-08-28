@@ -11,6 +11,7 @@ import { RecaptchaVerifier } from 'firebase/auth';
 import { AuthService, auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
+import DuplicateAccountHandler from '@/components/DuplicateAccountHandler';
 
 export default function SignupClient() {
   const { user, role, loading, redirectBasedOnRole } = useAuth();
@@ -34,6 +35,8 @@ export default function SignupClient() {
   const [phoneVerificationSent, setPhoneVerificationSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [showDuplicateHandler, setShowDuplicateHandler] = useState(false);
+  const [duplicateCredentials, setDuplicateCredentials] = useState<{ email?: string; phone?: string }>({});
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const router = useRouter();
@@ -147,9 +150,17 @@ export default function SignupClient() {
         );
         await redirectBasedOnRole(userCredential.user.uid);
       } catch (error) {
-        setErrors({ email: (error as Error).message });
+        const errorMessage = (error as Error).message;
+        
+        // Check if this is a duplicate credential error
+        if (errorMessage.includes('already exists')) {
+          setDuplicateCredentials({ email: formData.email });
+          setShowDuplicateHandler(true);
+        } else {
+          setErrors({ email: errorMessage });
+        }
       } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
       }
     }
   };
@@ -159,6 +170,16 @@ export default function SignupClient() {
     if (validateForm()) {
       setIsSubmitting(true);
       try {
+        // Check for duplicate credentials before sending verification code
+        const duplicateCheck = await AuthService.checkDuplicateCredentials(undefined, formData.phone);
+        if (duplicateCheck.hasDuplicates) {
+          if (duplicateCheck.duplicates.phone) {
+            setDuplicateCredentials({ phone: formData.phone });
+            setShowDuplicateHandler(true);
+            return;
+          }
+        }
+        
         // Set persistence before phone authentication
         await AuthService.setPersistence(formData.rememberMe);
         
@@ -182,6 +203,18 @@ export default function SignupClient() {
     setIsSubmitting(true);
     try {
       const userCredential = await confirmationResult.confirm(verificationCode);
+      
+      // Double-check for duplicates before creating profile (in case another user signed up in the meantime)
+      const duplicateCheck = await AuthService.checkDuplicateCredentials(undefined, formData.phone);
+      if (duplicateCheck.hasDuplicates) {
+        if (duplicateCheck.duplicates.phone) {
+          // Delete the Firebase auth user since we can't create the profile
+          await userCredential.user.delete();
+          setDuplicateCredentials({ phone: formData.phone });
+          setShowDuplicateHandler(true);
+          return;
+        }
+      }
       
       // Create user profile for phone signup
       await AuthService.createUserProfile(userCredential.user, {
@@ -211,8 +244,13 @@ export default function SignupClient() {
     } catch (error) {
       setErrors({ general: (error as Error).message });
     } finally {
-    setIsSubmitting(false);
+      setIsSubmitting(false);
     }
+  };
+
+  const handleCloseDuplicateHandler = () => {
+    setShowDuplicateHandler(false);
+    setDuplicateCredentials({});
   };
 
   const benefits = [
@@ -678,6 +716,15 @@ export default function SignupClient() {
           </div>
         </div>
       </div>
+
+      {/* Duplicate Account Handler Modal */}
+      {showDuplicateHandler && (
+        <DuplicateAccountHandler
+          email={duplicateCredentials.email}
+          phone={duplicateCredentials.phone}
+          onClose={handleCloseDuplicateHandler}
+        />
+      )}
     </div>
   );
 } 

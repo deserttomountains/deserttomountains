@@ -63,13 +63,13 @@ export default function ContactClient() {
   };
 
   const contactInfo = [
-    { icon: Mail, label: 'Email', value: 'info@deserttomountains.com', href: 'mailto:info@deserttomountains.com' },
-    { icon: Phone, label: 'Phone', value: '+91 98765 43210', href: 'tel:+919876543210' },
-    { icon: MapPin, label: 'Address', value: 'Jodhpur, Rajasthan', href: null }
+    { icon: Mail, label: 'Email', value: 'info@deserttomountains.com', href: 'mailto:auranaturalplaster@gmail.com' },
+    { icon: Phone, label: 'Phone', value: '+91 81711 89456', href: 'tel:+918171189456' },
+    { icon: MapPin, label: 'Address', value: '149, Shikargarh, Jodhpur, Rajasthan', href: null }
   ];
 
   const faqs = [
-    { q: 'How long does shipping take?', a: 'Standard shipping takes 3-5 business days across India.' },
+    { q: 'How long does shipping take?', a: 'Standard shipping takes 7-10 business days across India.' },
     { q: 'Do you offer installation services?', a: 'Yes, we provide professional installation services for Aura plaster.' },
     { q: 'Are your products safe for children?', a: 'Absolutely! All our products are 100% natural and child-safe.' }
   ];
@@ -243,7 +243,7 @@ export default function ContactClient() {
                   <Instagram className="w-5 h-5 sm:w-7 sm:h-7" />
                 </a>
                 <a
-                  href="https://wa.me/919876543210"
+                  href="https://wa.me/918171189456"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-full bg-gradient-to-br from-[#8B7A1A] to-[#B8A94A] p-3 sm:p-4 text-white shadow-lg hover:scale-110 hover:shadow-2xl transition cursor-pointer"

@@ -552,13 +552,13 @@ function LeadsPageContent() {
                <div className="flex items-center justify-center gap-3 mt-4">
                  <button
                    onClick={() => setSearchTerm('')}
-                   className="px-4 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-colors text-sm"
+                   className="px-4 py-2 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-colors text-sm cursor-pointer"
                  >
                    Clear Search
                  </button>
                  <button
                    onClick={() => setSelectedStatusFilter('All')}
-                   className="px-4 py-2 bg-[#F5F2E8] text-[#8B7A1A] rounded-lg hover:bg-[#E6DCC0] transition-colors text-sm"
+                   className="px-4 py-2 bg-[#F5F2E8] text-[#8B7A1A] rounded-lg hover:bg-[#E6DCC0] transition-colors text-sm cursor-pointer"
                  >
                    Show All Leads
                  </button>
@@ -683,14 +683,14 @@ function LeadsPageContent() {
                             });
                            setShowEditLeadModal(true);
                          }}
-                         className="p-2 text-[#8B7A1A] hover:bg-[#F5F2E8] rounded-lg transition-colors"
+                         className="p-2 text-[#8B7A1A] hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
                          title="Edit Lead"
                        >
                          <Edit className="w-4 h-4" />
                        </button>
                        <button
                          onClick={() => handleDeleteLead(lead)}
-                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                          title="Delete Lead"
                        >
                          <Trash2 className="w-4 h-4" />

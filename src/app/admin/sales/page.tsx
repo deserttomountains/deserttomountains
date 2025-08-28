@@ -70,8 +70,8 @@ function SalesPageContent() {
     return orders.filter(order => {
       try {
         const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                         (order.orderDate && typeof order.orderDate === 'object' && order.orderDate.toDate) ? 
-                         order.orderDate.toDate() : new Date(order.orderDate);
+                         (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
+                         (order.orderDate as any).toDate() : new Date(order.orderDate);
         return orderDate >= startOfMonth;
       } catch (error) {
         return false;
@@ -95,8 +95,8 @@ function SalesPageContent() {
     return orders.filter(order => {
       try {
         const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                         (order.orderDate && typeof order.orderDate === 'object' && order.orderDate.toDate) ? 
-                         order.orderDate.toDate() : new Date(order.orderDate);
+                         (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
+                         (order.orderDate as any).toDate() : new Date(order.orderDate);
         orderDate.setHours(0, 0, 0, 0);
         return orderDate.getTime() === today.getTime();
       } catch (error) {
@@ -139,8 +139,8 @@ function SalesPageContent() {
          filtered = filtered.filter(order => {
            try {
              const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                              (order.orderDate && typeof order.orderDate === 'object' && order.orderDate.toDate) ? 
-                              order.orderDate.toDate() : new Date(order.orderDate);
+                              (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
+                              (order.orderDate as any).toDate() : new Date(order.orderDate);
              orderDate.setHours(0, 0, 0, 0);
              return orderDate.getTime() === today.getTime();
            } catch (error) {
@@ -152,8 +152,8 @@ function SalesPageContent() {
          filtered = filtered.filter(order => {
            try {
              const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                              (order.orderDate && typeof order.orderDate === 'object' && order.orderDate.toDate) ? 
-                              order.orderDate.toDate() : new Date(order.orderDate);
+                              (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
+                              (order.orderDate as any).toDate() : new Date(order.orderDate);
              return orderDate >= weekAgo;
            } catch (error) {
              return false;
@@ -164,8 +164,8 @@ function SalesPageContent() {
          filtered = filtered.filter(order => {
            try {
              const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                              (order.orderDate && typeof order.orderDate === 'object' && order.orderDate.toDate) ? 
-                              order.orderDate.toDate() : new Date(order.orderDate);
+                              (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
+                              (order.orderDate as any).toDate() : new Date(order.orderDate);
              return orderDate >= monthAgo;
            } catch (error) {
              return false;
@@ -767,7 +767,7 @@ function SalesPageContent() {
                     <h3 className="font-semibold text-[#5E4E06] mb-3">Shipping Address</h3>
                     <div className="text-sm text-[#5E4E06]">
                       <p>{selectedOrder.shippingAddress.street}</p>
-                      <p>{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.postalCode}</p>
+                      <p>{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}</p>
                       <p>{selectedOrder.shippingAddress.country}</p>
                     </div>
                   </div>
@@ -864,7 +864,9 @@ function SalesPageContent() {
                           
                           // Then update Firebase
                           console.log('Updating Firebase with status:', newStatus);
-                          await AuthService.updateOrderStatus(selectedOrder.id, newStatus);
+                          if (selectedOrder.id) {
+                            await AuthService.updateOrderStatus(selectedOrder.id, newStatus);
+                          }
                           
                           showToast('Order status updated successfully', 'success');
                           console.log('Status update completed successfully');
