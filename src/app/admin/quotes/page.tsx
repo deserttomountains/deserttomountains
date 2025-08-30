@@ -1110,16 +1110,16 @@ function QuotesPageContent() {
 
         {/* Create Quote Modal - Mobile Optimized */}
         {showCreateQuoteModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 pt-16 sm:pt-4 sm:items-center sm:p-4">
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-lg sm:max-w-4xl max-h-[calc(100vh-4rem)] sm:max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-1 pt-12 sm:pt-4 sm:items-center sm:p-4">
+            <div className="bg-white rounded-xl sm:rounded-3xl shadow-2xl w-full max-w-sm sm:max-w-4xl max-h-[calc(100vh-3rem)] sm:max-h-[90vh] overflow-hidden flex flex-col">
               {/* Modal Header - Mobile Optimized */}
-              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[#D4AF37] bg-gradient-to-r from-[#F5F2E8] to-[#F0EAD6]">
-                <div className="flex items-center space-x-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-between p-3 sm:p-6 border-b border-[#D4AF37] bg-gradient-to-r from-[#F5F2E8] to-[#F0EAD6]">
+                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-lg sm:text-xl font-bold text-[#5E4E06] truncate">
+                    <h3 className="text-base sm:text-xl font-bold text-[#5E4E06] truncate">
                       Create Quote
                     </h3>
                     <p className="text-xs sm:text-sm text-[#8B7A1A] truncate">
@@ -1164,45 +1164,47 @@ function QuotesPageContent() {
                   className="p-2 hover:bg-[#E6DCC0] rounded-lg transition-colors duration-200 cursor-pointer flex-shrink-0 touch-manipulation"
                   aria-label="Close modal"
                 >
-                  <X className="w-5 h-5 text-[#8B7A1A]" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B7A1A]" />
                 </button>
               </div>
 
               {/* Modal Body - Mobile Optimized */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Customer Selection */}
-                <div className="bg-[#F5F2E8] rounded-xl p-4 sm:p-6 border border-[#D4AF37]">
-                  <h4 className="text-base sm:text-lg font-semibold text-[#5E4E06] mb-4">Customer Selection</h4>
+                <div className="bg-[#F5F2E8] rounded-xl p-3 sm:p-6 border border-[#D4AF37]">
+                  <h4 className="text-sm sm:text-lg font-semibold text-[#5E4E06] mb-3 sm:mb-4">Customer Selection</h4>
                   
-                  {/* Mode Toggle - Mobile Optimized */}
-                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
-                    <button
-                      onClick={() => setQuoteMode('existing')}
-                      className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 cursor-pointer touch-manipulation ${
-                        quoteMode === 'existing'
-                          ? 'bg-[#D4AF37] text-white shadow-lg'
-                          : 'bg-white text-[#8B7A1A] hover:bg-[#F5F2E8] active:bg-[#E6DCC0] border border-[#D4AF37]'
-                      }`}
-                    >
-                      Existing Lead
-                    </button>
-                    <button
-                      onClick={() => setQuoteMode('new')}
-                      className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 cursor-pointer touch-manipulation ${
-                        quoteMode === 'new'
-                          ? 'bg-[#D4AF37] text-white shadow-lg'
-                          : 'bg-white text-[#8B7A1A] hover:bg-[#F5F2E8] active:bg-[#E6DCC0] border border-[#D4AF37]'
-                      }`}
-                    >
-                      New Customer
-                    </button>
+                  {/* Mode Toggle - Tab Style */}
+                  <div className="bg-white rounded-lg sm:rounded-xl border border-[#D4AF37] p-1 mb-3 sm:mb-4">
+                    <div className="flex">
+                      <button
+                        onClick={() => setQuoteMode('existing')}
+                        className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md sm:rounded-lg font-medium transition-all duration-200 cursor-pointer touch-manipulation text-xs sm:text-sm ${
+                          quoteMode === 'existing'
+                            ? 'bg-[#D4AF37] text-white shadow-sm'
+                            : 'bg-transparent text-[#8B7A1A] hover:bg-[#F5F2E8] active:bg-[#E6DCC0]'
+                        }`}
+                      >
+                        Existing Lead
+                      </button>
+                      <button
+                        onClick={() => setQuoteMode('new')}
+                        className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md sm:rounded-lg font-medium transition-all duration-200 cursor-pointer touch-manipulation text-xs sm:text-sm ${
+                          quoteMode === 'new'
+                            ? 'bg-[#D4AF37] text-white shadow-sm'
+                            : 'bg-transparent text-[#8B7A1A] hover:bg-[#F5F2E8] active:bg-[#E6DCC0]'
+                        }`}
+                      >
+                        New Customer
+                      </button>
+                    </div>
                   </div>
 
                   {quoteMode === 'existing' ? (
                     /* Existing Lead Selection - Mobile Optimized */
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Select Lead</label>
+                        <label className="block text-xs sm:text-sm font-medium text-[#8B7A1A] mb-1 sm:mb-2">Select Lead</label>
                         <select
                           value={selectedLeadForQuote?.id || ''}
                           onChange={(e) => {
@@ -1237,7 +1239,7 @@ function QuotesPageContent() {
                               }
                             }
                           }}
-                          className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-base touch-manipulation appearance-none bg-white"
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base touch-manipulation appearance-none bg-white"
                           style={{
                             backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23D4AF37' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
                             backgroundPosition: 'right 0.75rem center',
@@ -1258,23 +1260,23 @@ function QuotesPageContent() {
                       </div>
                       
                       {selectedLeadForQuote && (
-                        <div className="p-4 bg-white rounded-xl border border-[#D4AF37]">
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-[#8B7A1A]">Name</span>
-                              <span className="text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.name}</span>
+                        <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border border-[#D4AF37]">
+                          <div className="space-y-2 sm:space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                              <span className="text-xs sm:text-sm font-medium text-[#8B7A1A]">Name</span>
+                              <span className="text-sm sm:text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.name}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-[#8B7A1A]">Interest</span>
-                              <span className="text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.interest}</span>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                              <span className="text-xs sm:text-sm font-medium text-[#8B7A1A]">Interest</span>
+                              <span className="text-sm sm:text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.interest}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-[#8B7A1A]">Email</span>
-                              <span className="text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.email || 'Not provided'}</span>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                              <span className="text-xs sm:text-sm font-medium text-[#8B7A1A]">Email</span>
+                              <span className="text-sm sm:text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.email || 'Not provided'}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-[#8B7A1A]">Phone</span>
-                              <span className="text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.phone || 'Not provided'}</span>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                              <span className="text-xs sm:text-sm font-medium text-[#8B7A1A]">Phone</span>
+                              <span className="text-sm sm:text-base font-semibold text-[#5E4E06]">{selectedLeadForQuote.phone || 'Not provided'}</span>
                             </div>
                           </div>
                         </div>
@@ -1282,10 +1284,10 @@ function QuotesPageContent() {
                     </div>
                   ) : (
                     /* New Customer Form - Mobile Optimized */
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {/* Customer Name - Full Width on Mobile */}
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-[#8B7A1A] mb-2">
+                      <div className="space-y-1 sm:space-y-2">
+                        <label className="block text-xs sm:text-sm font-medium text-[#8B7A1A] mb-1 sm:mb-2">
                           Customer Name <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -1301,7 +1303,7 @@ function QuotesPageContent() {
                               }));
                             }
                           }}
-                          className="w-full px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-base touch-manipulation"
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base touch-manipulation"
                           placeholder="Enter customer name"
                           required
                           autoComplete="name"
@@ -1439,15 +1441,15 @@ function QuotesPageContent() {
 
                   {/* Payment Link - Full Width on Mobile */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#8B7A1A] mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-[#8B7A1A] mb-1 sm:mb-2">
                       Payment Link <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex gap-2 mb-2">
+                    <div className="flex flex-col sm:flex-row gap-2 mb-2">
                       <input
                         type="url"
                         value={quoteForm.paymentLink}
                         onChange={(e) => setQuoteForm(prev => ({ ...prev, paymentLink: e.target.value }))}
-                        className="flex-1 px-4 py-3 border border-[#D4AF37] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-base touch-manipulation"
+                        className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base touch-manipulation"
                         placeholder="https://razorpay.com/pay/..."
                         required
                         autoComplete="url"
@@ -1456,10 +1458,10 @@ function QuotesPageContent() {
                       <button
                         type="button"
                         onClick={() => window.open('https://dashboard.razorpay.com/app/paymentlinks/new', '_blank')}
-                        className="px-4 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 cursor-pointer flex items-center gap-2 whitespace-nowrap touch-manipulation"
+                        className="w-full sm:w-auto px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-lg sm:rounded-xl hover:scale-105 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap touch-manipulation text-sm sm:text-base"
                         title="Create new payment link in Razorpay dashboard"
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
                         Create Link
                       </button>
                     </div>
@@ -1480,11 +1482,11 @@ function QuotesPageContent() {
                   </div>
                   
                   {/* Items Grid - Mobile Optimized */}
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {quoteForm.items.map((item, index) => {
                       const selectedProduct = products.find(p => p.id === item.productId);
                       return (
-                        <div key={index} className="bg-white rounded-xl border border-[#D4AF37] p-4">
+                        <div key={index} className="bg-white rounded-lg sm:rounded-xl border border-[#D4AF37] p-3 sm:p-4">
                           <div className="space-y-4">
                             {/* Product Selection - Full Width on Mobile */}
                             <div className="space-y-2">
@@ -1514,7 +1516,7 @@ function QuotesPageContent() {
                             </div>
                             
                             {/* Quantity and Price Row - Stacked on Mobile */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[#8B7A1A] mb-2">Quantity</label>
                                 <input
@@ -1704,9 +1706,9 @@ function QuotesPageContent() {
               </div>
 
               {/* Modal Footer - Mobile Optimized */}
-              <div className="p-4 sm:p-6 border-t border-[#D4AF37] bg-gradient-to-r from-[#F5F2E8] to-[#F0EAD6]">
+              <div className="p-3 sm:p-6 border-t border-[#D4AF37] bg-gradient-to-r from-[#F5F2E8] to-[#F0EAD6]">
                 {/* Mobile Button Layout - Stacked on Small Screens */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3">
                   <button
                     onClick={() => {
                       setShowCreateQuoteModal(false);
@@ -1729,7 +1731,7 @@ function QuotesPageContent() {
                         customerInterest: ''
                       });
                     }}
-                    className="w-full sm:w-auto px-6 py-3 bg-[#F5F2E8] text-[#8B7A1A] rounded-xl hover:bg-[#E6DCC0] active:bg-[#D4C4A0] transition-all duration-200 font-medium cursor-pointer touch-manipulation"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-[#F5F2E8] text-[#8B7A1A] rounded-lg sm:rounded-xl hover:bg-[#E6DCC0] active:bg-[#D4C4A0] transition-all duration-200 font-medium cursor-pointer touch-manipulation text-sm sm:text-base"
                   >
                     Cancel
                   </button>
@@ -1739,7 +1741,7 @@ function QuotesPageContent() {
                       (quoteMode === 'existing' && !selectedLeadForQuote) ||
                       (quoteMode === 'new' && (!newCustomerForm.name.trim() || !newCustomerForm.interest.trim() || !newCustomerForm.source.trim()))
                     }
-                    className={`w-full sm:w-auto px-6 py-3 rounded-xl font-medium transition-all duration-200 touch-manipulation ${
+                    className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-medium transition-all duration-200 touch-manipulation text-sm sm:text-base ${
                       (quoteMode === 'existing' && !selectedLeadForQuote) ||
                       (quoteMode === 'new' && (!newCustomerForm.name.trim() || !newCustomerForm.interest.trim() || !newCustomerForm.source.trim()))
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'

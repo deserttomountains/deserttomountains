@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
 import { razorpayService } from '@/services/razorpayService';
 
 export async function POST(request: NextRequest) {
@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
       razorpay_signature, 
       status,
       payment_id,
-      entity
+      entity,
+      firebase_order_id // Add Firebase order ID
     } = body.payload?.payment?.entity || body;
 
     // Validate required fields
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
 
     const orderId = razorpay_order_id || order_id;
     const paymentId = razorpay_payment_id || payment_id;
+    const firebaseOrderId = firebase_order_id; // Use Firebase order ID for updates
 
     // Verify payment signature
     const isValidPayment = razorpayService.verifyPaymentSignature(
@@ -77,13 +79,21 @@ export async function POST(request: NextRequest) {
         ? 'failed'
         : 'pending';
 
-    // Update order status in Firebase
-    if (orderId) {
+    // Update order status in Firebase using Firebase order ID
+    if (firebaseOrderId) {
       try {
-        const orderRef = await AuthService.getOrderById(orderId);
-        if (orderRef) {
+        console.log(`Attempting to find order with Firebase ID: ${firebaseOrderId}`);
+        
+        // Use Admin SDK to get order (bypasses security rules)
+        const orderDoc = await getAdminDb().collection('orders').doc(firebaseOrderId).get();
+        
+        if (orderDoc.exists) {
+          const orderData = orderDoc.data();
+          console.log(`Order found: ${orderData?.orderId}, current status: ${orderData?.status}, payment status: ${orderData?.paymentStatus}`);
+          
           const updateData = {
             paymentStatus,
+            status: paymentStatus === 'completed' ? 'confirmed' : 'pending',
             transactionId: paymentId,
             paymentMode: 'razorpay',
             paymentMessage: status || paymentDetails?.status || 'unknown',
@@ -99,15 +109,20 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          await AuthService.updateOrder(orderId, updateData);
-          console.log(`Order ${orderId} updated with payment status: ${paymentStatus}`);
+          console.log(`Updating order with data:`, updateData);
+          
+          // Update using Admin SDK (bypasses security rules)
+          await getAdminDb().collection('orders').doc(firebaseOrderId).update(updateData);
+          console.log(`Order ${firebaseOrderId} updated successfully with payment status: ${paymentStatus}`);
         } else {
-          console.warn(`Order ${orderId} not found in Firebase`);
+          console.warn(`Order ${firebaseOrderId} not found in Firebase`);
         }
       } catch (error) {
         console.error('Error updating order in Firebase:', error);
         // Don't fail the webhook if Firebase update fails
       }
+    } else {
+      console.warn('No Firebase order ID provided for order update');
     }
 
     return NextResponse.json({ 
@@ -122,7 +137,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       status: 'error', 
       message: 'Failed to process webhook',
-      error: error.message 
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { useState, useEffect, useRef } from 'react';
-import { getAuth, updateProfile, updateEmail, sendPasswordResetEmail, deleteUser } from 'firebase/auth';
+import { getAuth, updateProfile, updateEmail, sendPasswordResetEmail, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import app from '@/lib/firebase';
 import { AuthService } from '@/lib/firebase';
 import DashboardLayout from '../DashboardLayout';
@@ -10,9 +10,6 @@ import { useToast } from '@/components/ToastContext';
 // Import country list from UniversalAddressForm
 import { COUNTRIES } from '@/components/UniversalAddressForm';
 import { Globe } from 'lucide-react';
-import AccountMerger from '@/components/AccountMerger';
-import CredentialLinkingModal from '@/components/CredentialLinkingModal';
-import { AuthLinkingService } from '@/lib/AuthLinkingService';
 
 export default function AccountSettingsPage() {
   const auth = getAuth(app);
@@ -22,6 +19,7 @@ export default function AccountSettingsPage() {
   // Form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [stateVal, setStateVal] = useState("");
@@ -33,13 +31,7 @@ export default function AccountSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
-  
-  // Account merger state
-  const [showAccountMerger, setShowAccountMerger] = useState(false);
-  const [duplicateCredentials, setDuplicateCredentials] = useState<{ email?: string; phone?: string }>({});
-  
-  // Credential linking state
-  const [showCredentialLinking, setShowCredentialLinking] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
   
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -73,6 +65,11 @@ export default function AccountSettingsPage() {
             // Load email from Firestore if available
             if (profile.email) {
               setEmail(profile.email);
+            }
+            
+            // Load phone from Firestore if available
+            if (profile.phone) {
+              setPhone(profile.phone);
             }
             
             // Load address fields
@@ -117,13 +114,6 @@ export default function AccountSettingsPage() {
 
 
 
-  // For Google sign-in users, email is always primary, phone is always editable
-  const isPhonePrimary = !!user?.phoneNumber && user.providerData.some(p => p.providerId === 'phone');
-  const isEmailPrimary = !!user?.email && user.providerData.some(p => p.providerId === 'password' || p.providerId === 'google.com');
-  
-  // For Google sign-in users, always allow phone editing
-  const canEditPhone = !isPhonePrimary || user?.providerData.some(p => p.providerId === 'google.com');
-
   // Form validation
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -157,21 +147,7 @@ export default function AccountSettingsPage() {
 
 
 
-  const handleDuplicateCredentials = (email?: string, phone?: string) => {
-    setDuplicateCredentials({ email, phone });
-    setShowAccountMerger(true);
-  };
 
-  const handleAccountMergerClose = () => {
-    setShowAccountMerger(false);
-    setDuplicateCredentials({});
-  };
-
-  const handleAccountMergerSuccess = (message: string) => {
-    showToast(message, 'success');
-    setShowAccountMerger(false);
-    setDuplicateCredentials({});
-  };
 
 
 
@@ -192,31 +168,8 @@ export default function AccountSettingsPage() {
         await updateProfile(user, { displayName: name });
       }
       
-      // Update email in Firebase Auth if it's a secondary field
-      if (user && isPhonePrimary && email && email !== user.email) {
-        await updateEmail(user, email);
-      }
-      
       // Update Firestore profile with all data
       if (user) {
-        // Check for duplicate credentials before updating
-        const duplicateCheck = await AuthService.checkDuplicateCredentialsForUpdate(
-          user.uid,
-          email,
-          user.phoneNumber || '' // Use auth phone if available
-        );
-        
-        if (duplicateCheck.hasDuplicates) {
-          if (duplicateCheck.duplicates.phone) {
-            handleDuplicateCredentials(email, user.phoneNumber || '');
-            return;
-          }
-          if (duplicateCheck.duplicates.email) {
-            handleDuplicateCredentials(email, user.phoneNumber || '');
-            return;
-          }
-        }
-
         const firestoreProfile = await AuthService.getUserProfile(user.uid);
         const updatedProfile = {
           ...firestoreProfile,
@@ -224,7 +177,7 @@ export default function AccountSettingsPage() {
           role: (firestoreProfile?.role ?? 'customer') as 'customer' | 'admin', // Always a valid UserRole
           firstName: name.split(' ')[0] || '',
           lastName: name.split(' ').slice(1).join(' '),
-          phone: user.phoneNumber || '', // Use auth phone if available
+          phone: phone, // Use the phone from form state
           email: email,
           address: {
             street,
@@ -275,7 +228,16 @@ export default function AccountSettingsPage() {
       return;
     }
     
+    if (!deletePassword) {
+      showToast("Please enter your password to confirm account deletion", 'error');
+      return;
+    }
+    
     try {
+      // Re-authenticate user before deletion
+      const credential = EmailAuthProvider.credential(user.email!, deletePassword);
+      await reauthenticateWithCredential(user, credential);
+      
       // Delete from Firestore first
       await AuthService.deleteUserProfile(user.uid);
       // Then delete from Firebase Auth
@@ -283,7 +245,13 @@ export default function AccountSettingsPage() {
       showToast("Account deleted successfully", 'success');
     } catch (e: any) {
       console.error('Error deleting account:', e);
-      showToast(e.message || "Failed to delete account", 'error');
+      if (e.code === 'auth/wrong-password') {
+        showToast("Incorrect password. Please try again.", 'error');
+      } else if (e.code === 'auth/requires-recent-login') {
+        showToast("Please enter your password to confirm this action.", 'error');
+      } else {
+        showToast(e.message || "Failed to delete account", 'error');
+      }
     }
   }
 
@@ -318,7 +286,8 @@ export default function AccountSettingsPage() {
                 </div>
                 <div>
                   <div className="font-black text-xl text-[#5E4E06]">{name || 'Your Name'}</div>
-                  <div className="text-[#8B7A1A] text-sm">{isPhonePrimary ? (user?.phoneNumber || 'No phone') : email}</div>
+                  <div className="text-[#8B7A1A] text-sm">{email || 'No email'}</div>
+                  {phone && <div className="text-[#8B7A1A] text-sm">{phone}</div>}
                 </div>
               </div>
               <div className="mb-8">
@@ -346,32 +315,22 @@ export default function AccountSettingsPage() {
                       </div>
                     )}
                   </div>
-                  {/* Email field - always editable for Google users */}
+                  {/* Email field - always editable */}
                   <div>
-                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">
-                      {isPhonePrimary ? 'Email (Secondary)' : 'Email (Primary)'}
-                    </label>
-                    {isPhonePrimary ? (
-                      <input
-                        className={`w-full border rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:outline-none ${
-                          errors.email 
-                            ? 'border-red-500 focus:ring-red-500' 
-                            : 'border-[#E6DCC0] focus:ring-[#D4AF37]'
-                        }`}
-                        value={email}
-                        onChange={e => {
-                          setEmail(e.target.value);
-                          if (errors.email) clearErrors();
-                        }}
-                        placeholder="Add your email"
-                      />
-                    ) : (
-                      <input
-                        className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-gray-100 text-[#5E4E06] cursor-not-allowed"
-                        value={email}
-                        disabled
-                      />
-                    )}
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Email Address</label>
+                    <input
+                      className={`w-full border rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:outline-none ${
+                        errors.email 
+                          ? 'border-red-500 focus:ring-red-500' 
+                          : 'border-[#E6DCC0] focus:ring-[#D4AF37]'
+                      }`}
+                      value={email}
+                      onChange={e => {
+                        setEmail(e.target.value);
+                        if (errors.email) clearErrors();
+                      }}
+                      placeholder="Enter your email"
+                    />
                     {errors.email && (
                       <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
                         <AlertCircle className="w-4 h-4" />
@@ -508,69 +467,16 @@ export default function AccountSettingsPage() {
                 {!user?.email && <div className="text-xs text-[#8B7A1A] mt-1">Password reset is only available for email accounts.</div>}
               </div>
 
-              {/* Phone Authentication Section */}
-              <div className="mb-8">
-                <h2 className="text-lg font-bold text-[#5E4E06] mb-4">Phone Authentication</h2>
-                {user && (
-                  <div className="space-y-4">
-                    {/* Current Status */}
-                    <div className="p-4 bg-gradient-to-r from-[#F5F2E8] to-[#E6DCC0] rounded-xl border border-[#D4AF37]/30">
-                      <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm">Current Status</h3>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Phone className={`w-4 h-4 ${user.phoneNumber ? 'text-green-600' : 'text-gray-400'}`} />
-                          <span className={`text-sm ${user.phoneNumber ? 'text-green-700' : 'text-gray-500'}`}>
-                            {user.phoneNumber ? 'Phone verified for sign-in' : 'Phone not verified for sign-in'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Mail className={`w-4 h-4 ${user.email ? 'text-green-600' : 'text-gray-400'}`} />
-                          <span className={`text-sm ${user.email ? 'text-green-700' : 'text-gray-500'}`}>
-                            {user.email ? 'Email & Password' : 'No email linked'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Shield className={`w-4 h-4 ${user.providerData.some(p => p.providerId === 'google.com') ? 'text-green-600' : 'text-gray-400'}`} />
-                          <span className={`text-sm ${user.providerData.some(p => p.providerId === 'google.com') ? 'text-green-700' : 'text-gray-500'}`}>
-                            {user.providerData.some(p => p.providerId === 'google.com') ? 'Google Account' : 'No Google account linked'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Phone Verification Action */}
-                    {!user.phoneNumber && (
-                      <button
-                        onClick={() => setShowCredentialLinking(true)}
-                        className="w-full px-4 py-3 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] transition-all duration-300 cursor-pointer text-base"
-                      >
-                        🔐 Verify Phone for Sign-in
-                      </button>
-                    )}
-
-                    {user.phoneNumber && AuthLinkingService.canLinkCredentials(user) && (
-                      <button
-                        onClick={() => setShowCredentialLinking(true)}
-                        className="w-full px-4 py-3 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] transition-all duration-300 cursor-pointer text-base"
-                      >
-                        + Add Another Sign-in Method
-                      </button>
-                    )}
-
-                    {!AuthLinkingService.canLinkCredentials(user) && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                        <p className="text-blue-700 text-sm text-center">
-                          You have the maximum number of sign-in methods linked.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
               <div className="border-t border-red-200 pt-8">
                 <h2 className="font-bold text-red-700 text-base mb-2 flex items-center gap-2"><Trash2 className="w-5 h-5" /> Danger Zone</h2>
                 <div className="mb-4 text-red-700 text-sm">Deleting your account is irreversible. All your data will be permanently removed.</div>
-                <AlertDialog.Root open={showDelete} onOpenChange={setShowDelete}>
+                <AlertDialog.Root open={showDelete} onOpenChange={(open) => {
+                  setShowDelete(open);
+                  if (!open) {
+                    setDeleteConfirm('');
+                    setDeletePassword('');
+                  }
+                }}>
                   <AlertDialog.Trigger asChild>
                     <button className="w-full px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition cursor-pointer">Delete Account</button>
                   </AlertDialog.Trigger>
@@ -578,13 +484,20 @@ export default function AccountSettingsPage() {
                     <AlertDialog.Overlay className="fixed inset-0 bg-black/30 z-50" />
                     <AlertDialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-8 z-50 w-full max-w-xs flex flex-col items-center">
                       <AlertDialog.Title className="text-lg font-bold mb-2 text-red-700">Delete Account?</AlertDialog.Title>
-                      <AlertDialog.Description className="mb-6 text-center text-red-700">Type <b>DELETE</b> below to confirm. This action cannot be undone.</AlertDialog.Description>
+                      <AlertDialog.Description className="mb-6 text-center text-red-700">Type <b>DELETE</b> and enter your password below to confirm. This action cannot be undone.</AlertDialog.Description>
                       <input
                         className="w-full border border-red-300 rounded px-3 py-2 mb-4 text-red-700 focus:ring-2 focus:ring-red-400"
                         value={deleteConfirm}
                         onChange={e => setDeleteConfirm(e.target.value)}
                         placeholder="Type here..."
                         autoFocus
+                      />
+                      <input
+                        type="password"
+                        className="w-full border border-red-300 rounded px-3 py-2 mb-4 text-red-700 focus:ring-2 focus:ring-red-400"
+                        value={deletePassword}
+                        onChange={e => setDeletePassword(e.target.value)}
+                        placeholder="Enter your password"
                       />
                       <div className="flex gap-4 w-full justify-center">
                         <AlertDialog.Cancel asChild>
@@ -594,7 +507,7 @@ export default function AccountSettingsPage() {
                           <button
                             className="px-4 py-2 rounded font-bold text-white bg-red-600 hover:bg-red-700 transition cursor-pointer"
                             onClick={handleDeleteAccount}
-                            disabled={deleteConfirm !== 'DELETE'}
+                            disabled={deleteConfirm !== 'DELETE' || !deletePassword}
                           >
                             Delete
                           </button>
@@ -603,10 +516,21 @@ export default function AccountSettingsPage() {
                     </AlertDialog.Content>
                   </AlertDialog.Portal>
                 </AlertDialog.Root>
-              </div>
+                                </div>
 
-            </div>
-          </div>
+                  {/* Phone Number Field */}
+                  <div>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Phone Number</label>
+                    <input
+                      className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:ring-[#D4AF37] focus:outline-none"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      placeholder="Enter your phone number"
+                    />
+                                    </div>
+
+                </div>
+              </div>
           {/* Save Button */}
           <div className="flex justify-end mt-10">
             <button
@@ -634,26 +558,6 @@ export default function AccountSettingsPage() {
           </div>
         </div>
       </div>
-
-      {/* Account Merger Modal */}
-      {showAccountMerger && (
-        <AccountMerger
-          email={duplicateCredentials.email}
-          phone={duplicateCredentials.phone}
-          onClose={handleAccountMergerClose}
-          onSuccess={handleAccountMergerSuccess}
-        />
-      )}
-
-      {/* Credential Linking Modal */}
-      <CredentialLinkingModal
-        isOpen={showCredentialLinking}
-        onClose={() => setShowCredentialLinking(false)}
-        onSuccess={(message) => {
-          showToast(message, 'success');
-          setShowCredentialLinking(false);
-        }}
-      />
     </DashboardLayout>
   );
 } 

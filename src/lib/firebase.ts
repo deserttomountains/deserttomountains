@@ -421,125 +421,6 @@ export class AuthService {
     }
   }
 
-  // Check for duplicate credentials before signup
-  static async checkDuplicateCredentials(email?: string, phone?: string): Promise<{ hasDuplicates: boolean; duplicates: { email?: string; phone?: string } }> {
-    if (!this.isFirebaseConfigured()) {
-      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
-    }
-
-    try {
-      const duplicates: { email?: string; phone?: string } = {};
-      let hasDuplicates = false;
-
-      // Check email if provided
-      if (email) {
-        const emailCheck = await this.checkUserExistsByEmail(email);
-        if (emailCheck.exists) {
-          duplicates.email = 'An account with this email already exists.';
-          hasDuplicates = true;
-        }
-      }
-
-      // Check phone if provided
-      if (phone) {
-        const phoneCheck = await this.checkUserExistsByPhone(phone);
-        if (phoneCheck.exists) {
-          duplicates.phone = 'An account with this phone number already exists.';
-          hasDuplicates = true;
-        }
-      }
-
-      return { hasDuplicates, duplicates };
-    } catch (error) {
-      console.error('Error checking duplicate credentials:', error);
-      throw new Error('Failed to check for duplicate credentials');
-    }
-  }
-
-  // Check for duplicate credentials when updating profile (excludes current user)
-  static async checkDuplicateCredentialsForUpdate(
-    currentUid: string, 
-    email?: string, 
-    phone?: string
-  ): Promise<{ hasDuplicates: boolean; duplicates: { email?: string; phone?: string } }> {
-    if (!this.isFirebaseConfigured()) {
-      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
-    }
-
-    try {
-      const duplicates: { email?: string; phone?: string } = {};
-      let hasDuplicates = false;
-
-      // Check email if provided
-      if (email) {
-        const emailCheck = await this.checkUserExistsByEmail(email);
-        if (emailCheck.exists && emailCheck.uid !== currentUid) {
-          duplicates.email = 'This email is already associated with another account.';
-          hasDuplicates = true;
-        }
-      }
-
-      // Check phone if provided
-      if (phone) {
-        const phoneCheck = await this.checkUserExistsByPhone(phone);
-        if (phoneCheck.exists && phoneCheck.uid !== currentUid) {
-          duplicates.phone = 'This phone number is already associated with another account.';
-          hasDuplicates = true;
-        }
-      }
-
-      return { hasDuplicates, duplicates };
-    } catch (error) {
-      console.error('Error checking duplicate credentials for update:', error);
-      throw new Error('Failed to check for duplicate credentials');
-    }
-  }
-
-  // Get existing account information for duplicate credentials (useful for account recovery)
-  static async getExistingAccountInfo(email?: string, phone?: string): Promise<{ 
-    email?: { uid: string; createdAt: Date }; 
-    phone?: { uid: string; createdAt: Date } 
-  }> {
-    if (!this.isFirebaseConfigured()) {
-      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
-    }
-
-    try {
-      const result: { email?: { uid: string; createdAt: Date }; phone?: { uid: string; createdAt: Date } } = {};
-
-      if (email) {
-        const emailCheck = await this.checkUserExistsByEmail(email);
-        if (emailCheck.exists) {
-          const userProfile = await this.getUserProfile(emailCheck.uid!);
-          if (userProfile) {
-            result.email = {
-              uid: emailCheck.uid!,
-              createdAt: userProfile.createdAt
-            };
-          }
-        }
-      }
-
-      if (phone) {
-        const phoneCheck = await this.checkUserExistsByPhone(phone);
-        if (phoneCheck.exists) {
-          const userProfile = await this.getUserProfile(phoneCheck.uid!);
-          if (userProfile) {
-            result.phone = {
-              uid: phoneCheck.uid!,
-              createdAt: userProfile.createdAt
-            };
-          }
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error getting existing account info:', error);
-      throw new Error('Failed to get existing account information');
-    }
-  }
-
   // Get user role from Firestore
   static async getUserRole(uid: string): Promise<UserRole> {
     if (!this.isFirebaseConfigured()) {
@@ -589,18 +470,6 @@ export class AuthService {
     }
 
     try {
-      // Check for duplicate credentials before updating
-      const duplicateCheck = await this.checkDuplicateCredentialsForUpdate(
-        uid, 
-        updatedProfile.email, 
-        updatedProfile.phone
-      );
-      
-      if (duplicateCheck.hasDuplicates) {
-        const errorMessages = Object.values(duplicateCheck.duplicates).filter(Boolean).join(' ');
-        throw new Error(errorMessages);
-      }
-      
       await setDoc(doc(db, 'users', uid), updatedProfile);
     } catch (error) {
       console.error('Error updating user profile:', error);
@@ -864,13 +733,6 @@ export class AuthService {
     }
     
     try {
-      // Check for duplicate credentials before creating the account
-      const duplicateCheck = await this.checkDuplicateCredentials(email, additionalData?.phone);
-      if (duplicateCheck.hasDuplicates) {
-        const errorMessages = Object.values(duplicateCheck.duplicates).filter(Boolean).join(' ');
-        throw new Error(errorMessages);
-      }
-      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Profile is automatically created by Firebase Functions
@@ -1250,6 +1112,14 @@ export class AuthService {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('firebase:authUser:');
         sessionStorage.removeItem('firebase:authUser:');
+        
+        // Clear any reCAPTCHA instances
+        const recaptchaContainers = document.querySelectorAll('[id^="recaptcha-container"]');
+        recaptchaContainers.forEach(container => {
+          if (container.innerHTML) {
+            container.innerHTML = '';
+          }
+        });
       }
       
       console.log('User signed out successfully');
@@ -1299,6 +1169,9 @@ export class AuthService {
         break;
       case 'auth/account-exists-with-different-credential':
         message = 'An account already exists with the same email but different sign-in credentials.';
+        break;
+      case 'auth/credential-already-in-use':
+        message = 'This phone number is already associated with another account.';
         break;
       case 'auth/operation-not-allowed':
         message = 'This sign-in method is not enabled. Please contact support.';

@@ -61,7 +61,7 @@ export default function AuraClient() {
   const samplePacks = [
     { size: 3, price: 1499, label: "3 Samples" },
     { size: 6, price: 2799, label: "6 Samples" },
-    { size: 13, price: 4999, label: "13 Samples" },
+    { size: 13, price: 4999, label: "12 + 1 Free" },
   ];
 
   const shaderColors = [
@@ -137,7 +137,7 @@ export default function AuraClient() {
   const handleSamplePackChange = (packSize: 3 | 6 | 13) => {
     setSelectedSamplePack(packSize);
 
-    // If 13 samples selected, automatically select all colors
+    // If 12 + 1 Free pack selected, automatically select all colors
     if (packSize === 13) {
       setSelectedColors(sampleColors.map((color) => color.id));
     } else {
@@ -221,7 +221,9 @@ export default function AuraClient() {
     try {
       const cartItem = {
         id: 2,
-        name: `Mock Sample (${selectedSamplePack} Colors)`,
+        name: selectedSamplePack === 13 
+          ? "Mock Sample (12 + 1 Free Colors)" 
+          : `Mock Sample (${selectedSamplePack} Colors)`,
         image: "/images/gallery/1.webp",
         price: selectedPack?.price || 0,
         quantity: 1,
@@ -735,7 +737,7 @@ export default function AuraClient() {
                 </div>
                 <p className="text-sm text-gray-600">
                   {selectedSamplePack === 13
-                    ? "All 13 colors will be automatically selected"
+                    ? "All 12 colors + 1 Free Natural White will be automatically selected"
                     : `Select ${selectedSamplePack} colors from the options below`}
                 </p>
               </div>
@@ -771,6 +773,12 @@ export default function AuraClient() {
                       <span className="text-xs font-semibold text-gray-800 text-center leading-tight">
                         {color.name}
                       </span>
+                      {/* Free tag for Natural White - only show for 12 + 1 Free pack */}
+                      {color.id === "natural-white" && selectedSamplePack === 13 && (
+                        <div className="absolute top-1 left-1 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                          FREE
+                        </div>
+                      )}
                       {selectedColors.includes(color.id) && (
                         <div className="absolute top-1 right-1 w-6 h-6 bg-[#5E4E06] rounded-full flex items-center justify-center">
                           <CheckCircle className="w-4 h-4 text-white" />

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,10 +22,17 @@ export async function POST(request: NextRequest) {
     // TODO: Implement signature verification using Cashfree's method for production
     if (orderId && txStatus) {
       try {
-        const orderRef = await AuthService.getOrderById(orderId);
-        if (orderRef) {
-          await AuthService.updateOrder(orderId, {
+        // Get order from Firebase using Admin SDK
+        const orderDoc = await getAdminDb().collection('orders').doc(orderId).get();
+        
+        if (orderDoc.exists) {
+          const orderData = orderDoc.data();
+          console.log(`Order found: ${orderData?.orderId}, current status: ${orderData?.status}`);
+          
+          // Update order using Admin SDK
+          await getAdminDb().collection('orders').doc(orderId).update({
             paymentStatus: txStatus === 'SUCCESS' ? 'completed' : 'failed',
+            status: txStatus === 'SUCCESS' ? 'confirmed' : 'pending',
             transactionId: referenceId,
             paymentMode: paymentMode,
             paymentMessage: txMsg,

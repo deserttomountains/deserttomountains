@@ -2,24 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection - preserve existing functionality with email/phone protection
+    // Users collection - simplified for basic auth system
     match /users/{userId} {
       // Users can read/write their own data
       allow read, write: if request.auth != null && request.auth.uid == userId;
       
-      // Admins can read all user data (CRITICAL - was missing!)
+      // Admins can read all user data
       allow read: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       
-      // Allow list for duplicate checking (crucial for the duplicate detection)
-      allow list: if request.auth != null;
+      // Allow list for admin user management (simplified from duplicate checking)
+      allow list: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       
-      // Additional protection: Prevent direct client updates to email/phone fields
-      // This rule will be evaluated AFTER the general write rule above
+      // Simplified update protection: Prevent direct client updates to email/phone fields
       allow update: if request.auth != null && 
                    request.auth.uid == userId &&
                    // Prevent client-side updates to email and phone during profile updates
-                   // But allow them during initial creation (signup process)
                    (
                      // If email field is being updated, it must remain the same
                      (!('email' in request.resource.data) || 
@@ -36,18 +35,22 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Orders collection - exactly like your original rules
+    // Orders collection - customers can manage their own orders
     match /orders/{orderId} {
       // Admins can do everything
       allow read, write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       
-      // CRITICAL: Allow customers to create their own orders (was missing!)
+      // Customers can create their own orders
       allow create: if request.auth != null &&
         request.resource.data.customerId == request.auth.uid;
       
       // Customers can read their own orders
       allow read: if request.auth != null &&
+        resource.data.customerId == request.auth.uid;
+      
+      // Customers can update their own orders
+      allow update: if request.auth != null &&
         resource.data.customerId == request.auth.uid;
     }
     
@@ -63,30 +66,30 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // QUOTES COLLECTION - exactly like your original detailed rules
+    // QUOTES COLLECTION - admin only with validation
     match /quotes/{quoteId} {
       // Basic admin access
       allow read, write: if request.auth != null && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       
-      // Additional validation for quote creation (from your original rules)
+      // Additional validation for quote creation
       allow create: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
         request.resource.data.createdBy == request.auth.uid &&
         request.resource.data.createdAt is timestamp &&
         request.resource.data.updatedAt is timestamp;
       
-      // Additional validation for quote updates (from your original rules)
+      // Additional validation for quote updates
       allow update: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
         request.resource.data.updatedAt is timestamp;
       
-      // Additional validation for quote deletion (from your original rules)
+      // Additional validation for quote deletion
       allow delete: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Franchise Applications - exactly like your original rules
+    // Franchise Applications - public create, admin read/write
     match /franchiseApplications/{docId} {
       allow create: if true;
       allow read: if request.auth != null &&
@@ -95,7 +98,7 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Contact Form Submissions - exactly like your original rules
+    // Contact Form Submissions - public create, admin read/write
     match /contactFormSubmissions/{docId} {
       allow create: if true;
       allow read: if request.auth != null &&

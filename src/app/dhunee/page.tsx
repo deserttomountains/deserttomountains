@@ -64,7 +64,7 @@ export default function DhuneePage() {
       "price": "299",
       "priceCurrency": "INR",
       "priceValidUntil": "2024-12-31",
-      "availability": "https://schema.org/InStock",
+      "availability": "https://schema.org/OutOfStock",
       "seller": {
         "@type": "Organization",
         "name": "Desert to Mountains"

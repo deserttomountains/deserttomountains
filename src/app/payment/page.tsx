@@ -154,7 +154,9 @@ export default function PaymentPage() {
       };
       
       // 1. Save order in Firestore
-      await AuthService.createOrder(orderData);
+      const firebaseOrderId = await AuthService.createOrder(orderData);
+      
+      console.log('Order created in Firebase with ID:', firebaseOrderId);
       
       if (selectedGateway === 'razorpay') {
         // 2. Create Razorpay order via API
@@ -190,18 +192,50 @@ export default function PaymentPage() {
           handler: async function (response: any) {
             // Payment success
             showToast('Payment successful! Updating order...', 'success');
-            // Optionally, call backend to verify payment and update order status
-            await fetch('/api/payment/razorpay/webhook', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_order_id: razorpayOrder.id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                status: 'captured'
-              })
-            });
-            setTimeout(() => router.push('/order-confirmation'), 1200);
+            
+            // Clear cart from localStorage and context
+            localStorage.removeItem('cart');
+            if (typeof clearCart === 'function') clearCart();
+            
+            // Call backend to verify payment and update order status
+            try {
+              const updateResponse = await fetch('/api/payment/razorpay/update-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: razorpayOrder.id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  firebase_order_id: firebaseOrderId // Pass the actual Firebase document ID
+                })
+              });
+              
+              if (updateResponse.ok) {
+                const updateResult = await updateResponse.json();
+                console.log('Order update response:', updateResult);
+                
+                // Store order details for confirmation page
+                const orderDetails = {
+                  orderId: orderId,
+                  paymentMethod: 'Razorpay',
+                  transactionId: response.razorpay_payment_id,
+                  amount: total,
+                  items: cart
+                };
+                localStorage.setItem('orderConfirmationData', JSON.stringify(orderDetails));
+                
+                setTimeout(() => router.push('/order-confirmation'), 1200);
+              } else {
+                const errorText = await updateResponse.text();
+                console.error('Order update failed:', updateResponse.status, errorText);
+                showToast('Payment successful but order update failed. Please contact support.', 'warning');
+                setTimeout(() => router.push('/dashboard/orders'), 1200);
+              }
+            } catch (error) {
+              console.error('Error updating order:', error);
+              showToast('Payment successful but order update failed. Please contact support.', 'warning');
+              setTimeout(() => router.push('/dashboard/orders'), 1200);
+            }
           },
           prefill: {
             name: orderData.customerName,
@@ -257,8 +291,19 @@ export default function PaymentPage() {
               // Clear cart from localStorage and context
               localStorage.removeItem('cart');
               if (typeof clearCart === 'function') clearCart();
-              showToast('Payment successful! Redirecting to your orders...', 'success');
-              setTimeout(() => router.push('/dashboard/orders'), 1200);
+              
+              // Store order details for confirmation page
+              const orderDetails = {
+                orderId: orderId,
+                paymentMethod: 'Cashfree',
+                transactionId: data.referenceId || 'CF' + Date.now(),
+                amount: total,
+                items: cart
+              };
+              localStorage.setItem('orderConfirmationData', JSON.stringify(orderDetails));
+              
+              showToast('Payment successful! Redirecting to order confirmation...', 'success');
+              setTimeout(() => router.push('/order-confirmation'), 1200);
             },
             onFailure: function(data: any) {
               showToast('Payment failed or cancelled.', 'error');

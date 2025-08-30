@@ -3,17 +3,10 @@
 import { useState } from 'react';
 import Navigation from '@/components/Navigation';
 import { Sparkles, CheckCircle, ShoppingCart, Star, ArrowRight } from 'lucide-react';
-import { useCart } from '@/components/CartContext';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/components/ToastContext';
 
 export default function DhuneeClient() {
   const [selectedSize, setSelectedSize] = useState<'small' | 'large'>('small');
   const [quantity, setQuantity] = useState(1);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const { addToCart } = useCart();
-  const { showToast } = useToast();
-  const router = useRouter();
 
   const sizes = [
     { key: 'small', label: 'Small', price: 249 },
@@ -40,24 +33,7 @@ export default function DhuneeClient() {
 
   const selected = sizes.find(s => s.key === selectedSize);
 
-  const handleAddToCart = async () => {
-    setIsAddingToCart(true);
-    try {
-      const cartItem = {
-        id: selectedSize === 'small' ? 4 : 5,
-        name: `Dhunee Organic Incense (${selected?.label})`,
-        image: '/images/dhunee_1.webp',
-        price: selected?.price || 0,
-        quantity,
-        subtitle: 'Himalayan Herbs & Cow Dung',
-      };
-      addToCart(cartItem);
-      showToast('Added to cart!', 'success');
-      router.push('/cart');
-    } finally {
-      setIsAddingToCart(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4]">
@@ -82,6 +58,9 @@ export default function DhuneeClient() {
                   <Star className="w-3 h-3 sm:w-4 sm:h-4 text-[#E6C866] fill-current" />
                   <span className="text-xs sm:text-sm font-bold text-[#2A2418]">4.9/5</span>
                 </div>
+              </div>
+              <div className="absolute bottom-4 left-4 bg-red-500 text-white rounded-full px-3 sm:px-4 py-2 shadow-lg">
+                <span className="text-xs sm:text-sm font-bold">Out of Stock</span>
               </div>
             </div>
           </div>
@@ -117,14 +96,13 @@ export default function DhuneeClient() {
               </div>
             </div>
             
-            {/* Price, Quantity Selector, and Add to Cart */}
+            {/* Out of Stock Message */}
             <div className="flex flex-col sm:flex-row gap-4 items-center mb-6 sm:mb-8">
               <span className="text-2xl sm:text-3xl font-black text-[#5E4E06]">₹{selected?.price}</span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 opacity-50">
                 <button
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  className="w-8 h-8 rounded-full bg-[#F8F6F0] text-[#5E4E06] font-bold flex items-center justify-center border border-[#B8A94A] hover:bg-[#E6C866] transition-colors"
-                  disabled={quantity <= 1}
+                  className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 font-bold flex items-center justify-center border border-gray-300 cursor-not-allowed"
+                  disabled
                 >
                   -
                 </button>
@@ -132,27 +110,25 @@ export default function DhuneeClient() {
                   type="number"
                   min={1}
                   value={quantity}
-                  onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-12 text-center font-bold text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#8B7A1A] transition text-sm"
+                  className="w-12 text-center font-bold text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-2 py-1 cursor-not-allowed text-sm"
+                  disabled
                 />
                 <button
-                  onClick={() => setQuantity(q => q + 1)}
-                  className="w-8 h-8 rounded-full bg-[#F8F6F0] text-[#5E4E06] font-bold flex items-center justify-center border border-[#B8A94A] hover:bg-[#E6C866] transition-colors"
+                  className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 font-bold flex items-center justify-center border border-gray-300 cursor-not-allowed"
+                  disabled
                 >
                   +
                 </button>
               </div>
               <button
-                onClick={handleAddToCart}
-                disabled={isAddingToCart}
-                className={`w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer ${
-                  isAddingToCart ? 'opacity-75 cursor-not-allowed' : ''
-                }`}
+                disabled
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gray-400 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base cursor-not-allowed opacity-75"
               >
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+                Out of Stock
               </button>
             </div>
+            <div className="text-xs sm:text-sm text-red-600 font-semibold mb-2">Currently Out of Stock</div>
             <div className="text-xs sm:text-sm text-gray-500">Inclusive of all taxes</div>
           </div>
         </div>
@@ -275,15 +251,15 @@ export default function DhuneeClient() {
       <section className="py-16 sm:py-24 bg-gradient-to-br from-[#2A2418] via-[#5E4E06] to-[#8B7A1A] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-[#5E4E06]/20 to-[#8B7A1A]/20"></div>
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 sm:mb-10">Ready to Elevate Your Space?</h2>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 sm:mb-10">Dhunee is Currently Out of Stock</h2>
           <p className="text-lg sm:text-xl lg:text-2xl text-[#F0EDE4] mb-12 sm:mb-16 max-w-4xl mx-auto leading-relaxed font-light">
-            Join those who have embraced <span className="font-semibold text-[#E6C866]">spiritual purity</span> and <span className="font-semibold text-[#E6C866]">therapeutic living</span> with Dhunee. Transform your home, mind, and aura today.
+            We're temporarily out of stock of this <span className="font-semibold text-[#E6C866]">spiritual incense</span>. Contact us to get notified when Dhunee becomes available again.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 justify-center">
             <a href="/contact" className="group px-8 sm:px-12 py-4 sm:py-6 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-full shadow-2xl hover:shadow-[#B8A94A]/25 transition-all duration-500 hover:scale-105 cursor-pointer">
               <span className="flex items-center gap-3 sm:gap-4 text-lg sm:text-xl">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                Connect with Us
+                Get Notified When Available
                 <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-2 transition-transform" />
               </span>
             </a>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Navigation from '@/components/Navigation';
-import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle, Phone, User, Shield, Heart } from 'lucide-react';
+import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle, Phone, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { AuthService, auth } from '@/lib/firebase';
 import { RecaptchaVerifier } from 'firebase/auth';
@@ -11,7 +11,6 @@ import 'react-phone-input-2/lib/style.css';
 import styles from './PhoneInputCustom.module.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
-import DuplicateAccountHandler from '@/components/DuplicateAccountHandler';
 
 export default function LoginClient() {
   const { user, role, loading, redirectBasedOnRole } = useAuth();
@@ -29,58 +28,16 @@ export default function LoginClient() {
   const [phoneVerificationSent, setPhoneVerificationSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
-  const [deviceInfo, setDeviceInfo] = useState<any>(null);
-  const [showDuplicateHandler, setShowDuplicateHandler] = useState(false);
-  const [duplicateCredentials, setDuplicateCredentials] = useState<{ email?: string; phone?: string }>({});
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect');
 
-  // Detect device information
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userAgent = navigator.userAgent;
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-      const isAndroid = /Android/.test(userAgent);
-      
-      setDeviceInfo({
-        isMobile,
-        isIOS,
-        isAndroid,
-        userAgent,
-        platform: navigator.platform,
-        language: navigator.language
-      });
+    if (user && !loading) {
+      redirectBasedOnRole(user.uid);
     }
-  }, []);
-
-  // Redirect logged-in users to their appropriate dashboard or redirect param
-  useEffect(() => {
-    if (!loading && user && role) {
-      console.log('LoginClient: User is logged in, checking redirection...', {
-        user: user.uid,
-        role,
-        redirectTo
-      });
-      
-      const timer = setTimeout(() => {
-        if (redirectTo) {
-          console.log('LoginClient: Redirecting to:', redirectTo);
-          router.push(redirectTo);
-        } else if (role === 'admin') {
-          console.log('LoginClient: Redirecting admin to /admin');
-          router.push('/admin');
-        } else {
-          console.log('LoginClient: Redirecting customer to /dashboard');
-          router.push('/dashboard');
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [user, role, loading, router, redirectTo]);
+  }, [user, loading, redirectBasedOnRole]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -99,21 +56,18 @@ export default function LoginClient() {
     const newErrors: { [key: string]: string } = {};
 
     if (loginMethod === 'email') {
-      if (!formData.email) {
+      if (!formData.email.trim()) {
         newErrors.email = 'Email is required';
       } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
         newErrors.email = 'Please enter a valid email';
       }
-
       if (!formData.password) {
         newErrors.password = 'Password is required';
-      } else if (formData.password.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters';
       }
     } else {
-      if (!formData.phone) {
+      if (!formData.phone.trim()) {
         newErrors.phone = 'Phone number is required';
-      } else if (!/^\+?[\d\s\-\(\)]{10,}$/.test(formData.phone)) {
+      } else if (formData.phone.length < 10) {
         newErrors.phone = 'Please enter a valid phone number';
       }
     }
@@ -124,59 +78,63 @@ export default function LoginClient() {
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      setIsSubmitting(true);
-      try {
-        console.log('LoginClient: Starting email login for:', formData.email);
-        await AuthService.setPersistence(formData.rememberMe);
-        const userCredential = await AuthService.signInWithEmail(formData.email, formData.password);
-        console.log('LoginClient: Email login successful, user:', userCredential.user.uid);
-        
-        // Profile is automatically created by Firebase Functions
-        await redirectBasedOnRole(userCredential.user.uid);
-      } catch (error) {
-        console.error('LoginClient: Email login failed:', error);
-        setErrors({ email: (error as Error).message });
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      // Set persistence before authentication
+      await AuthService.setPersistence(formData.rememberMe);
+      
+      const userCredential = await AuthService.signInWithEmail(formData.email, formData.password);
+      
+      // Profile is automatically created by Firebase Functions
+      await redirectBasedOnRole(userCredential.user.uid);
+    } catch (error) {
+      setErrors({ general: (error as Error).message });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handlePhoneLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      setIsSubmitting(true);
-      try {
-        console.log('LoginClient: Starting phone login for:', formData.phone, 'Device:', deviceInfo);
-        
-        // Device-specific warnings
-        if (deviceInfo?.isMobile) {
-          console.log('Mobile device detected - SMS should work well');
-        } else {
-          console.log('Desktop device detected - user needs access to phone for SMS');
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      // Initialize reCAPTCHA if not already done
+      if (!recaptchaVerifierRef.current) {
+        const recaptchaContainer = document.getElementById('recaptcha-container-login');
+        if (!recaptchaContainer) {
+          setErrors({ phone: 'reCAPTCHA container not found' });
+          return;
         }
-        
-        await AuthService.setPersistence(formData.rememberMe);
-        const result = await AuthService.signInWithPhone(formData.phone, recaptchaVerifierRef.current!);
-        setConfirmationResult(result);
-        setPhoneVerificationSent(true);
-        console.log('LoginClient: Phone verification code sent successfully');
-      } catch (error) {
-        console.error('LoginClient: Phone login failed:', error);
-        
-        // Device-specific error messages
-        let errorMessage = (error as Error).message;
-        if (deviceInfo?.isMobile && errorMessage.includes('reCAPTCHA')) {
-          errorMessage = 'reCAPTCHA verification failed. Please try again or use email login.';
-        } else if (!deviceInfo?.isMobile && errorMessage.includes('SMS')) {
-          errorMessage = 'SMS delivery failed. Please ensure you have access to your phone or try email login.';
-        }
-        
-        setErrors({ phone: errorMessage });
-      } finally {
-        setIsSubmitting(false);
+
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container-login', {
+          size: 'invisible'
+        });
+        await recaptchaVerifierRef.current.render();
       }
+
+      // Send verification code
+      console.log('Phone number being sent to Firebase:', formData.phone);
+      console.log('Phone number type:', typeof formData.phone);
+      console.log('Phone number length:', formData.phone.length);
+      
+      // Ensure phone number is in E.164 format
+      let formattedPhone = formData.phone;
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = `+${formattedPhone}`;
+      }
+      console.log('Formatted phone number:', formattedPhone);
+      
+      const result = await AuthService.signInWithPhone(formattedPhone, recaptchaVerifierRef.current);
+      setConfirmationResult(result);
+      setPhoneVerificationSent(true);
+    } catch (error) {
+      setErrors({ phone: (error as Error).message });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -223,8 +181,6 @@ export default function LoginClient() {
     }
   };
 
-
-
   const resendVerificationCode = async () => {
     setIsSubmitting(true);
     
@@ -237,492 +193,279 @@ export default function LoginClient() {
     }
   };
 
-  const handleCloseDuplicateHandler = () => {
-    setShowDuplicateHandler(false);
-    setDuplicateCredentials({});
-  };
-
-  useEffect(() => {
-    // Only initialize reCAPTCHA if user is not logged in and we're not loading
-    if (!loading && !user && !recaptchaVerifierRef.current && typeof window !== 'undefined') {
-      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {},
-        'expired-callback': () => {
-          setErrors(prev => ({ ...prev, phone: 'reCAPTCHA expired. Please try again.' }));
-        }
-      });
-    }
-    // Cleanup on unmount
-    return () => {
-      if (recaptchaVerifierRef.current) {
-        recaptchaVerifierRef.current.clear();
-        recaptchaVerifierRef.current = null;
-      }
-    };
-  }, [loading, user]);
-
-  // Show loading spinner while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
+      <div className="min-h-screen bg-gradient-to-br from-[#F5F2E8] to-[#E8E0C8] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37] mx-auto"></div>
+          <p className="mt-4 text-[#5E4E06]">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  // Don't render login form if user is already authenticated
-  if (user) {
-    return null;
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F5F2E8] to-[#E8E0C8]">
+        <Navigation />
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-[#5E4E06] mb-4">Welcome Back!</h2>
+            <p className="text-[#8B7A1A] mb-6">
+              You have successfully logged in. Redirecting to your dashboard...
+            </p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D4AF37] mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] relative overflow-hidden">
-      {!loading && !user && <div id="recaptcha-container" ref={recaptchaRef}></div>}
-      {/* Floating Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-[#D4AF37]/20 to-[#8B7A1A]/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-[#E6C866]/15 to-[#B8A94A]/15 rounded-full blur-2xl animate-bounce"></div>
-        <div className="absolute bottom-40 left-1/4 w-20 h-20 bg-gradient-to-br from-[#5E4E06]/10 to-[#8B7A1A]/10 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-gradient-to-br from-[#D4AF37]/15 to-[#E6C866]/15 rounded-full blur-2xl animate-bounce"></div>
-      </div>
-
+    <div className="min-h-screen bg-gradient-to-br from-[#F5F2E8] to-[#E8E0C8]">
       <Navigation />
       
-      <div className="pt-24 pb-16 px-6 relative z-10">
-        <div className="max-w-2xl mx-auto">
-          
-          {/* Header Section */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-[#5E4E06]/10 to-[#8B7A1A]/10 border border-[#D4AF37]/30 text-[#5E4E06] rounded-full text-sm font-bold shadow-lg mb-8 animate-fade-in">
-              <Sparkles className="w-5 h-5 text-[#8B7A1A]" />
-              <span>Welcome Back to Desert to Mountains</span>
-            </div>
-            <h1 className="text-5xl md:text-6xl font-black text-[#5E4E06] mb-6 leading-tight">
-              Access Your Account
-            </h1>
-            <p className="text-[#8B7A1A] text-xl font-medium leading-relaxed max-w-lg mx-auto">
-              Choose your preferred way to access your account and continue your journey with authentic natural plaster
-            </p>
-          </div>
-
-          {isSubmitted ? (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-3xl p-10 text-center shadow-2xl animate-fade-in">
-              <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <CheckCircle className="w-12 h-12 text-white" />
+      <div className="flex items-center justify-center min-h-screen px-4 py-8">
+        <div className="max-w-md w-full">
+          {/* Form */}
+          <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Shield className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-4">
-                Welcome Back!
-              </h3>
-              <p className="text-green-700 text-lg mb-8 font-medium">
-                You have successfully signed in to your Desert to Mountains account.
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#5E4E06] mb-2">Welcome Back</h1>
+              <p className="text-[#8B7A1A] text-sm sm:text-base">
+                Sign in to your account to continue your journey
               </p>
-              <Link 
-                href="/" 
-                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-2xl hover:shadow-xl transition-all duration-300 hover:scale-105"
-              >
-                <span>Continue to Home</span>
-                <ArrowRight className="w-5 h-5" />
-              </Link>
             </div>
-          ) : (
-            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-[#D4AF37] p-8 md:p-10 animate-fade-in">
-              
-              {/* Login Method Tabs */}
-              <div className="flex bg-[#F5F2E8] rounded-2xl p-2 mb-8">
-                <button
-                  onClick={() => setLoginMethod('email')}
-                  className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all duration-300 cursor-pointer ${
-                    loginMethod === 'email'
-                      ? 'bg-white text-[#5E4E06] shadow-lg'
-                      : 'text-[#8B7A1A] hover:text-[#5E4E06]'
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <Mail className="w-5 h-5" />
-                    <span>Email</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setLoginMethod('phone')}
-                  className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all duration-300 cursor-pointer ${
-                    loginMethod === 'phone'
-                      ? 'bg-white text-[#5E4E06] shadow-lg'
-                      : 'text-[#8B7A1A] hover:text-[#5E4E06]'
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <Phone className="w-5 h-5" />
-                    <span>Phone</span>
-                  </div>
-                </button>
-              </div>
 
-              {/* Email/Password Login Form */}
-              {loginMethod === 'email' && !phoneVerificationSent && (
-                <form onSubmit={handleEmailLogin} className="space-y-6">
+            {/* Login Method Toggle */}
+            <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
+              <button
+                onClick={() => setLoginMethod('email')}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                  loginMethod === 'email'
+                    ? 'bg-white text-[#5E4E06] shadow-sm'
+                    : 'text-gray-600 hover:text-[#5E4E06]'
+                }`}
+              >
+                <Mail className="w-4 h-4 inline mr-2" />
+                Email
+              </button>
+              <button
+                onClick={() => setLoginMethod('phone')}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                  loginMethod === 'phone'
+                    ? 'bg-white text-[#5E4E06] shadow-sm'
+                    : 'text-gray-600 hover:text-[#5E4E06]'
+                }`}
+              >
+                <Phone className="w-4 h-4 inline mr-2" />
+                Phone
+              </button>
+            </div>
+
+            {/* Phone Verification Step */}
+            {loginMethod === 'phone' && phoneVerificationSent ? (
+              <form onSubmit={handleVerificationCode} className="space-y-4">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <CheckCircle className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-[#5E4E06] mb-2">Enter Verification Code</h3>
+                  <p className="text-[#8B7A1A] text-sm">
+                    We've sent a 6-digit code to <span className="font-bold text-[#5E4E06]">{formData.phone}</span>
+                  </p>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#D4AF37] focus:outline-none text-center text-2xl font-bold tracking-widest"
+                    placeholder="000000"
+                    maxLength={6}
+                  />
+                  {errors.verificationCode && (
+                    <p className="mt-1 text-sm text-red-600">{errors.verificationCode}</p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base"
+                >
+                  {isSubmitting ? 'Verifying...' : 'Verify & Sign In'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPhoneVerificationSent(false)}
+                  className="w-full py-3 border-2 border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm sm:text-base"
+                >
+                  Back to Phone Number
+                </button>
+              </form>
+            ) : (
+              /* Regular Login Form */
+              <form onSubmit={loginMethod === 'email' ? handleEmailLogin : handlePhoneLogin} className="space-y-4">
+                {/* Email/Phone Field */}
+                {loginMethod === 'email' ? (
                   <div>
-                    <label htmlFor="email" className="block text-lg font-bold text-[#5E4E06] mb-3">
-                      Email Address
-                    </label>
+                    <label className="block text-sm font-medium text-[#5E4E06] mb-2">Email Address</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                        <Mail className="w-6 h-6 text-[#8B7A1A]" />
-                      </div>
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="email"
-                        id="email"
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className={`w-full pl-14 pr-5 py-5 border-2 rounded-2xl focus:outline-none focus:ring-4 focus:ring-offset-0 transition-all duration-300 placeholder:text-[#8B7A1A] placeholder:font-medium text-[#5E4E06] font-medium text-lg
-                          ${errors.email 
-                            ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500 bg-red-50' 
-                            : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A] hover:shadow-xl bg-white/90 backdrop-blur-sm'
-                          }
-                        `}
-                        placeholder="your@email.com"
+                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#D4AF37] focus:outline-none transition-colors"
+                        placeholder="Enter your email"
                       />
                     </div>
                     {errors.email && (
-                      <p className="mt-3 text-sm text-red-600 font-medium">{errors.email}</p>
+                      <p className="mt-1 text-sm text-red-600">{errors.email}</p>
                     )}
                   </div>
-
+                ) : (
                   <div>
-                    <label htmlFor="password" className="block text-lg font-bold text-[#5E4E06] mb-3">
-                      Password
-                    </label>
+                    <label className="block text-sm font-medium text-[#5E4E06] mb-2">Phone Number</label>
+                    <PhoneInput
+                      country={'in'}
+                      value={formData.phone}
+                      onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
+                      inputClass="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#D4AF37] focus:outline-none transition-colors"
+                      containerClass="phone-input-container"
+                      buttonClass="phone-input-button"
+                      dropdownClass="phone-input-dropdown"
+                      enableSearch={true}
+                      searchPlaceholder="Search countries..."
+                      inputProps={{
+                        placeholder: 'Enter your phone number'
+                      }}
+                      countryCodeEditable={false}
+                      preferredCountries={['in', 'us', 'gb']}
+                    />
+                    {errors.phone && (
+                      <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Password Field (only for email login) */}
+                {loginMethod === 'email' && (
+                  <div>
+                    <label className="block text-sm font-medium text-[#5E4E06] mb-2">Password</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                        <Lock className="w-6 h-6 text-[#8B7A1A]" />
-                      </div>
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type={showPassword ? 'text' : 'password'}
-                        id="password"
                         name="password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        className={`w-full pl-14 pr-14 py-5 border-2 rounded-2xl focus:outline-none focus:ring-4 focus:ring-offset-0 transition-all duration-300 placeholder:text-[#8B7A1A] placeholder:font-medium text-[#5E4E06] font-medium text-lg
-                          ${errors.password 
-                            ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500 bg-red-50' 
-                            : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A] hover:shadow-xl bg-white/90 backdrop-blur-sm'
-                          }
-                        `}
+                        className="w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:border-[#D4AF37] focus:outline-none transition-colors"
                         placeholder="Enter your password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-5 flex items-center cursor-pointer"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        {showPassword ? (
-                          <EyeOff className="w-6 h-6 text-[#8B7A1A] hover:text-[#5E4E06] transition-colors" />
-                        ) : (
-                          <Eye className="w-6 h-6 text-[#8B7A1A] hover:text-[#5E4E06] transition-colors" />
-                        )}
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
                     {errors.password && (
-                      <p className="mt-3 text-sm text-red-600 font-medium">{errors.password}</p>
+                      <p className="mt-1 text-sm text-red-600">{errors.password}</p>
                     )}
                   </div>
+                )}
 
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center cursor-pointer">
-                      <div className="relative">
-                        <input
-                          type="checkbox"
-                          name="rememberMe"
-                          checked={formData.rememberMe}
-                          onChange={handleInputChange}
-                          className="sr-only"
-                        />
-                        <div className={`w-6 h-6 border-2 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                          formData.rememberMe 
-                            ? 'bg-[#5E4E06] border-[#5E4E06]' 
-                            : 'bg-white border-[#D4AF37] hover:border-[#8B7A1A]'
-                        }`}>
-                          {formData.rememberMe && (
-                            <CheckCircle className="w-4 h-4 text-white" />
-                          )}
-                        </div>
-                      </div>
-                      <span className="ml-3 text-[#8B7A1A] font-semibold">Remember me</span>
-                    </label>
-                    <Link href="/login/forgot-password" className="text-[#5E4E06] hover:text-[#8B7A1A] font-bold transition-colors">
-                      Forgot password?
-                    </Link>
+                {/* Remember Me */}
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="rememberMe"
+                    checked={formData.rememberMe}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2"
+                  />
+                  <span className="text-sm text-[#8B7A1A]">Keep me signed in</span>
+                </label>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base"
+                >
+                  {isSubmitting ? 'Signing In...' : 'Sign In'}
+                </button>
+
+                {/* Google Login */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
                   </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-5 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-lg rounded-2xl hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Signing In...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Sign In with Email</span>
-                        <ArrowRight className="w-6 h-6" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* Phone Login Form */}
-              {loginMethod === 'phone' && !phoneVerificationSent && (
-                <form onSubmit={handlePhoneLogin} className="space-y-6">
-                  <div>
-                    <label htmlFor="phone" className="block text-lg font-bold text-[#5E4E06] mb-3">
-                      Phone Number
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                        <Phone className="w-6 h-6 text-[#8B7A1A]" />
-                      </div>
-                      <div className="pl-14">
-                        <PhoneInput
-                          country={'in'}
-                          value={formData.phone}
-                          onChange={(value, country, e, formattedValue) => {
-                            // value is the number without +, country.dialCode is the code
-                            // Always store as +country.dialCode + value (if not already present)
-                            let fullNumber = value;
-                            if (value && value[0] !== '+') {
-                              fullNumber = `+${value}`;
-                            }
-                            setFormData(prev => ({
-                              ...prev,
-                              phone: fullNumber
-                            }));
-                            if (errors.phone) {
-                              setErrors(prev => ({ ...prev, phone: '' }));
-                            }
-                          }}
-                          inputProps={{
-                            name: 'phone',
-                            required: true,
-                            autoFocus: true,
-                            className: `${styles.phoneInput} ${errors.phone ? styles.error : ''}`
-                          }}
-                          containerClass={styles.phoneContainer}
-                          buttonClass={styles.phoneButton}
-                          dropdownClass={styles.phoneDropdown}
-                          specialLabel=""
-                          inputStyle={{ width: '100%' }}
-                          dropdownStyle={{ zIndex: 1000 }}
-                          isValid={(value, country) => {
-                            // Only allow valid E.164 numbers
-                            return /^\+\d{10,15}$/.test(value);
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {errors.phone && (
-                      <p className="mt-3 text-sm text-red-600 font-medium">{errors.phone}</p>
-                    )}
-                    <p className="mt-2 text-sm text-[#8B7A1A]">
-                      We'll send you a verification code via SMS
-                    </p>
-                    
-                    {/* Device-specific tips */}
-                    {deviceInfo && (
-                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                        {deviceInfo.isMobile ? (
-                          <p className="text-yellow-700 text-sm">
-                            💡 <strong>Tip:</strong> SMS verification works best on mobile devices. Make sure you have good network coverage.
-                          </p>
-                        ) : (
-                          <p className="text-yellow-700 text-sm">
-                            💡 <strong>Tip:</strong> You'll need access to your phone to receive the SMS verification code.
-                          </p>
-                        )}
-                      </div>
-                    )}
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-[#8B7A1A]">Or continue with</span>
                   </div>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-5 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-lg rounded-2xl hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Sending Code...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Send Verification Code</span>
-                        <ArrowRight className="w-6 h-6" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* Phone Verification Code Form */}
-              {phoneVerificationSent && (
-                <form onSubmit={handleVerificationCode} className="space-y-6">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <Phone className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-[#5E4E06] mb-2">Enter Verification Code</h3>
-                    <p className="text-[#8B7A1A] text-lg">
-                      We've sent a 6-digit code to <span className="font-bold">{formData.phone}</span>
-                    </p>
-                    
-                    {/* Device-specific guidance */}
-                    {deviceInfo && (
-                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                        {deviceInfo.isMobile ? (
-                          <p className="text-blue-700 text-sm">
-                            📱 <strong>Mobile Device:</strong> Check your SMS messages for the verification code.
-                          </p>
-                        ) : (
-                          <p className="text-blue-700 text-sm">
-                            💻 <strong>Desktop Device:</strong> Please check your phone for the SMS verification code.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="verificationCode" className="block text-lg font-bold text-[#5E4E06] mb-3">
-                      Verification Code
-                    </label>
-                    <input
-                      type="text"
-                      id="verificationCode"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      className={`w-full px-5 py-5 border-2 rounded-2xl focus:outline-none focus:ring-4 focus:ring-offset-0 transition-all duration-300 text-center text-2xl font-bold tracking-widest
-                        ${errors.verificationCode 
-                          ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500 bg-red-50' 
-                          : 'border-[#D4AF37] focus:ring-[#8B7A1A]/20 focus:border-[#8B7A1A] hover:border-[#8B7A1A] hover:shadow-xl bg-white/90 backdrop-blur-sm'
-                        }
-                      `}
-                      placeholder="000000"
-                      maxLength={6}
-                    />
-                    {errors.verificationCode && (
-                      <p className="mt-3 text-sm text-red-600 font-medium">{errors.verificationCode}</p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setPhoneVerificationSent(false)}
-                      className="flex-1 py-5 border-2 border-[#D4AF37] text-[#5E4E06] font-bold text-lg rounded-2xl hover:bg-[#F5F2E8] transition-all duration-300 cursor-pointer"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex-1 py-5 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold text-lg rounded-2xl hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Verifying...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Verify & Sign In</span>
-                          <ArrowRight className="w-6 h-6" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="text-center">
-                    <button
-                      type="button"
-                      onClick={resendVerificationCode}
-                      disabled={isSubmitting}
-                      className="text-[#5E4E06] hover:text-[#8B7A1A] font-bold transition-colors disabled:opacity-50"
-                    >
-                      Didn't receive the code? Resend
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* Social Login Divider */}
-              {!phoneVerificationSent && (
-                <>
-                  <div className="flex items-center my-8">
-                    <div className="flex-1 h-px bg-[#D4AF37]/30"></div>
-                    <span className="px-4 text-[#8B7A1A] font-semibold">Or continue with</span>
-                    <div className="flex-1 h-px bg-[#D4AF37]/30"></div>
-                  </div>
-
-                  {/* Social Login Buttons */}
-                  <div className="flex justify-center mb-6">
-                    <button
-                      onClick={handleGoogleLogin}
-                      disabled={isSubmitting}
-                      className="w-full max-w-xs flex items-center justify-center gap-3 py-4 px-6 border-2 border-[#D4AF37] rounded-2xl bg-white shadow-lg hover:bg-[#F5F2E8] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-lg font-bold"
-                    >
-                      <svg className="w-7 h-7" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                      </svg>
-                      <span className="font-bold text-[#5E4E06] text-lg">Continue with Google</span>
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* General Error Display */}
-              {errors.general && (
-                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-2xl">
-                  <p className="text-red-600 font-medium">{errors.general}</p>
-                  {errors.general.includes('Firebase is not configured') && (
-                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                      <p className="text-blue-700 text-sm">
-                        <strong>Setup Required:</strong> To use authentication features, you need to configure Firebase. 
-                        Please follow the setup guide in <code className="bg-blue-100 px-1 rounded">FIREBASE_SETUP.md</code> 
-                        and create a <code className="bg-blue-100 px-1 rounded">.env.local</code> file with your Firebase credentials.
-                      </p>
-                    </div>
-                  )}
                 </div>
-              )}
 
-              {/* Sign Up Link */}
-              <div className="text-center pt-6 border-t border-[#D4AF37]/30">
-                <p className="text-[#8B7A1A] text-lg font-medium">
-                  Don't have an account?{' '}
-                  <Link href="/signup" className="text-[#5E4E06] hover:text-[#8B7A1A] font-bold transition-colors underline decoration-2 underline-offset-4">
-                    Create your account here
-                  </Link>
-                </p>
-              </div>
-            </div>
-          )}
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isSubmitting}
+                  className="w-full py-3 sm:py-4 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] hover:shadow-md transition-all duration-300 shadow-sm text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-5 h-5 inline mr-2" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Continue with Google
+                </button>
+
+                {/* Error Message */}
+                {errors.general && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-sm text-red-600">{errors.general}</p>
+                  </div>
+                )}
+
+                {/* Forgot Password & Signup Links */}
+                <div className="text-center space-y-2">
+                  <p className="text-[#8B7A1A] text-sm">
+                    <Link href="/forgot-password" className="text-[#D4AF37] hover:underline">
+                      Forgot your password?
+                    </Link>
+                  </p>
+                  <p className="text-[#8B7A1A] text-sm">
+                    Don't have an account?{' '}
+                    <Link href="/signup" className="text-[#D4AF37] hover:underline font-medium">
+                      Sign up here
+                    </Link>
+                  </p>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Duplicate Account Handler Modal */}
-      {showDuplicateHandler && (
-        <DuplicateAccountHandler
-          email={duplicateCredentials.email}
-          phone={duplicateCredentials.phone}
-          onClose={handleCloseDuplicateHandler}
-        />
-      )}
+      {/* reCAPTCHA container for phone login */}
+      <div 
+        id="recaptcha-container-login" 
+        ref={recaptchaRef} 
+        className="absolute bottom-2 left-2 opacity-0 pointer-events-none"
+        style={{ width: '100px', height: '50px' }}
+      ></div>
     </div>
   );
 } 

@@ -12,6 +12,7 @@ interface OrderDetails {
   estimatedDelivery: string;
   totalAmount: number;
   paymentMethod: string;
+  transactionId?: string;
   shippingAddress: any;
   items: any[];
 }
@@ -26,17 +27,16 @@ function OrderConfirmationContent() {
   useEffect(() => {
     // Get order details from localStorage or URL params
     const orderId = searchParams.get('orderId') || generateOrderId();
+    const orderConfirmationData = localStorage.getItem('orderConfirmationData');
     const checkoutData = localStorage.getItem('checkoutData');
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     
-    if (checkoutData && cart.length > 0) {
-      const parsedCheckoutData = JSON.parse(checkoutData);
-      const totalAmount = cart.reduce((sum: number, item: any) => sum + item.price, 0);
-      const shipping = 0; // Shipping fee will be calculated separately after order confirmation
-      const finalTotal = totalAmount + shipping; // 5% GST already included in product prices
-
+    if (orderConfirmationData) {
+      // Use stored order confirmation data from successful payment
+      const parsedOrderData = JSON.parse(orderConfirmationData);
+      const parsedCheckoutData = checkoutData ? JSON.parse(checkoutData) : {};
+      
       setOrderDetails({
-        orderId,
+        orderId: parsedOrderData.orderId,
         orderDate: new Date().toLocaleDateString('en-IN', {
           year: 'numeric',
           month: 'long',
@@ -47,18 +47,57 @@ function OrderConfirmationContent() {
           month: 'long',
           day: 'numeric'
         }),
-        totalAmount: finalTotal,
-        paymentMethod: searchParams.get('paymentMethod') || 'Online Payment',
-        shippingAddress: parsedCheckoutData.shippingAddress,
-        items: cart
+        totalAmount: parsedOrderData.amount,
+        paymentMethod: parsedOrderData.paymentMethod,
+        transactionId: parsedOrderData.transactionId,
+        shippingAddress: parsedCheckoutData.shippingAddress || {},
+        items: parsedOrderData.items || []
       });
 
       // Show order placed toast
       showToast('Order placed successfully!', 'success');
 
-      // Clear cart and checkout data after successful order
-      localStorage.removeItem('cart');
+      // Clear order confirmation data after displaying
+      localStorage.removeItem('orderConfirmationData');
       localStorage.removeItem('checkoutData');
+    } else if (checkoutData) {
+      // Fallback to checkout data (for cases where order confirmation data is not available)
+      const parsedCheckoutData = JSON.parse(checkoutData);
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      
+      if (cart.length > 0) {
+        const totalAmount = cart.reduce((sum: number, item: any) => sum + item.price, 0);
+        const shipping = 0; // Shipping fee will be calculated separately after order confirmation
+        const finalTotal = totalAmount + shipping; // 5% GST already included in product prices
+
+        setOrderDetails({
+          orderId,
+          orderDate: new Date().toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          estimatedDelivery: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          totalAmount: finalTotal,
+          paymentMethod: searchParams.get('paymentMethod') || 'Online Payment',
+          shippingAddress: parsedCheckoutData.shippingAddress,
+          items: cart
+        });
+
+        // Show order placed toast
+        showToast('Order placed successfully!', 'success');
+
+        // Clear cart and checkout data after successful order
+        localStorage.removeItem('cart');
+        localStorage.removeItem('checkoutData');
+      } else {
+        // If no cart data, redirect to home
+        router.push('/');
+      }
     } else {
       // If no order data, redirect to home
       router.push('/');
@@ -113,8 +152,15 @@ function OrderConfirmationContent() {
             Thank you for choosing Desert to Mountains! We're excited to bring natural beauty and sustainability to your space.
           </p>
           
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-full text-lg font-bold border border-white/30">
-            <span>Order ID: {orderDetails.orderId}</span>
+          <div className="flex flex-col md:flex-row items-center gap-3">
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-full text-lg font-bold border border-white/30">
+              <span>Order ID: {orderDetails.orderId}</span>
+            </div>
+            {orderDetails.transactionId && (
+              <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-full text-lg font-bold border border-white/30">
+                <span>Transaction ID: {orderDetails.transactionId}</span>
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 export type Toast = {
   id: number;
   message: string;
@@ -53,6 +53,10 @@ const toastTypeStyles = {
     bg: 'from-red-500 to-red-600',
     icon: <XCircle className="w-6 h-6 text-white" />,
   },
+  warning: {
+    bg: 'from-yellow-500 to-yellow-600',
+    icon: <AlertTriangle className="w-6 h-6 text-white" />,
+  },
   info: {
     bg: 'from-[#8B7A1A] to-[#E6C866]',
     icon: <Info className="w-6 h-6 text-white" />,
@@ -62,7 +66,7 @@ const toastTypeStyles = {
 export const ToastContainer: React.FC<{ toasts: Toast[]; onClose: (id: number) => void }> = ({ toasts, onClose }) => (
   <div className="fixed right-6 z-[9999] flex flex-col gap-3" style={{ top: '5rem' }}>
     {toasts.map((toast) => {
-      const style = toastTypeStyles[toast.type];
+      const style = toastTypeStyles[toast.type] || toastTypeStyles.info; // Fallback to info style if type is not found
       return (
         <div
           key={toast.id}
