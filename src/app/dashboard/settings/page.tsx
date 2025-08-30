@@ -5,12 +5,14 @@ import { getAuth, updateProfile, updateEmail, sendPasswordResetEmail, deleteUser
 import app from '@/lib/firebase';
 import { AuthService } from '@/lib/firebase';
 import DashboardLayout from '../DashboardLayout';
-import { User as UserIcon, Trash2, Loader2, Save, AlertCircle, Phone } from 'lucide-react';
+import { User as UserIcon, Trash2, Loader2, Save, AlertCircle, Phone, Shield, Mail } from 'lucide-react';
 import { useToast } from '@/components/ToastContext';
 // Import country list from UniversalAddressForm
 import { COUNTRIES } from '@/components/UniversalAddressForm';
 import { Globe } from 'lucide-react';
 import AccountMerger from '@/components/AccountMerger';
+import CredentialLinkingModal from '@/components/CredentialLinkingModal';
+import { AuthLinkingService } from '@/lib/AuthLinkingService';
 
 export default function AccountSettingsPage() {
   const auth = getAuth(app);
@@ -20,7 +22,6 @@ export default function AccountSettingsPage() {
   // Form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [stateVal, setStateVal] = useState("");
@@ -37,6 +38,9 @@ export default function AccountSettingsPage() {
   const [showAccountMerger, setShowAccountMerger] = useState(false);
   const [duplicateCredentials, setDuplicateCredentials] = useState<{ email?: string; phone?: string }>({});
   
+  // Credential linking state
+  const [showCredentialLinking, setShowCredentialLinking] = useState(false);
+  
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -48,32 +52,10 @@ export default function AccountSettingsPage() {
   // Ref for the country dropdown container
   const countryDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Phone input state
-  const [selectedCountryCode, setSelectedCountryCode] = useState('+91'); // Default to India
-  const [showPhoneCountryDropdown, setShowPhoneCountryDropdown] = useState(false);
-  const [phoneCountrySearch, setPhoneCountrySearch] = useState('');
-  
 
   
-  // Filter countries for phone input (focus on common ones first)
-  const commonPhoneCountries = [
-    { code: 'IN', name: 'India', dialCode: '+91', flag: '🇮🇳' },
-    { code: 'US', name: 'United States', dialCode: '+1', flag: '🇺🇸' },
-    { code: 'GB', name: 'United Kingdom', dialCode: '+44', flag: '🇬🇧' },
-    { code: 'CA', name: 'Canada', dialCode: '+1', flag: '🇨🇦' },
-    { code: 'AU', name: 'Australia', dialCode: '+61', flag: '🇦🇺' },
-    { code: 'DE', name: 'Germany', dialCode: '+49', flag: '🇩🇪' },
-    { code: 'FR', name: 'France', dialCode: '+33', flag: '🇫🇷' },
-    { code: 'JP', name: 'Japan', dialCode: '+81', flag: '🇯🇵' },
-    { code: 'SG', name: 'Singapore', dialCode: '+65', flag: '🇸🇬' },
-    { code: 'AE', name: 'UAE', dialCode: '+971', flag: '🇦🇪' },
-  ];
-  
-  const filteredPhoneCountries = commonPhoneCountries.filter(c => 
-    c.name.toLowerCase().includes(phoneCountrySearch.toLowerCase()) || 
-    c.dialCode.includes(phoneCountrySearch) ||
-    c.code.toLowerCase().includes(phoneCountrySearch.toLowerCase())
-  );
+
+
 
   // Load Firestore profile for all fields
   useEffect(() => {
@@ -88,43 +70,9 @@ export default function AccountSettingsPage() {
               : profile.firstName || profile.lastName || user?.displayName || "";
             setName(fullName);
             
-            // Load email and phone from Firestore if available
+            // Load email from Firestore if available
             if (profile.email) {
               setEmail(profile.email);
-            }
-            if (profile.phone) {
-              // Simple extraction: remove country code and show only phone number
-              if (profile.phone.startsWith('+91')) {
-                setSelectedCountryCode('+91');
-                setPhone(profile.phone.substring(3)); // Remove +91
-              } else if (profile.phone.startsWith('+1')) {
-                setSelectedCountryCode('+1');
-                setPhone(profile.phone.substring(2)); // Remove +1
-              } else if (profile.phone.startsWith('+44')) {
-                setSelectedCountryCode('+44');
-                setPhone(profile.phone.substring(3)); // Remove +44
-              } else if (profile.phone.startsWith('+61')) {
-                setSelectedCountryCode('+61');
-                setPhone(profile.phone.substring(3)); // Remove +61
-              } else if (profile.phone.startsWith('+49')) {
-                setSelectedCountryCode('+49');
-                setPhone(profile.phone.substring(3)); // Remove +49
-              } else if (profile.phone.startsWith('+33')) {
-                setSelectedCountryCode('+33');
-                setPhone(profile.phone.substring(3)); // Remove +33
-              } else if (profile.phone.startsWith('+81')) {
-                setSelectedCountryCode('+81');
-                setPhone(profile.phone.substring(3)); // Remove +81
-              } else if (profile.phone.startsWith('+65')) {
-                setSelectedCountryCode('+65');
-                setPhone(profile.phone.substring(3)); // Remove +65
-              } else if (profile.phone.startsWith('+971')) {
-                setSelectedCountryCode('+971');
-                setPhone(profile.phone.substring(4)); // Remove +971
-              } else {
-                // Unknown country code, just show the full number
-                setPhone(profile.phone);
-              }
             }
             
             // Load address fields
@@ -167,24 +115,7 @@ export default function AccountSettingsPage() {
     };
   }, [showCountryDropdown]);
 
-  // Handle click outside to close phone country dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (!target?.closest('.phone-country-dropdown')) {
-        setShowPhoneCountryDropdown(false);
-        setPhoneCountrySearch('');
-      }
-    };
 
-    if (showPhoneCountryDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showPhoneCountryDropdown]);
 
   // For Google sign-in users, email is always primary, phone is always editable
   const isPhonePrimary = !!user?.phoneNumber && user.providerData.some(p => p.providerId === 'phone');
@@ -209,12 +140,7 @@ export default function AccountSettingsPage() {
       newErrors.email = 'Please enter a valid email address';
     }
     
-    // Phone validation - simple length check
-    if (phone) {
-      if (phone.length < 7 || phone.length > 15) {
-        newErrors.phone = 'Phone number must be between 7-15 digits';
-      }
-    }
+
     
     // Pincode validation (6 digits for India)
     if (pincode && !/^\d{6}$/.test(pincode)) {
@@ -229,22 +155,7 @@ export default function AccountSettingsPage() {
     setErrors({});
   };
 
-  // Simple phone number handling - just numbers, no formatting
-  const handlePhoneChange = (value: string) => {
-    // Only allow digits
-    const cleaned = value.replace(/\D/g, '');
-    setPhone(cleaned);
-    if (errors.phone) clearErrors();
-  };
 
-  const handleCountryCodeChange = (countryCode: string) => {
-    setSelectedCountryCode(countryCode);
-    setShowPhoneCountryDropdown(false);
-    setPhoneCountrySearch('');
-    
-    // Don't modify the phone number when changing country code
-    // Let the user manually enter the number
-  };
 
   const handleDuplicateCredentials = (email?: string, phone?: string) => {
     setDuplicateCredentials({ email, phone });
@@ -262,10 +173,9 @@ export default function AccountSettingsPage() {
     setDuplicateCredentials({});
   };
 
-  const resetPhoneInput = () => {
-    setPhone('');
-    setSelectedCountryCode('+91');
-  };
+
+
+
 
   async function handleSave() {
     // Clear previous errors and validate form
@@ -293,16 +203,16 @@ export default function AccountSettingsPage() {
         const duplicateCheck = await AuthService.checkDuplicateCredentialsForUpdate(
           user.uid,
           email,
-          selectedCountryCode + phone.replace(/\s/g, '')
+          user.phoneNumber || '' // Use auth phone if available
         );
         
         if (duplicateCheck.hasDuplicates) {
           if (duplicateCheck.duplicates.phone) {
-            handleDuplicateCredentials(email, selectedCountryCode + phone.replace(/\s/g, ''));
+            handleDuplicateCredentials(email, user.phoneNumber || '');
             return;
           }
           if (duplicateCheck.duplicates.email) {
-            handleDuplicateCredentials(email, selectedCountryCode + phone.replace(/\s/g, ''));
+            handleDuplicateCredentials(email, user.phoneNumber || '');
             return;
           }
         }
@@ -314,7 +224,7 @@ export default function AccountSettingsPage() {
           role: (firestoreProfile?.role ?? 'customer') as 'customer' | 'admin', // Always a valid UserRole
           firstName: name.split(' ')[0] || '',
           lastName: name.split(' ').slice(1).join(' '),
-          phone: selectedCountryCode + phone.replace(/\s/g, ''), // Remove spaces for storage
+          phone: user.phoneNumber || '', // Use auth phone if available
           email: email,
           address: {
             street,
@@ -408,7 +318,7 @@ export default function AccountSettingsPage() {
                 </div>
                 <div>
                   <div className="font-black text-xl text-[#5E4E06]">{name || 'Your Name'}</div>
-                  <div className="text-[#8B7A1A] text-sm">{isPhonePrimary ? phone : email}</div>
+                  <div className="text-[#8B7A1A] text-sm">{isPhonePrimary ? (user?.phoneNumber || 'No phone') : email}</div>
                 </div>
               </div>
               <div className="mb-8">
@@ -470,104 +380,7 @@ export default function AccountSettingsPage() {
                     )}
                   </div>
 
-                  {/* Phone field - always editable for Google users */}
-                  <div>
-                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">
-                      {isPhonePrimary ? 'Phone (Primary)' : 'Phone Number'}
-                    </label>
-                    {isPhonePrimary ? (
-                      <input
-                        className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-gray-100 text-[#5E4E06] cursor-not-allowed"
-                        value={phone}
-                        disabled
-                      />
-                    ) : (
-                      <div className="relative">
-                        {/* Country Code Dropdown */}
-                        <div className="absolute inset-y-0 left-0 z-10">
-                          <button
-                            type="button"
-                            onClick={() => setShowPhoneCountryDropdown(!showPhoneCountryDropdown)}
-                            className="h-full px-3 flex items-center gap-2 bg-[#F5F2E8] border-r border-[#E6DCC0] rounded-l-xl hover:bg-[#E6DCC0] transition-colors"
-                          >
-                            <span className="text-sm font-medium text-[#5E4E06]">{selectedCountryCode}</span>
-                            <svg className="w-4 h-4 text-[#8B7A1A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                          
-                          {/* Country Code Dropdown Menu */}
-                          {showPhoneCountryDropdown && (
-                            <div className="phone-country-dropdown absolute top-full left-0 mt-1 w-64 bg-white border border-[#D4AF37] rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto">
-                              {/* Search */}
-                              <div className="p-3 border-b border-[#D4AF37]/30">
-                                <input
-                                  type="text"
-                                  value={phoneCountrySearch}
-                                  onChange={(e) => setPhoneCountrySearch(e.target.value)}
-                                  placeholder="Search countries..."
-                                  className="w-full px-3 py-2 text-sm border border-[#E6DCC0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] bg-white text-[#5E4E06] placeholder:text-[#8B7A1A]"
-                                />
-                              </div>
-                              
-                              {/* Country List */}
-                              <div className="py-2">
-                                {filteredPhoneCountries.map((country) => (
-                                  <button
-                                    key={country.code}
-                                    type="button"
-                                    onClick={() => handleCountryCodeChange(country.dialCode)}
-                                    className="w-full px-3 py-2 text-left hover:bg-[#F5F2E8] transition-colors flex items-center gap-3"
-                                  >
-                                    <span className="text-lg">{country.flag}</span>
-                                    <span className="text-sm font-medium text-[#5E4E06]">{country.name}</span>
-                                    <span className="text-sm text-[#8B7A1A] ml-auto">{country.dialCode}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Phone Input */}
-                        <input
-                          className={`w-full border rounded-xl py-3 pl-24 pr-3 bg-white text-[#5E4E06] focus:ring-2 focus:outline-none ${
-                            errors.phone 
-                              ? 'border-red-500 focus:ring-red-500' 
-                              : 'border-[#E6DCC0] focus:border-[#D4AF37] focus:ring-[#D4AF37]/20'
-                          }`}
-                          value={phone}
-                          onChange={(e) => handlePhoneChange(e.target.value)}
-                          placeholder="Enter phone number"
-                        />
-                        
-                        {/* Reset Button */}
-                        {phone && (
-                          <button
-                            type="button"
-                            onClick={resetPhoneInput}
-                            className="absolute inset-y-0 right-0 px-3 text-[#8B7A1A] hover:text-[#5E4E06] transition-colors"
-                            title="Reset phone number"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {errors.phone && (
-                      <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.phone}
-                      </div>
-                    )}
-                    {!isPhonePrimary && (
-                      <div className="text-xs text-[#8B7A1A] mt-1">
-                        💡 <strong>Tip:</strong> Select your country code and enter your phone number. The system will automatically format it for you. This will be used for account verification and communications.
-                      </div>
-                    )}
-                  </div>
+
                 </div>
               </div>
               {/* Address Section */}
@@ -694,6 +507,66 @@ export default function AccountSettingsPage() {
                 </button>
                 {!user?.email && <div className="text-xs text-[#8B7A1A] mt-1">Password reset is only available for email accounts.</div>}
               </div>
+
+              {/* Phone Authentication Section */}
+              <div className="mb-8">
+                <h2 className="text-lg font-bold text-[#5E4E06] mb-4">Phone Authentication</h2>
+                {user && (
+                  <div className="space-y-4">
+                    {/* Current Status */}
+                    <div className="p-4 bg-gradient-to-r from-[#F5F2E8] to-[#E6DCC0] rounded-xl border border-[#D4AF37]/30">
+                      <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm">Current Status</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Phone className={`w-4 h-4 ${user.phoneNumber ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className={`text-sm ${user.phoneNumber ? 'text-green-700' : 'text-gray-500'}`}>
+                            {user.phoneNumber ? 'Phone verified for sign-in' : 'Phone not verified for sign-in'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className={`w-4 h-4 ${user.email ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className={`text-sm ${user.email ? 'text-green-700' : 'text-gray-500'}`}>
+                            {user.email ? 'Email & Password' : 'No email linked'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Shield className={`w-4 h-4 ${user.providerData.some(p => p.providerId === 'google.com') ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className={`text-sm ${user.providerData.some(p => p.providerId === 'google.com') ? 'text-green-700' : 'text-gray-500'}`}>
+                            {user.providerData.some(p => p.providerId === 'google.com') ? 'Google Account' : 'No Google account linked'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Phone Verification Action */}
+                    {!user.phoneNumber && (
+                      <button
+                        onClick={() => setShowCredentialLinking(true)}
+                        className="w-full px-4 py-3 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] transition-all duration-300 cursor-pointer text-base"
+                      >
+                        🔐 Verify Phone for Sign-in
+                      </button>
+                    )}
+
+                    {user.phoneNumber && AuthLinkingService.canLinkCredentials(user) && (
+                      <button
+                        onClick={() => setShowCredentialLinking(true)}
+                        className="w-full px-4 py-3 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] transition-all duration-300 cursor-pointer text-base"
+                      >
+                        + Add Another Sign-in Method
+                      </button>
+                    )}
+
+                    {!AuthLinkingService.canLinkCredentials(user) && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                        <p className="text-blue-700 text-sm text-center">
+                          You have the maximum number of sign-in methods linked.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="border-t border-red-200 pt-8">
                 <h2 className="font-bold text-red-700 text-base mb-2 flex items-center gap-2"><Trash2 className="w-5 h-5" /> Danger Zone</h2>
                 <div className="mb-4 text-red-700 text-sm">Deleting your account is irreversible. All your data will be permanently removed.</div>
@@ -771,6 +644,16 @@ export default function AccountSettingsPage() {
           onSuccess={handleAccountMergerSuccess}
         />
       )}
+
+      {/* Credential Linking Modal */}
+      <CredentialLinkingModal
+        isOpen={showCredentialLinking}
+        onClose={() => setShowCredentialLinking(false)}
+        onSuccess={(message) => {
+          showToast(message, 'success');
+          setShowCredentialLinking(false);
+        }}
+      />
     </DashboardLayout>
   );
 } 

@@ -5,18 +5,12 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "email",
+          "fieldPath": "role",
           "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "users", 
-      "queryScope": "COLLECTION",
-      "fields": [
+        },
         {
-          "fieldPath": "phone",
-          "order": "ASCENDING"
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -44,7 +38,7 @@
         },
         {
           "fieldPath": "createdAt",
-          "order": "DESCENDING"
+          "order": "ASCENDING"
         }
       ]
     }

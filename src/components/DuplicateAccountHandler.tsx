@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle, Mail, Phone, User, ArrowRight, LogIn } from 'lucide-react';
+import { AlertTriangle, Mail, Phone, User, ArrowRight, LogIn, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import { AuthService } from '@/lib/firebase';
 
@@ -164,6 +164,24 @@ export default function DuplicateAccountHandler({ email, phone, onClose }: Dupli
             </div>
           )}
 
+          {/* Linking Options */}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 mb-6">
+            <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
+              <LinkIcon className="w-5 h-5" />
+              Want to Link These Credentials?
+            </h3>
+            <div className="space-y-3 text-green-700">
+              <p className="text-sm">
+                If you own the existing account, you can link these additional credentials to it for easier sign-in.
+              </p>
+              <div className="space-y-2">
+                <p className="text-sm">• Sign in to your existing account first</p>
+                <p className="text-sm">• Go to Settings → Sign-in Methods</p>
+                <p className="text-sm">• Use "Link New Sign-in Method" to add these credentials</p>
+              </div>
+            </div>
+          </div>
+
           {/* Help Text */}
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-3">Need Help?</h3>
@@ -171,6 +189,7 @@ export default function DuplicateAccountHandler({ email, phone, onClose }: Dupli
               <p>• If you forgot your password, use the "Forgot Password" option on the login page</p>
               <p>• If you're having trouble accessing your account, contact our support team</p>
               <p>• You can only have one account per email address and phone number</p>
+              <p>• You can link multiple sign-in methods to a single account</p>
             </div>
           </div>
 

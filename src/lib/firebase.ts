@@ -873,9 +873,7 @@ export class AuthService {
       
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Create user profile in Firestore
-      await this.createUserProfile(userCredential.user, additionalData);
-      
+      // Profile is automatically created by Firebase Functions
       return userCredential;
     } catch (error) {
       throw this.handleAuthError(error as AuthError);

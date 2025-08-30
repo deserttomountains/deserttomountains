@@ -132,13 +132,7 @@ export default function LoginClient() {
         const userCredential = await AuthService.signInWithEmail(formData.email, formData.password);
         console.log('LoginClient: Email login successful, user:', userCredential.user.uid);
         
-        // Check if user profile exists, create if not
-        const existingProfile = await AuthService.getUserProfile(userCredential.user.uid);
-        if (!existingProfile) {
-          console.log('LoginClient: Creating user profile for existing user');
-          await AuthService.createUserProfile(userCredential.user);
-        }
-        
+        // Profile is automatically created by Firebase Functions
         await redirectBasedOnRole(userCredential.user.uid);
       } catch (error) {
         console.error('LoginClient: Email login failed:', error);
@@ -201,14 +195,7 @@ export default function LoginClient() {
       
       const userCredential = await confirmationResult.confirm(verificationCode);
       
-      // Create user profile if it doesn't exist (for phone login)
-      const existingProfile = await AuthService.getUserProfile(userCredential.user.uid);
-      if (!existingProfile) {
-        await AuthService.createUserProfile(userCredential.user, {
-          phone: formData.phone
-        });
-      }
-      
+      // Profile is automatically created by Firebase Functions
       await redirectBasedOnRole(userCredential.user.uid);
     } catch (error) {
       setErrors({ verificationCode: (error as Error).message });
@@ -226,13 +213,7 @@ export default function LoginClient() {
       
       const userCredential = await AuthService.signInWithGoogle();
       
-      // Create user profile if it doesn't exist (for Google login)
-      const existingProfile = await AuthService.getUserProfile(userCredential.user.uid);
-      if (!existingProfile) {
-        console.log('LoginClient: Creating user profile for Google login');
-        await AuthService.createUserProfile(userCredential.user);
-      }
-      
+      // Profile is automatically created by Firebase Functions
       await redirectBasedOnRole(userCredential.user.uid);
     } catch (error) {
       console.error('LoginClient: Google login failed:', error);

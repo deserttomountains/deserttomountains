@@ -216,11 +216,7 @@ export default function SignupClient() {
         }
       }
       
-      // Create user profile for phone signup
-      await AuthService.createUserProfile(userCredential.user, {
-        phone: formData.phone
-      });
-      
+      // Profile is automatically created by Firebase Functions
       await redirectBasedOnRole(userCredential.user.uid);
     } catch (error) {
       setErrors({ verificationCode: (error as Error).message });
@@ -237,9 +233,7 @@ export default function SignupClient() {
       
       const userCredential = await AuthService.signInWithGoogle();
       
-      // Create user profile for Google signup
-      await AuthService.createUserProfile(userCredential.user);
-      
+      // Profile is automatically created by Firebase Functions
       await redirectBasedOnRole(userCredential.user.uid);
     } catch (error) {
       setErrors({ general: (error as Error).message });
