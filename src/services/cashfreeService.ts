@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from 'crypto';
+
 // Cashfree Payment Gateway Integration Service
 
 export interface CashfreeOrderRequest {
@@ -47,6 +49,7 @@ export interface CashfreePaymentStatus {
 class CashfreeService {
   private clientId: string;
   private clientSecret: string;
+  private webhookSecret: string;
   private environment: 'TEST' | 'PROD';
   private baseUrl: string;
 
@@ -54,6 +57,7 @@ class CashfreeService {
     // These should be moved to environment variables
     this.clientId = process.env.NEXT_PUBLIC_CASHFREE_CLIENT_ID || 'test_1234567890';
     this.clientSecret = process.env.CASHFREE_CLIENT_SECRET || 'test_secret_1234567890';
+    this.webhookSecret = process.env.CASHFREE_WEBHOOK_SECRET || 'test_webhook_secret_1234567890';
     this.environment = (process.env.NEXT_PUBLIC_CASHFREE_ENV as 'TEST' | 'PROD') || 'TEST';
     this.baseUrl = this.environment === 'PROD' 
       ? 'https://api.cashfree.com/pg' 
@@ -130,12 +134,61 @@ class CashfreeService {
 
   async verifyPaymentSignature(orderId: string, orderAmount: number, referenceId: string, signature: string): Promise<boolean> {
     try {
-      // In a real implementation, you would verify the signature using Cashfree's verification method
-      // For now, we'll return true as a placeholder
-      // TODO: Implement proper signature verification
-      return true;
+      // Create the message string as per Cashfree's signature verification method
+      const message = `${orderId}${orderAmount}${referenceId}`;
+      
+      // Create HMAC SHA256 hash using the webhook secret
+      const expectedSignature = createHmac('sha256', this.webhookSecret)
+        .update(message)
+        .digest('hex');
+      
+      // Compare the expected signature with the received signature
+      const isValid = timingSafeEqual(
+        Buffer.from(expectedSignature, 'hex'),
+        Buffer.from(signature, 'hex')
+      );
+      
+      console.log('Cashfree signature verification:', {
+        orderId,
+        orderAmount,
+        referenceId,
+        message,
+        expectedSignature,
+        receivedSignature: signature,
+        isValid
+      });
+      
+      return isValid;
     } catch (error) {
       console.error('Error verifying payment signature:', error);
+      return false;
+    }
+  }
+
+  // Alternative method for webhook signature verification (when we have the raw body)
+  verifyWebhookSignature(rawBody: string, signature: string): boolean {
+    try {
+      // Create HMAC SHA256 hash using the webhook secret
+      const expectedSignature = createHmac('sha256', this.webhookSecret)
+        .update(rawBody)
+        .digest('hex');
+      
+      // Compare the expected signature with the received signature
+      const isValid = timingSafeEqual(
+        Buffer.from(expectedSignature, 'hex'),
+        Buffer.from(signature, 'hex')
+      );
+      
+      console.log('Cashfree webhook signature verification:', {
+        rawBodyLength: rawBody.length,
+        expectedSignature,
+        receivedSignature: signature,
+        isValid
+      });
+      
+      return isValid;
+    } catch (error) {
+      console.error('Error verifying webhook signature:', error);
       return false;
     }
   }

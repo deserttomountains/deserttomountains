@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { cashfreeService } from '@/services/cashfreeService';
 
 // Firebase configuration for server-side operations
 const firebaseConfig = {
@@ -34,7 +35,9 @@ try {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Get the raw body for signature verification
+    const rawBody = await request.text();
+    const body = JSON.parse(rawBody);
     
     // Log the webhook data for debugging
     console.log('Cashfree Webhook received:', JSON.stringify(body));
@@ -50,7 +53,29 @@ export async function POST(request: NextRequest) {
       signature
     } = body;
     
-    // TODO: Implement signature verification using Cashfree's method for production
+    // Verify webhook signature
+    if (!signature) {
+      console.error('Cashfree webhook missing signature');
+      return NextResponse.json(
+        { status: 'error', message: 'Missing signature' },
+        { status: 400 }
+      );
+    }
+    
+    // Verify the webhook signature using the raw body
+    const isValidSignature = cashfreeService.verifyWebhookSignature(rawBody, signature);
+    
+    if (!isValidSignature) {
+      console.error('Cashfree webhook invalid signature');
+      return NextResponse.json(
+        { status: 'error', message: 'Invalid signature' },
+        { status: 400 }
+      );
+    }
+    
+    console.log('Cashfree webhook signature verified successfully');
+    
+    // Process the webhook data
     if (orderId && txStatus) {
       console.log(`Cashfree payment ${txStatus} for order: ${orderId}`);
       console.log(`Reference ID: ${referenceId}, Payment Mode: ${paymentMode}`);
@@ -60,12 +85,17 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`Attempting to find order with ID: ${orderId}`);
           
-          // Use direct Firestore operations
-          const orderDocRef = doc(serverDb, 'orders', orderId);
-          const orderDoc = await getDoc(orderDocRef);
+          // Query orders collection to find the order with matching order ID
+          const { collection, query, where, getDocs } = await import('firebase/firestore');
+          const ordersRef = collection(serverDb, 'orders');
+          const q = query(ordersRef, where('orderId', '==', orderId));
+          const querySnapshot = await getDocs(q);
           
-          if (orderDoc.exists()) {
+          if (!querySnapshot.empty) {
+            const orderDoc = querySnapshot.docs[0];
             const orderData = orderDoc.data();
+            const firebaseOrderId = orderDoc.id;
+            
             console.log(`Order found: ${orderData.orderId}, current status: ${orderData.status}, payment status: ${orderData.paymentStatus}`);
             
             const updateData = {
@@ -81,10 +111,35 @@ export async function POST(request: NextRequest) {
             console.log(`Updating order with data:`, updateData);
             
             // Update using direct Firestore operations
-            await updateDoc(orderDocRef, updateData);
-            console.log(`Order ${orderId} updated successfully with payment status: completed`);
+            await updateDoc(doc(serverDb, 'orders', firebaseOrderId), updateData);
+            console.log(`Order ${firebaseOrderId} updated successfully with payment status: completed`);
           } else {
-            console.warn(`Order ${orderId} not found in Firebase`);
+            console.warn(`Order with order ID ${orderId} not found in Firebase`);
+            
+            // Fallback: try to find by Firebase document ID if orderId is actually a Firebase ID
+            console.log(`Trying fallback with Firebase order ID: ${orderId}`);
+            const orderDocRef = doc(serverDb, 'orders', orderId);
+            const orderDoc = await getDoc(orderDocRef);
+            
+            if (orderDoc.exists()) {
+              const orderData = orderDoc.data();
+              console.log(`Order found via fallback: ${orderData.orderId}, current status: ${orderData.status}, payment status: ${orderData.paymentStatus}`);
+              
+              const updateData = {
+                paymentStatus: 'completed' as const,
+                status: 'confirmed' as const,
+                transactionId: referenceId,
+                paymentMode: paymentMode,
+                paymentMessage: txMsg,
+                paymentTime: txTime,
+                lastUpdated: new Date().toISOString(),
+              };
+
+              await updateDoc(orderDocRef, updateData);
+              console.log(`Order ${orderId} updated successfully via fallback with payment status: completed`);
+            } else {
+              console.warn(`Order ${orderId} not found in Firebase via fallback`);
+            }
           }
         } catch (error) {
           console.error('Error updating order in Firebase:', error);
