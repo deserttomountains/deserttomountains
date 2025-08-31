@@ -1,11 +1,11 @@
 "use client";
-import * as AlertDialog from '@radix-ui/react-alert-dialog';
+
 import { useState, useEffect, useRef } from 'react';
-import { getAuth, updateProfile, updateEmail, sendPasswordResetEmail, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { getAuth, updateProfile, updateEmail, sendPasswordResetEmail } from 'firebase/auth';
 import app from '@/lib/firebase';
 import { AuthService } from '@/lib/firebase';
 import DashboardLayout from '../DashboardLayout';
-import { User as UserIcon, Trash2, Loader2, Save, AlertCircle, Phone, Shield, Mail } from 'lucide-react';
+import { User as UserIcon, Loader2, Save, AlertCircle, Phone, Shield, Mail } from 'lucide-react';
 import { useToast } from '@/components/ToastContext';
 // Import country list from UniversalAddressForm
 import { COUNTRIES } from '@/components/UniversalAddressForm';
@@ -20,7 +20,8 @@ export default function AccountSettingsPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [street, setStreet] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
   const [city, setCity] = useState("");
   const [stateVal, setStateVal] = useState("");
   const [pincode, setPincode] = useState("");
@@ -29,9 +30,7 @@ export default function AccountSettingsPage() {
   // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState("");
-  const [deletePassword, setDeletePassword] = useState("");
+
   
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -74,7 +73,8 @@ export default function AccountSettingsPage() {
             
             // Load address fields
             if (profile.address) {
-              setStreet(profile.address.street || "");
+              setAddressLine1(profile.address.street || profile.address.addressLine1 || "");
+              setAddressLine2(profile.address.addressLine2 || "");
               setCity(profile.address.city || "");
               setStateVal(profile.address.state || "");
               setPincode(profile.address.pincode || "");
@@ -180,7 +180,8 @@ export default function AccountSettingsPage() {
           phone: phone, // Use the phone from form state
           email: email,
           address: {
-            street,
+            addressLine1,
+            addressLine2,
             city,
             state: stateVal,
             pincode,
@@ -202,6 +203,17 @@ export default function AccountSettingsPage() {
     }
   }
 
+  // Check if user has email or Google-based authentication
+  function hasEmailOrGoogleAuth() {
+    if (!user) return false;
+    
+    const providers = user.providerData;
+    const hasEmailProvider = providers.find(p => p.providerId === 'password');
+    const hasGoogleProvider = providers.find(p => p.providerId === 'google.com');
+    
+    return hasEmailProvider || hasGoogleProvider;
+  }
+
   async function handleResetPassword() {
     if (!user?.email) {
       showToast("No email associated with this account", 'error');
@@ -217,43 +229,7 @@ export default function AccountSettingsPage() {
     }
   }
 
-  async function handleDeleteAccount() {
-    if (deleteConfirm !== 'DELETE') {
-      showToast("Please type 'DELETE' to confirm account deletion", 'error');
-      return;
-    }
-    
-    if (!user) {
-      showToast("No user found", 'error');
-      return;
-    }
-    
-    if (!deletePassword) {
-      showToast("Please enter your password to confirm account deletion", 'error');
-      return;
-    }
-    
-    try {
-      // Re-authenticate user before deletion
-      const credential = EmailAuthProvider.credential(user.email!, deletePassword);
-      await reauthenticateWithCredential(user, credential);
-      
-      // Delete from Firestore first
-      await AuthService.deleteUserProfile(user.uid);
-      // Then delete from Firebase Auth
-      await deleteUser(user);
-      showToast("Account deleted successfully", 'success');
-    } catch (e: any) {
-      console.error('Error deleting account:', e);
-      if (e.code === 'auth/wrong-password') {
-        showToast("Incorrect password. Please try again.", 'error');
-      } else if (e.code === 'auth/requires-recent-login') {
-        showToast("Please enter your password to confirm this action.", 'error');
-      } else {
-        showToast(e.message || "Failed to delete account", 'error');
-      }
-    }
-  }
+
 
   if (loading) {
     return (
@@ -347,12 +323,21 @@ export default function AccountSettingsPage() {
                 <h2 className="text-lg font-bold text-[#5E4E06] mb-4">Address</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Street</label>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Address Line 1</label>
                     <input
                       className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:ring-[#D4AF37] focus:outline-none"
-                      value={street}
-                      onChange={e => setStreet(e.target.value)}
-                      placeholder="Street address"
+                      value={addressLine1}
+                      onChange={e => setAddressLine1(e.target.value)}
+                      placeholder="Street address, apartment, suite, etc."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Address Line 2 (Optional)</label>
+                    <input
+                      className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:ring-[#D4AF37] focus:outline-none"
+                      value={addressLine2}
+                      onChange={e => setAddressLine2(e.target.value)}
+                      placeholder="Apartment, suite, unit, etc."
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -454,69 +439,22 @@ export default function AccountSettingsPage() {
             </div>
             {/* Right Column: Security & Danger Zone */}
             <div className="flex-1 min-w-0 flex flex-col gap-8">
-              <div className="mb-8">
-                <h2 className="text-lg font-bold text-[#5E4E06] mb-4">Security</h2>
-                <button
-                  className="w-full px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-bold rounded-xl hover:scale-105 transition-all duration-300 cursor-pointer text-base shadow"
-                  onClick={handleResetPassword}
-                  disabled={!user?.email}
-                  type="button"
-                >
-                  Reset Password
-                </button>
-                {!user?.email && <div className="text-xs text-[#8B7A1A] mt-1">Password reset is only available for email accounts.</div>}
-              </div>
+              {hasEmailOrGoogleAuth() && (
+                <div className="mb-8">
+                  <h2 className="text-lg font-bold text-[#5E4E06] mb-4">Security</h2>
+                  <button
+                    className="w-full px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-bold rounded-xl hover:scale-105 transition-all duration-300 cursor-pointer text-base shadow"
+                    onClick={handleResetPassword}
+                    disabled={!user?.email}
+                    type="button"
+                  >
+                    Reset Password
+                  </button>
+                  <div className="text-xs text-[#8B7A1A] mt-1">Password reset is available for email and Google accounts.</div>
+                </div>
+              )}
 
-              <div className="border-t border-red-200 pt-8">
-                <h2 className="font-bold text-red-700 text-base mb-2 flex items-center gap-2"><Trash2 className="w-5 h-5" /> Danger Zone</h2>
-                <div className="mb-4 text-red-700 text-sm">Deleting your account is irreversible. All your data will be permanently removed.</div>
-                <AlertDialog.Root open={showDelete} onOpenChange={(open) => {
-                  setShowDelete(open);
-                  if (!open) {
-                    setDeleteConfirm('');
-                    setDeletePassword('');
-                  }
-                }}>
-                  <AlertDialog.Trigger asChild>
-                    <button className="w-full px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition cursor-pointer">Delete Account</button>
-                  </AlertDialog.Trigger>
-                  <AlertDialog.Portal>
-                    <AlertDialog.Overlay className="fixed inset-0 bg-black/30 z-50" />
-                    <AlertDialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-8 z-50 w-full max-w-xs flex flex-col items-center">
-                      <AlertDialog.Title className="text-lg font-bold mb-2 text-red-700">Delete Account?</AlertDialog.Title>
-                      <AlertDialog.Description className="mb-6 text-center text-red-700">Type <b>DELETE</b> and enter your password below to confirm. This action cannot be undone.</AlertDialog.Description>
-                      <input
-                        className="w-full border border-red-300 rounded px-3 py-2 mb-4 text-red-700 focus:ring-2 focus:ring-red-400"
-                        value={deleteConfirm}
-                        onChange={e => setDeleteConfirm(e.target.value)}
-                        placeholder="Type here..."
-                        autoFocus
-                      />
-                      <input
-                        type="password"
-                        className="w-full border border-red-300 rounded px-3 py-2 mb-4 text-red-700 focus:ring-2 focus:ring-red-400"
-                        value={deletePassword}
-                        onChange={e => setDeletePassword(e.target.value)}
-                        placeholder="Enter your password"
-                      />
-                      <div className="flex gap-4 w-full justify-center">
-                        <AlertDialog.Cancel asChild>
-                          <button className="px-4 py-2 rounded font-bold text-gray-700 bg-gray-100 border hover:bg-gray-200 transition cursor-pointer">Cancel</button>
-                        </AlertDialog.Cancel>
-                        <AlertDialog.Action asChild>
-                          <button
-                            className="px-4 py-2 rounded font-bold text-white bg-red-600 hover:bg-red-700 transition cursor-pointer"
-                            onClick={handleDeleteAccount}
-                            disabled={deleteConfirm !== 'DELETE' || !deletePassword}
-                          >
-                            Delete
-                          </button>
-                        </AlertDialog.Action>
-                      </div>
-                    </AlertDialog.Content>
-                  </AlertDialog.Portal>
-                </AlertDialog.Root>
-                                </div>
+              
 
                   {/* Phone Number Field */}
                   <div>

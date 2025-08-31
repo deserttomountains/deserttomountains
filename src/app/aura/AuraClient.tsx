@@ -27,7 +27,7 @@ import { useToast } from "@/components/ToastContext";
 
 export default function AuraClient() {
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
   const { showToast } = useToast();
   const [selectedSize, setSelectedSize] = useState<
     "small" | "medium" | "large"
@@ -162,6 +162,11 @@ export default function AuraClient() {
     return selectedPack?.price || 0;
   };
 
+  // Calculate total cart value
+  const getTotalCartValue = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
   const handleAddToCart = async () => {
     if (!canAddToCart) return;
 
@@ -204,7 +209,6 @@ export default function AuraClient() {
       }
       addToCart(cartItem);
       showToast("Added to cart!", "success");
-      router.push("/cart");
     } catch (error) {
       console.error("Error adding to cart:", error);
       // You could show an error message here
@@ -232,7 +236,6 @@ export default function AuraClient() {
       addToCart(cartItem);
       showToast("Added to cart!", "success");
       setShowSampleModal(false);
-      router.push("/cart");
     } catch (error) {
       console.error("Error adding to cart:", error);
     } finally {
@@ -829,30 +832,33 @@ export default function AuraClient() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 md:gap-4">
             <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4">
               <span className="text-lg sm:text-xl md:text-2xl font-black text-[#5E4E06]">
-                {wallPlasterType === "natural" ? (
-                  `₹${pack.price * neutralQuantity}`
-                ) : getPigmentedTotalQty() > 0 ? (
-                  `Total: ₹${getPigmentedTotalPrice()}`
-                ) : (
-                  "₹0"
-                )}
+                ₹{getTotalCartValue().toLocaleString()}
               </span>
               <span className="text-xs sm:text-sm text-gray-500">
-                Inclusive of all taxes
+                Cart Total • Inclusive of all taxes
               </span>
             </div>
-            <button
-              onClick={handleAddToCart}
-              disabled={!canAddToCart || isAddingToCart}
-              className={`w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2 sm:py-3 font-bold rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base ${
-                canAddToCart && !isAddingToCart
-                  ? "bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white hover:shadow-xl hover:scale-105 cursor-pointer"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-              {isAddingToCart ? "Adding..." : "Add to Cart"}
-            </button>
+            <div className="flex gap-2 sm:gap-3">
+              <button
+                onClick={() => router.push("/cart")}
+                className="px-4 sm:px-6 py-2 sm:py-3 font-bold rounded-xl border-2 border-[#5E4E06] text-[#5E4E06] bg-white hover:bg-[#5E4E06] hover:text-white transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer"
+              >
+                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+                View Cart
+              </button>
+              <button
+                onClick={handleAddToCart}
+                disabled={!canAddToCart || isAddingToCart}
+                className={`px-4 sm:px-6 md:px-8 py-2 sm:py-3 font-bold rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base ${
+                  canAddToCart && !isAddingToCart
+                    ? "bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white hover:shadow-xl hover:scale-105 cursor-pointer"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+                {isAddingToCart ? "Adding..." : "Add to Cart"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -92,7 +92,13 @@ export default function PaymentPage() {
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/login?redirect=/payment');
+      // Check if we're in checkout flow
+      const isCheckoutFlow = localStorage.getItem('checkoutFlow') === 'true';
+      if (isCheckoutFlow) {
+        router.replace('/login?redirect=/payment&checkout=true');
+      } else {
+        router.replace('/login?redirect=/payment');
+      }
       return;
     }
     const checkoutData = localStorage.getItem('checkoutData');
@@ -226,7 +232,8 @@ export default function PaymentPage() {
               // Don't show error to user - webhook will handle it
             }
             
-            // Redirect to order confirmation - webhook will also handle order status update
+            // Clear checkout flow flag and redirect to order confirmation
+            localStorage.removeItem('checkoutFlow');
             setTimeout(() => router.push('/order-confirmation'), 1200);
           },
           prefill: {
@@ -327,6 +334,8 @@ export default function PaymentPage() {
                 // Don't show error to user - webhook will handle it
               }
               
+              // Clear checkout flow flag and redirect to order confirmation
+              localStorage.removeItem('checkoutFlow');
               setTimeout(() => router.push('/order-confirmation'), 1200);
             },
             onFailure: function(data: any) {
@@ -345,6 +354,8 @@ export default function PaymentPage() {
 
       // Default: Other gateways or fallback
       showToast('Redirecting to payment gateway...', 'success');
+      // Clear checkout flow flag and redirect to order confirmation
+      localStorage.removeItem('checkoutFlow');
       setTimeout(() => router.push('/order-confirmation'), 1200);
     } catch (error: any) {
       showToast(error.message || 'Failed to create payment order. Please try again.', 'error');

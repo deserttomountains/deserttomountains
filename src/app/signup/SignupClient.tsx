@@ -234,7 +234,7 @@ export default function SignupClient() {
             </p>
             <Link
               href="/dashboard"
-              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 shadow-md"
+              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 shadow-md cursor-pointer"
             >
               Go to Dashboard
               <ArrowRight className="ml-2 w-5 h-5" />
@@ -267,7 +267,7 @@ export default function SignupClient() {
             <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
               <button
                 onClick={() => setSignupMethod('email')}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all cursor-pointer ${
                   signupMethod === 'email'
                     ? 'bg-white text-[#5E4E06] shadow-sm'
                     : 'text-gray-600 hover:text-[#5E4E06]'
@@ -278,7 +278,7 @@ export default function SignupClient() {
               </button>
               <button
                 onClick={() => setSignupMethod('phone')}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all cursor-pointer ${
                   signupMethod === 'phone'
                     ? 'bg-white text-[#5E4E06] shadow-sm'
                     : 'text-gray-600 hover:text-[#5E4E06]'
@@ -319,7 +319,7 @@ export default function SignupClient() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base"
+                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base cursor-pointer"
                 >
                   {isSubmitting ? 'Verifying...' : 'Verify & Create Account'}
                 </button>
@@ -327,7 +327,7 @@ export default function SignupClient() {
                 <button
                   type="button"
                   onClick={() => setPhoneVerificationSent(false)}
-                  className="w-full py-3 border-2 border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm sm:text-base"
+                  className="w-full py-3 border-2 border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm sm:text-base cursor-pointer"
                 >
                   Back to Phone Number
                 </button>
@@ -435,7 +435,7 @@ export default function SignupClient() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
@@ -460,7 +460,7 @@ export default function SignupClient() {
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                         >
                           {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
@@ -480,15 +480,15 @@ export default function SignupClient() {
                       name="agreeToTerms"
                       checked={formData.agreeToTerms}
                       onChange={handleInputChange}
-                      className="mt-1 w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2"
+                      className="mt-1 w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2 cursor-pointer"
                     />
                     <span className="text-sm text-[#8B7A1A]">
                       I agree to the{' '}
-                      <Link href="/terms" className="text-[#D4AF37] hover:underline">
+                      <Link href="/terms" className="text-[#D4AF37] hover:underline cursor-pointer">
                         Terms and Conditions
                       </Link>{' '}
                       and{' '}
-                      <Link href="/privacy" className="text-[#D4AF37] hover:underline">
+                      <Link href="/privacy" className="text-[#D4AF37] hover:underline cursor-pointer">
                         Privacy Policy
                       </Link>
                     </span>
@@ -503,7 +503,7 @@ export default function SignupClient() {
                       name="newsletter"
                       checked={formData.newsletter}
                       onChange={handleInputChange}
-                      className="mt-1 w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2"
+                      className="mt-1 w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2 cursor-pointer"
                     />
                     <span className="text-sm text-[#8B7A1A]">
                       Subscribe to our newsletter for exclusive offers and updates
@@ -516,7 +516,7 @@ export default function SignupClient() {
                       name="rememberMe"
                       checked={formData.rememberMe}
                       onChange={handleInputChange}
-                      className="mt-1 w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2"
+                      className="mt-1 w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2 cursor-pointer"
                     />
                     <span className="text-sm text-[#8B7A1A]">
                       Keep me signed in
@@ -528,7 +528,7 @@ export default function SignupClient() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base"
+                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base cursor-pointer"
                 >
                   {isSubmitting ? 'Creating Account...' : 'Create Account'}
                 </button>
@@ -547,7 +547,7 @@ export default function SignupClient() {
                   type="button"
                   onClick={handleGoogleSignup}
                   disabled={isSubmitting}
-                  className="w-full py-3 sm:py-4 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] hover:shadow-md transition-all duration-300 shadow-sm text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 sm:py-4 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] hover:shadow-md transition-all duration-300 shadow-sm text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <svg className="w-5 h-5 inline mr-2" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -569,7 +569,7 @@ export default function SignupClient() {
                 <div className="text-center">
                   <p className="text-[#8B7A1A] text-sm">
                     Already have an account?{' '}
-                    <Link href="/login" className="text-[#D4AF37] hover:underline font-medium">
+                    <Link href="/login" className="text-[#D4AF37] hover:underline font-medium cursor-pointer">
                       Sign in here
                     </Link>
                   </p>

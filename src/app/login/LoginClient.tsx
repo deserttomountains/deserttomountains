@@ -35,9 +35,20 @@ export default function LoginClient() {
 
   useEffect(() => {
     if (user && !loading) {
-      redirectBasedOnRole(user.uid);
+      // Check if we're in checkout flow
+      const isCheckoutFlow = searchParams.get('checkout') === 'true';
+      const redirectPath = searchParams.get('redirect');
+      
+      if (isCheckoutFlow && redirectPath) {
+        // Clear checkout flow flag and redirect to checkout
+        localStorage.removeItem('checkoutFlow');
+        router.push(redirectPath);
+      } else {
+        // Normal login flow - redirect based on role
+        redirectBasedOnRole(user.uid);
+      }
     }
-  }, [user, loading, redirectBasedOnRole]);
+  }, [user, loading, redirectBasedOnRole, searchParams, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -87,8 +98,18 @@ export default function LoginClient() {
       
       const userCredential = await AuthService.signInWithEmail(formData.email, formData.password);
       
-      // Profile is automatically created by Firebase Functions
-      await redirectBasedOnRole(userCredential.user.uid);
+      // Check if we're in checkout flow
+      const isCheckoutFlow = searchParams.get('checkout') === 'true';
+      const redirectPath = searchParams.get('redirect');
+      
+      if (isCheckoutFlow && redirectPath) {
+        // Clear checkout flow flag and redirect to checkout
+        localStorage.removeItem('checkoutFlow');
+        router.push(redirectPath);
+      } else {
+        // Normal login flow - redirect based on role
+        await redirectBasedOnRole(userCredential.user.uid);
+      }
     } catch (error) {
       setErrors({ general: (error as Error).message });
     } finally {
@@ -153,8 +174,18 @@ export default function LoginClient() {
       
       const userCredential = await confirmationResult.confirm(verificationCode);
       
-      // Profile is automatically created by Firebase Functions
-      await redirectBasedOnRole(userCredential.user.uid);
+      // Check if we're in checkout flow
+      const isCheckoutFlow = searchParams.get('checkout') === 'true';
+      const redirectPath = searchParams.get('redirect');
+      
+      if (isCheckoutFlow && redirectPath) {
+        // Clear checkout flow flag and redirect to checkout
+        localStorage.removeItem('checkoutFlow');
+        router.push(redirectPath);
+      } else {
+        // Normal login flow - redirect based on role
+        await redirectBasedOnRole(userCredential.user.uid);
+      }
     } catch (error) {
       setErrors({ verificationCode: (error as Error).message });
     } finally {
@@ -171,8 +202,18 @@ export default function LoginClient() {
       
       const userCredential = await AuthService.signInWithGoogle();
       
-      // Profile is automatically created by Firebase Functions
-      await redirectBasedOnRole(userCredential.user.uid);
+      // Check if we're in checkout flow
+      const isCheckoutFlow = searchParams.get('checkout') === 'true';
+      const redirectPath = searchParams.get('redirect');
+      
+      if (isCheckoutFlow && redirectPath) {
+        // Clear checkout flow flag and redirect to checkout
+        localStorage.removeItem('checkoutFlow');
+        router.push(redirectPath);
+      } else {
+        // Normal login flow - redirect based on role
+        await redirectBasedOnRole(userCredential.user.uid);
+      }
     } catch (error) {
       console.error('LoginClient: Google login failed:', error);
       setErrors({ general: (error as Error).message });
@@ -246,7 +287,7 @@ export default function LoginClient() {
             <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
               <button
                 onClick={() => setLoginMethod('email')}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all cursor-pointer ${
                   loginMethod === 'email'
                     ? 'bg-white text-[#5E4E06] shadow-sm'
                     : 'text-gray-600 hover:text-[#5E4E06]'
@@ -257,7 +298,7 @@ export default function LoginClient() {
               </button>
               <button
                 onClick={() => setLoginMethod('phone')}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all cursor-pointer ${
                   loginMethod === 'phone'
                     ? 'bg-white text-[#5E4E06] shadow-sm'
                     : 'text-gray-600 hover:text-[#5E4E06]'
@@ -298,7 +339,7 @@ export default function LoginClient() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base"
+                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base cursor-pointer"
                 >
                   {isSubmitting ? 'Verifying...' : 'Verify & Sign In'}
                 </button>
@@ -306,7 +347,7 @@ export default function LoginClient() {
                 <button
                   type="button"
                   onClick={() => setPhoneVerificationSent(false)}
-                  className="w-full py-3 border-2 border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm sm:text-base"
+                  className="w-full py-3 border-2 border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm sm:text-base cursor-pointer"
                 >
                   Back to Phone Number
                 </button>
@@ -375,7 +416,7 @@ export default function LoginClient() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -393,7 +434,7 @@ export default function LoginClient() {
                     name="rememberMe"
                     checked={formData.rememberMe}
                     onChange={handleInputChange}
-                    className="w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2"
+                    className="w-4 h-4 text-[#D4AF37] border-gray-300 rounded focus:ring-[#D4AF37] focus:ring-2 cursor-pointer"
                   />
                   <span className="text-sm text-[#8B7A1A]">Keep me signed in</span>
                 </label>
@@ -402,7 +443,7 @@ export default function LoginClient() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base"
+                  className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm sm:text-base cursor-pointer"
                 >
                   {isSubmitting ? 'Signing In...' : 'Sign In'}
                 </button>
@@ -421,7 +462,7 @@ export default function LoginClient() {
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isSubmitting}
-                  className="w-full py-3 sm:py-4 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] hover:shadow-md transition-all duration-300 shadow-sm text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 sm:py-4 border-2 border-[#D4AF37] text-[#5E4E06] font-semibold rounded-xl hover:bg-[#F5F2E8] hover:shadow-md transition-all duration-300 shadow-sm text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <svg className="w-5 h-5 inline mr-2" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -442,13 +483,13 @@ export default function LoginClient() {
                 {/* Forgot Password & Signup Links */}
                 <div className="text-center space-y-2">
                   <p className="text-[#8B7A1A] text-sm">
-                    <Link href="/forgot-password" className="text-[#D4AF37] hover:underline">
+                    <Link href="/forgot-password" className="text-[#D4AF37] hover:underline cursor-pointer">
                       Forgot your password?
                     </Link>
                   </p>
                   <p className="text-[#8B7A1A] text-sm">
                     Don't have an account?{' '}
-                    <Link href="/signup" className="text-[#D4AF37] hover:underline font-medium">
+                    <Link href="/signup" className="text-[#D4AF37] hover:underline font-medium cursor-pointer">
                       Sign up here
                     </Link>
                   </p>

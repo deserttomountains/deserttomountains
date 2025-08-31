@@ -51,7 +51,13 @@ export default function AddressPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace('/login?redirect=/address');
+      // Check if we're in checkout flow
+      const isCheckoutFlow = localStorage.getItem('checkoutFlow') === 'true';
+      if (isCheckoutFlow) {
+        router.replace('/login?redirect=/address&checkout=true');
+      } else {
+        router.replace('/login?redirect=/address');
+      }
       return;
     }
     if (userProfile && userProfile.address) {
@@ -126,7 +132,14 @@ export default function AddressPage() {
       }
       // Save address to profile if checked
       if (saveAddress) {
-        await AuthService.saveUserAddress(user.uid, shippingAddress);
+        try {
+          await AuthService.saveUserAddress(user.uid, shippingAddress);
+          showToast('Address and profile information saved successfully!', 'success');
+        } catch (error) {
+          console.error('Error saving address:', error);
+          showToast('Failed to save address. Please try again.', 'error');
+          return;
+        }
       }
       // Store addresses in localStorage
       const checkoutData = {
@@ -135,7 +148,11 @@ export default function AddressPage() {
         sameAsShipping
       };
       localStorage.setItem('checkoutData', JSON.stringify(checkoutData));
-      showToast('Address saved!', 'success');
+      if (saveAddress) {
+        showToast('Address and profile information saved successfully!', 'success');
+      } else {
+        showToast('Address saved!', 'success');
+      }
       // Navigate to payment page
       router.push('/payment');
     } catch (error) {

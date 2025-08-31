@@ -339,7 +339,11 @@ export default function CartPage() {
             </div>
 
             <button
-              onClick={() => router.push('/address')}
+              onClick={() => {
+                // Set checkout flow flag before proceeding
+                localStorage.setItem('checkoutFlow', 'true');
+                router.push('/address');
+              }}
               className="group mt-2 px-6 py-3 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 text-base md:text-lg flex items-center gap-2 justify-center disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer relative overflow-hidden"
               disabled={cart.length === 0}
             >

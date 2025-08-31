@@ -15,9 +15,16 @@ const convertFirestoreDate = (date: any): Date | null => {
     // If it's already a Date object
     if (date instanceof Date) return date;
     
-    // If it's a Firestore Timestamp
-    if (date && typeof date === 'object' && date.toDate) {
+    // If it's a Firestore Timestamp with toDate method
+    if (date && typeof date === 'object' && typeof date.toDate === 'function') {
       return date.toDate();
+    }
+    
+    // If it's a Firestore Timestamp object with seconds/nanoseconds
+    if (date && typeof date === 'object' && (date.seconds !== undefined || date.nanoseconds !== undefined)) {
+      const seconds = date.seconds || 0;
+      const nanoseconds = date.nanoseconds || 0;
+      return new Date(seconds * 1000 + nanoseconds / 1000000);
     }
     
     // If it's a string or number
@@ -28,6 +35,14 @@ const convertFirestoreDate = (date: any): Date | null => {
       }
     }
     
+    // If it's an object with _seconds and _nanoseconds (Firestore v8 format)
+    if (date && typeof date === 'object' && (date._seconds !== undefined || date._nanoseconds !== undefined)) {
+      const seconds = date._seconds || 0;
+      const nanoseconds = date._nanoseconds || 0;
+      return new Date(seconds * 1000 + nanoseconds / 1000000);
+    }
+    
+    console.warn('Unable to convert date:', date, typeof date, 'Keys:', date && typeof date === 'object' ? Object.keys(date) : 'N/A');
     return null;
   } catch (error) {
     console.error('Error converting date:', error, date);
@@ -103,6 +118,8 @@ export default function OrdersPage() {
           id: doc.id,
           ...doc.data()
         })) as Order[];
+        
+
         
         // Sort locally to avoid index requirement
         userOrders.sort((a, b) => {
@@ -254,7 +271,7 @@ export default function OrdersPage() {
                           </div>
                           <div className="text-[#8B7A1A] text-sm flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {formatDate(order.orderDate)}
+                            {formatDate(order.createdAt)}
                           </div>
                         </div>
                       </div>
@@ -267,8 +284,7 @@ export default function OrdersPage() {
                         {order.items?.length || 0} item{(order.items?.length || 0) > 1 ? 's' : ''}
                       </div>
                       
-                      <div className="text-[#8B7A1A] font-bold text-lg flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
+                      <div className="text-[#8B7A1A] font-bold text-lg">
                         {formatCurrency(order.finalAmount || order.totalAmount || 0)}
                       </div>
                     </div>
@@ -295,7 +311,7 @@ export default function OrdersPage() {
                   <h2 className="text-2xl font-bold text-[#5E4E06]">Order Details</h2>
                   <button 
                     onClick={closeOrderDetails}
-                    className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors cursor-pointer"
                   >
                     <XCircle className="w-5 h-5 text-gray-600" />
                   </button>
@@ -311,7 +327,7 @@ export default function OrdersPage() {
                     <div>
                       <p className="text-[#8B7A1A] text-sm">Order Date</p>
                       <p className="font-semibold text-[#5E4E06]">
-                        {formatDate(selectedOrder.orderDate)}
+                        {formatDate(selectedOrder.createdAt)}
                       </p>
                     </div>
                     <div>

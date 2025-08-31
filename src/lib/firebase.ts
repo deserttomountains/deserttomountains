@@ -100,7 +100,8 @@ export { auth, db, storage };
 export type UserRole = 'customer' | 'admin';
 
 export interface Address {
-  street?: string;
+  street?: string; // Legacy field for backward compatibility
+  addressLine1?: string;
   addressLine2?: string;
   city?: string;
   state?: string;
@@ -427,6 +428,25 @@ export class AuthService {
       throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
     }
 
+    // Check global logout state
+    if (this.isLoggingOut) {
+      console.warn('Logout in progress, defaulting to customer role');
+      return 'customer';
+    }
+
+    // Check if user is currently authenticated
+    const currentUser = auth.currentUser;
+    if (!currentUser || currentUser.uid !== uid) {
+      console.warn('User not authenticated or UID mismatch, defaulting to customer role');
+      return 'customer';
+    }
+
+    // Additional check: if auth state is null, don't make Firestore calls
+    if (!auth.currentUser) {
+      console.warn('Auth state is null, defaulting to customer role');
+      return 'customer';
+    }
+
     try {
       console.log('Getting user role for:', uid);
       const userDoc = await getDoc(doc(db, 'users', uid));
@@ -441,6 +461,11 @@ export class AuthService {
       return 'customer'; // Default role if no profile exists
     } catch (error) {
       console.error('Error getting user role:', error);
+      // If it's a permission error, just return customer instead of logging error
+      if (error instanceof Error && error.message.includes('permission')) {
+        console.warn('Permission denied for role fetch, user may be signing out');
+        return 'customer';
+      }
       return 'customer'; // Default role on error
     }
   }
@@ -451,6 +476,25 @@ export class AuthService {
       throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
     }
 
+    // Check global logout state
+    if (this.isLoggingOut) {
+      console.warn('Logout in progress, skipping profile fetch');
+      return null;
+    }
+
+    // Check if user is currently authenticated
+    const currentUser = auth.currentUser;
+    if (!currentUser || currentUser.uid !== uid) {
+      console.warn('User not authenticated or UID mismatch, skipping profile fetch');
+      return null;
+    }
+
+    // Additional check: if auth state is null, don't make Firestore calls
+    if (!auth.currentUser) {
+      console.warn('Auth state is null, skipping profile fetch');
+      return null;
+    }
+
     try {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
@@ -459,6 +503,11 @@ export class AuthService {
       return null;
     } catch (error) {
       console.error('Error getting user profile:', error);
+      // If it's a permission error, just return null instead of logging error
+      if (error instanceof Error && error.message.includes('permission')) {
+        console.warn('Permission denied for profile fetch, user may be signing out');
+        return null;
+      }
       return null;
     }
   }
@@ -500,16 +549,43 @@ export class AuthService {
     }
   }
 
-  // Save or update user address in Firestore profile
-  static async saveUserAddress(uid: string, address: Address): Promise<void> {
+  // Save or update user address and profile in Firestore
+  static async saveUserAddress(uid: string, address: any): Promise<void> {
     if (!this.isFirebaseConfigured()) {
       throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
     }
     try {
-      await setDoc(doc(db, 'users', uid), {
-        address,
+      // Map address fields to match our Firestore structure
+      const mappedAddress: Address = {
+        addressLine1: address.addressLine1 || address.street || '',
+        addressLine2: address.addressLine2 || '',
+        city: address.city || '',
+        state: address.state || '',
+        pincode: address.pincode || address.postalCode || '',
+        country: address.country || '',
+        // Keep street for backward compatibility
+        street: address.addressLine1 || address.street || ''
+      };
+
+      // Extract name parts from fullName
+      const fullName = address.fullName || '';
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Prepare user profile data
+      const userProfileData: any = {
+        address: mappedAddress,
         updatedAt: new Date()
-      }, { merge: true });
+      };
+
+      // Add profile fields if they exist
+      if (firstName) userProfileData.firstName = firstName;
+      if (lastName) userProfileData.lastName = lastName;
+      if (address.phone) userProfileData.phone = address.phone;
+      if (address.email) userProfileData.email = address.email;
+
+      await setDoc(doc(db, 'users', uid), userProfileData, { merge: true });
     } catch (error) {
       console.error('Error saving user address:', error);
       throw new Error('Failed to save user address');
@@ -1100,18 +1176,61 @@ export class AuthService {
     }
   }
 
+  // Global logout state to prevent Firestore calls during logout
+  private static isLoggingOut = false;
+  
+  // Global listener cleanup function
+  private static cleanupListeners: (() => void)[] = [];
+  
+  // Register a listener for cleanup during logout
+  static registerListenerForCleanup(cleanupFn: () => void) {
+    this.cleanupListeners.push(cleanupFn);
+  }
+  
+  // Unregister a listener
+  static unregisterListener(cleanupFn: () => void) {
+    const index = this.cleanupListeners.indexOf(cleanupFn);
+    if (index > -1) {
+      this.cleanupListeners.splice(index, 1);
+    }
+  }
+
   // Enhanced sign out with session cleanup
   static async signOut(): Promise<void> {
     if (!this.isFirebaseConfigured()) {
       throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
     }
+    
+    // Set global logout state
+    this.isLoggingOut = true;
+    
+    // Cleanup all registered listeners
+    console.log('Cleaning up all registered listeners...');
+    this.cleanupListeners.forEach(cleanupFn => {
+      try {
+        cleanupFn();
+      } catch (error) {
+        console.warn('Error cleaning up listener:', error);
+      }
+    });
+    this.cleanupListeners = [];
+    
     try {
-      await auth.signOut();
-      
-      // Clear any stored auth data
+      // Clear any stored auth data first
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('firebase:authUser:');
-        sessionStorage.removeItem('firebase:authUser:');
+        // Clear all Firebase-related localStorage items
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('firebase') || key.includes('auth') || key.includes('user')) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // Clear all Firebase-related sessionStorage items
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.includes('firebase') || key.includes('auth') || key.includes('user')) {
+            sessionStorage.removeItem(key);
+          }
+        });
         
         // Clear any reCAPTCHA instances
         const recaptchaContainers = document.querySelectorAll('[id^="recaptcha-container"]');
@@ -1120,12 +1239,35 @@ export class AuthService {
             container.innerHTML = '';
           }
         });
+        
+        // Clear any cached data
+        if ('caches' in window) {
+          caches.keys().then(cacheNames => {
+            cacheNames.forEach(cacheName => {
+              if (cacheName.includes('firebase') || cacheName.includes('auth')) {
+                caches.delete(cacheName);
+              }
+            });
+          });
+        }
       }
+      
+      // Sign out from Firebase Auth
+      await auth.signOut();
+      
+      // Add a small delay to ensure auth state is fully updated
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       console.log('User signed out successfully');
     } catch (error) {
       console.error('Error signing out:', error);
-      throw this.handleAuthError(error as AuthError);
+      // Don't throw error during logout - just log it
+      console.warn('Non-critical error during logout:', error);
+    } finally {
+      // Reset global logout state after a delay
+      setTimeout(() => {
+        this.isLoggingOut = false;
+      }, 1000);
     }
   }
 

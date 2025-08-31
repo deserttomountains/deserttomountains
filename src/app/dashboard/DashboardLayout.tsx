@@ -1,7 +1,7 @@
 'use client';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
-import { User, Settings, LogOut, ShoppingBag, Bell, Edit3, Menu, LayoutDashboard, X as CloseIcon } from 'lucide-react';
+import { User, Settings, LogOut, ShoppingBag, Edit3, Menu, LayoutDashboard, X as CloseIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -39,9 +39,11 @@ export default function DashboardLayout({ active, children }: DashboardLayoutPro
   const handleLogout = async () => {
     try {
       await AuthService.signOut();
+      // Always redirect to login, even if there's an error
       router.push('/login');
     } catch (error) {
       console.error('Error signing out:', error);
+      // Still redirect to login even if signOut fails
       router.push('/login');
     }
   };
@@ -99,12 +101,9 @@ export default function DashboardLayout({ active, children }: DashboardLayoutPro
                 <Link href="/dashboard/settings" className={`flex items-center gap-4 px-5 py-4 rounded-xl font-bold transition-all text-lg md:text-base ${active === 'Settings' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}><Settings className="w-6 h-6 md:w-5 md:h-5" /> Account Settings</Link>
               </li>
               <li>
-                <Link href="/dashboard/notifications" className={`flex items-center gap-4 px-5 py-4 rounded-xl font-bold transition-all text-lg md:text-base ${active === 'Notifications' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}><Bell className="w-6 h-6 md:w-5 md:h-5" /> Notifications</Link>
-              </li>
-              <li>
                 <button 
                   onClick={async () => { await handleLogout(); }}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl font-bold transition-all text-lg md:text-base ${active === 'Logout' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl font-bold transition-all text-lg md:text-base cursor-pointer ${active === 'Logout' ? 'bg-gradient-to-r from-[#D4AF37]/30 to-[#8B7A1A]/10 text-[#5E4E06] shadow' : 'text-[#8B7A1A] hover:bg-[#F5F2E8] hover:text-[#5E4E06]'}`}
                 >
                   <LogOut className="w-6 h-6 md:w-5 md:h-5" /> Logout
                 </button>
@@ -122,8 +121,7 @@ export default function DashboardLayout({ active, children }: DashboardLayoutPro
           <Link href="/dashboard" className={`flex flex-col items-center justify-center flex-1 h-full ${active === 'Dashboard' ? 'text-[#5E4E06]' : 'text-[#8B7A1A]'} font-bold transition-all`}><LayoutDashboard className="w-6 h-6 mb-1" /> <span className="text-xs">Dashboard</span></Link>
           <Link href="/dashboard/orders" className={`flex flex-col items-center justify-center flex-1 h-full ${active === 'Orders' ? 'text-[#5E4E06]' : 'text-[#8B7A1A]'} font-bold transition-all`}><ShoppingBag className="w-6 h-6 mb-1" /> <span className="text-xs">Orders</span></Link>
           <Link href="/dashboard/settings" className={`flex flex-col items-center justify-center flex-1 h-full ${active === 'Settings' ? 'text-[#5E4E06]' : 'text-[#8B7A1A]'} font-bold transition-all`}><Settings className="w-6 h-6 mb-1" /> <span className="text-xs">Settings</span></Link>
-          <Link href="/dashboard/notifications" className={`flex flex-col items-center justify-center flex-1 h-full ${active === 'Notifications' ? 'text-[#5E4E06]' : 'text-[#8B7A1A]'} font-bold transition-all`}><Bell className="w-6 h-6 mb-1" /> <span className="text-xs">Alerts</span></Link>
-          <button onClick={handleLogout} className="flex flex-col items-center justify-center flex-1 h-full text-[#8B7A1A] font-bold transition-all"><LogOut className="w-6 h-6 mb-1" /> <span className="text-xs">Logout</span></button>
+          <button onClick={handleLogout} className="flex flex-col items-center justify-center flex-1 h-full text-[#8B7A1A] font-bold transition-all cursor-pointer"><LogOut className="w-6 h-6 mb-1" /> <span className="text-xs">Logout</span></button>
         </nav>
       </div>
     </div>

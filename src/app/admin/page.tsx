@@ -37,6 +37,8 @@ export default function AdminDashboard() {
       router.push('/login');
     } catch (error) {
       console.error('Error logging out:', error);
+      // Still redirect to login even if signOut fails
+      router.push('/login');
     }
   };
 

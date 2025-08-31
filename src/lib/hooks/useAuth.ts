@@ -17,13 +17,19 @@ export const useAuth = () => {
     loading: true,
     role: null
   });
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    // Don't set up auth listener if we're signing out
+    if (isSigningOut) {
+      return;
+    }
+
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      console.log('Auth state changed:', { user: user?.uid, email: user?.email });
+      console.log('Auth state changed:', { user: user?.uid, email: user?.email, isSigningOut });
       
-      if (user) {
+      if (user && !isSigningOut) {
         try {
           // Get user profile and role
           const profile = await AuthService.getUserProfile(user.uid);
@@ -53,6 +59,7 @@ export const useAuth = () => {
         }
       } else {
         console.log('User signed out');
+        // Clear auth state immediately without any Firestore calls
         setAuthState({
           user: null,
           userProfile: null,
@@ -63,10 +70,11 @@ export const useAuth = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isSigningOut]);
 
   const signOut = async () => {
     try {
+      setIsSigningOut(true);
       await AuthService.signOut();
       // Redirect to login page instead of home page
       router.push('/login');
@@ -74,6 +82,8 @@ export const useAuth = () => {
       console.error('Error signing out:', error);
       // Still redirect to login even if signOut fails
       router.push('/login');
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
