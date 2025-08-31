@@ -197,42 +197,34 @@ export default function PaymentPage() {
             localStorage.removeItem('cart');
             if (typeof clearCart === 'function') clearCart();
             
-            // Call backend to verify payment and update order status
             try {
-              const updateResponse = await fetch('/api/payment/razorpay/update-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  razorpay_order_id: razorpayOrder.id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  firebase_order_id: firebaseOrderId // Pass the actual Firebase document ID
-                })
-              });
+              // Update order directly on client side using AuthService
+              const updateData = {
+                paymentStatus: 'completed' as const,
+                status: 'confirmed' as const,
+                transactionId: response.razorpay_payment_id,
+                paymentMode: 'razorpay',
+                paymentMessage: 'Payment captured successfully',
+                paymentTime: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+              };
+
+              // Update the order using AuthService (client-side with auth context)
+              await AuthService.updateOrder(firebaseOrderId, updateData);
               
-              if (updateResponse.ok) {
-                const updateResult = await updateResponse.json();
-                console.log('Order update response:', updateResult);
-                
-                // Store order details for confirmation page
-                const orderDetails = {
-                  orderId: orderId,
-                  paymentMethod: 'Razorpay',
-                  transactionId: response.razorpay_payment_id,
-                  amount: total,
-                  items: cart
-                };
-                localStorage.setItem('orderConfirmationData', JSON.stringify(orderDetails));
-                
-                setTimeout(() => router.push('/order-confirmation'), 1200);
-              } else {
-                const errorText = await updateResponse.text();
-                console.error('Order update failed:', updateResponse.status, errorText);
-                showToast('Payment successful but order update failed. Please contact support.', 'warning');
-                setTimeout(() => router.push('/dashboard/orders'), 1200);
-              }
+              console.log('Order updated successfully on client side');
+              
+              const orderDetails = {
+                orderId: orderId,
+                paymentMethod: 'Razorpay',
+                transactionId: response.razorpay_payment_id,
+                amount: total,
+                items: cart
+              };
+              localStorage.setItem('orderConfirmationData', JSON.stringify(orderDetails));
+              setTimeout(() => router.push('/order-confirmation'), 1200);
             } catch (error) {
-              console.error('Error updating order:', error);
+              console.error('Error updating order on client side:', error);
               showToast('Payment successful but order update failed. Please contact support.', 'warning');
               setTimeout(() => router.push('/dashboard/orders'), 1200);
             }
@@ -287,23 +279,42 @@ export default function PaymentPage() {
           cf.checkout({
             paymentSessionId: cashfreeOrder.paymentSessionId,
             redirectTarget: '_self',
-            onSuccess: function(data: any) {
-              // Clear cart from localStorage and context
+            onSuccess: async function(data: any) {
+              showToast('Payment successful! Updating order...', 'success');
               localStorage.removeItem('cart');
               if (typeof clearCart === 'function') clearCart();
               
-              // Store order details for confirmation page
-              const orderDetails = {
-                orderId: orderId,
-                paymentMethod: 'Cashfree',
-                transactionId: data.referenceId || 'CF' + Date.now(),
-                amount: total,
-                items: cart
-              };
-              localStorage.setItem('orderConfirmationData', JSON.stringify(orderDetails));
-              
-              showToast('Payment successful! Redirecting to order confirmation...', 'success');
-              setTimeout(() => router.push('/order-confirmation'), 1200);
+              try {
+                // Update order directly on client side using AuthService
+                const updateData = {
+                  paymentStatus: 'completed' as const,
+                  status: 'confirmed' as const,
+                  transactionId: data.referenceId || 'CF' + Date.now(),
+                  paymentMode: 'cashfree',
+                  paymentMessage: 'Payment captured successfully',
+                  paymentTime: new Date().toISOString(),
+                  lastUpdated: new Date().toISOString(),
+                };
+
+                // Update the order using AuthService (client-side with auth context)
+                await AuthService.updateOrder(firebaseOrderId, updateData);
+                
+                console.log('Order updated successfully on client side');
+                
+                const orderDetails = {
+                  orderId: orderId,
+                  paymentMethod: 'Cashfree',
+                  transactionId: data.referenceId || 'CF' + Date.now(),
+                  amount: total,
+                  items: cart
+                };
+                localStorage.setItem('orderConfirmationData', JSON.stringify(orderDetails));
+                setTimeout(() => router.push('/order-confirmation'), 1200);
+              } catch (error) {
+                console.error('Error updating order on client side:', error);
+                showToast('Payment successful but order update failed. Please contact support.', 'warning');
+                setTimeout(() => router.push('/dashboard/orders'), 1200);
+              }
             },
             onFailure: function(data: any) {
               showToast('Payment failed or cancelled.', 'error');

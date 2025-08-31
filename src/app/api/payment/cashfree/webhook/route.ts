@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,31 +20,11 @@ export async function POST(request: NextRequest) {
     
     // TODO: Implement signature verification using Cashfree's method for production
     if (orderId && txStatus) {
-      try {
-        // Get order from Firebase using Admin SDK
-        const orderDoc = await getAdminDb().collection('orders').doc(orderId).get();
-        
-        if (orderDoc.exists) {
-          const orderData = orderDoc.data();
-          console.log(`Order found: ${orderData?.orderId}, current status: ${orderData?.status}`);
-          
-          // Update order using Admin SDK
-          await getAdminDb().collection('orders').doc(orderId).update({
-            paymentStatus: txStatus === 'SUCCESS' ? 'completed' : 'failed',
-            status: txStatus === 'SUCCESS' ? 'confirmed' : 'pending',
-            transactionId: referenceId,
-            paymentMode: paymentMode,
-            paymentMessage: txMsg,
-            paymentTime: txTime,
-            lastUpdated: new Date().toISOString()
-          });
-          console.log(`Order ${orderId} updated with payment status: ${txStatus}`);
-        } else {
-          console.warn(`Order ${orderId} not found in Firestore.`);
-        }
-      } catch (error) {
-        console.error('Error updating order in Firebase:', error);
-      }
+      console.log(`Cashfree payment ${txStatus} for order: ${orderId}`);
+      console.log(`Reference ID: ${referenceId}, Payment Mode: ${paymentMode}`);
+      
+      // Note: Order updates are now handled on the client side after successful payment
+      // This webhook is kept for logging and future server-side processing if needed
     } else {
       console.warn('Webhook missing orderId or txStatus:', body);
     }

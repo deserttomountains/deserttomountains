@@ -167,30 +167,6 @@ export default function OrdersPage() {
     setSelectedOrder(null);
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
-    try {
-      // Note: In production, customers shouldn't be able to update their own order status
-      // This is just for testing purposes
-      console.log(`Order status update requested: ${orderId} -> ${newStatus}`);
-      
-      // For now, just update local state for testing
-      setOrders(prev => prev.map(order => 
-        order.id === orderId 
-          ? { ...order, status: newStatus, lastUpdated: new Date().toISOString() }
-          : order
-      ));
-      
-      // Update selected order if it's the one being updated
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder(prev => prev ? { ...prev, status: newStatus, lastUpdated: new Date().toISOString() } : null);
-      }
-      
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      setError('Failed to update order status. Please try again.');
-    }
-  };
-
   if (loading) {
     return (
       <DashboardLayout active="Orders">
@@ -420,27 +396,6 @@ export default function OrdersPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* Status Update (for testing) */}
-                  <div>
-                    <h3 className="text-lg font-bold text-[#5E4E06] mb-3">Update Status (Testing)</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {(['pending', 'confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'] as Order['status'][]).map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => updateOrderStatus(selectedOrder.id!, status)}
-                          disabled={selectedOrder.status === status}
-                          className={`px-3 py-2 text-xs font-bold rounded-lg border transition-all ${
-                            selectedOrder.status === status
-                              ? 'bg-[#D4AF37] text-white border-[#D4AF37]'
-                              : 'bg-white text-[#5E4E06] border-[#D4AF37] hover:bg-[#F5F2E8]'
-                          } disabled:opacity-50`}
-                        >
-                          {statusLabels[status] || status}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

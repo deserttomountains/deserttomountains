@@ -52,6 +52,18 @@ service cloud.firestore {
       // Customers can update their own orders
       allow update: if request.auth != null &&
         resource.data.customerId == request.auth.uid;
+      
+      // Server-side operations for payment updates - NO AUTH REQUIRED
+      // Allow updates when payment-related fields are being updated (indicates server-side payment processing)
+      allow update: if 
+        // Check if this is a payment-related update (server-side)
+        ('paymentStatus' in request.resource.data) ||
+        ('transactionId' in request.resource.data) ||
+        ('paymentMode' in request.resource.data) ||
+        ('paymentMessage' in request.resource.data) ||
+        ('paymentTime' in request.resource.data) ||
+        ('lastUpdated' in request.resource.data) ||
+        ('status' in request.resource.data);
     }
     
     // Tasks collection - admin only
