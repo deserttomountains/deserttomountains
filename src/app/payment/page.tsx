@@ -270,7 +270,18 @@ export default function PaymentPage() {
           })
         });
         const cashfreeOrder = await res.json();
-        if (!cashfreeOrder.paymentSessionId) throw new Error(cashfreeOrder.error || 'Failed to create Cashfree order');
+        console.log('Cashfree order response:', cashfreeOrder);
+        
+        if (!cashfreeOrder.paymentSessionId) {
+          console.error('Cashfree order creation failed:', cashfreeOrder);
+          
+          // Check if it's a configuration issue
+          if (cashfreeOrder.error?.includes('payment_session_id') || cashfreeOrder.code === 'payment_session_id_invalid') {
+            throw new Error('Cashfree payment gateway is not properly configured. Please contact support or try Razorpay instead.');
+          }
+          
+          throw new Error(cashfreeOrder.error || cashfreeOrder.message || 'Failed to create Cashfree order');
+        }
         // 3. Load Cashfree Drop-in JS and open payment modal
         await loadCashfreeScript();
         // @ts-ignore
