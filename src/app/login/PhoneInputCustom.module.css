@@ -1,48 +1,58 @@
 .phoneContainer {
   width: 100%;
   background: transparent;
-  border-radius: 1rem;
+  border-radius: 0.75rem;
 }
 
 .phoneInput {
   width: 100% !important;
-  padding: 1.25rem 1.25rem 1.25rem 3.5rem !important;
-  border: 2px solid #D4AF37 !important;
-  border-radius: 1rem !important;
-  background: rgba(255,255,255,0.9) !important;
+  padding: 0.875rem 1rem 0.875rem 3.25rem !important;
+  border: 2px solid #E6DCC0 !important;
+  border-radius: 0.75rem !important;
+  background: white !important;
   color: #5E4E06 !important;
-  font-size: 1.125rem !important;
+  font-size: 1rem !important;
   font-weight: 500 !important;
-  transition: border 0.3s, box-shadow 0.3s;
+  transition: all 0.3s ease !important;
+}
+
+.phoneInput:hover {
+  border-color: #D4AF37 !important;
 }
 
 .phoneInput:focus {
   outline: none !important;
   border-color: #8B7A1A !important;
-  box-shadow: 0 0 0 4px rgba(139, 122, 26, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(139, 122, 26, 0.15) !important;
 }
 
 .phoneButton {
   border: none !important;
   background: transparent !important;
-  border-radius: 0.75rem 0 0 0.75rem !important;
+  border-radius: 0.5rem 0 0 0.5rem !important;
   color: #8B7A1A !important;
-  font-size: 1.1rem !important;
-  padding-left: 0.5rem !important;
-  padding-right: 0.5rem !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  padding: 0.875rem 0.75rem !important;
 }
 
 .phoneDropdown {
-  border-radius: 1rem !important;
+  border-radius: 0.75rem !important;
   border: 2px solid #D4AF37 !important;
-  background: #fffbe6 !important;
+  background: white !important;
   color: #5E4E06 !important;
-  font-size: 1rem !important;
-  box-shadow: 0 8px 32px rgba(212, 175, 55, 0.15) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
   z-index: 1000 !important;
 }
 
 .error {
-  border-color: #e53e3e !important;
-  background: #fff5f5 !important;
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+}
+
+.error:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
 } 

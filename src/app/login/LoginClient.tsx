@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Navigation from '@/components/Navigation';
-import { Sparkles, Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle, Phone, Shield } from 'lucide-react';
+import {Mail, Lock, Eye, EyeOff, CheckCircle, Phone, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { AuthService, auth } from '@/lib/firebase';
 import { RecaptchaVerifier } from 'firebase/auth';
@@ -376,15 +376,15 @@ export default function LoginClient() {
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-sm font-medium text-[#5E4E06] mb-2">Phone Number</label>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-2">Phone Number</label>
                     <PhoneInput
                       country={'in'}
                       value={formData.phone}
                       onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
-                      inputClass="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#D4AF37] focus:outline-none transition-colors"
-                      containerClass="phone-input-container"
-                      buttonClass="phone-input-button"
-                      dropdownClass="phone-input-dropdown"
+                      inputClass={styles.phoneInput}
+                      containerClass={styles.phoneContainer}
+                      buttonClass={styles.phoneButton}
+                      dropdownClass={styles.phoneDropdown}
                       enableSearch={true}
                       searchPlaceholder="Search countries..."
                       inputProps={{
@@ -394,7 +394,9 @@ export default function LoginClient() {
                       preferredCountries={['in', 'us', 'gb']}
                     />
                     {errors.phone && (
-                      <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                      <p className="mt-2 text-sm text-red-600 font-medium">
+                        {errors.phone}
+                      </p>
                     )}
                   </div>
                 )}
@@ -483,7 +485,7 @@ export default function LoginClient() {
                 {/* Forgot Password & Signup Links */}
                 <div className="text-center space-y-2">
                   <p className="text-[#8B7A1A] text-sm">
-                    <Link href="/forgot-password" className="text-[#D4AF37] hover:underline cursor-pointer">
+                    <Link href="/login/forgot-password" className="text-[#D4AF37] hover:underline cursor-pointer">
                       Forgot your password?
                     </Link>
                   </p>

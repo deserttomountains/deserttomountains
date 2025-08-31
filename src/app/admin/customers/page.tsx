@@ -6,8 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
 import { AdminRouteGuard } from '@/components/RouteGuard';
 import AdminLayout from '../components/AdminLayout';
-import { Users, Search, Filter, Edit, Trash2, Eye, Mail, Phone, Calendar } from 'lucide-react';
-import CustomerDetailsDrawer from '@/components/CustomerDetailsDrawer';
+import { Users, Search, Filter, Mail, Phone, Calendar } from 'lucide-react';
 
 function CustomersPageContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -18,9 +17,6 @@ function CustomersPageContent() {
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customersError, setCustomersError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState<UserProfile | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,34 +66,6 @@ function CustomersPageContent() {
       setCustomersError('Failed to load customers. Please check your permissions or try again later.');
     } finally {
       setCustomersLoading(false);
-    }
-  };
-
-  // Handle customer operations
-  const handleSaveCustomer = async (updated: UserProfile) => {
-    setIsSavingCustomer(true);
-    try {
-      await AuthService.updateUserProfile(updated.uid, updated);
-      setSelectedCustomer({ ...selectedCustomer, ...updated });
-      showToast('Customer updated successfully', 'success');
-      await loadAllCustomers(); // Refresh the list
-    } catch (error) {
-      console.error('Error updating customer:', error);
-      showToast('Failed to update customer', 'error');
-    } finally {
-      setIsSavingCustomer(false);
-    }
-  };
-
-  const handleDeleteCustomer = async (uid: string) => {
-    try {
-      await AuthService.deleteUser(uid);
-      setSelectedCustomer(null);
-      showToast('Customer deleted successfully', 'success');
-      await loadAllCustomers(); // Refresh the list
-    } catch (error) {
-      console.error('Error deleting customer:', error);
-      showToast('Failed to delete customer', 'error');
     }
   };
 
@@ -313,17 +281,30 @@ function CustomersPageContent() {
             </div>
           ) : (
                          <div className="divide-y divide-[#F5F2E8]">
-               {currentCustomers.map((customer) => (
+               {currentCustomers.map((customer) => {
+                 // Generate display name and initials
+                 const firstName = customer.firstName || '';
+                 const lastName = customer.lastName || '';
+                 const fullName = `${firstName} ${lastName}`.trim();
+                 const displayName = fullName || customer.email?.split('@')[0] || 'Unknown Customer';
+                 const initials = ((firstName || '')[0] || '').toUpperCase() + ((lastName || '')[0] || '').toUpperCase();
+                 const fallbackInitials = initials || (customer.email?.[0] || 'U').toUpperCase();
+                 
+                 return (
                 <div key={customer.uid} className="p-4 sm:p-6 hover:bg-[#F8F6F0] transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] flex items-center justify-center text-white font-bold text-lg shadow">
-                        {((customer.firstName || '')[0] || '').toUpperCase()}
-                        {((customer.lastName || '')[0] || '').toUpperCase()}
+                        {fallbackInitials}
                       </div>
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-[#5E4E06] mb-1">
-                          {customer.firstName} {customer.lastName}
+                          {displayName}
+                          {!fullName && (
+                            <span className="ml-2 text-xs text-[#8B7A1A] bg-[#F5F2E8] px-2 py-1 rounded-full">
+                              No Name
+                            </span>
+                          )}
                         </h3>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-[#8B7A1A]">
                           <div className="flex items-center gap-1">
@@ -336,48 +317,23 @@ function CustomersPageContent() {
                               <span>{customer.phone}</span>
                             </div>
                           )}
-                                                     <div className="flex items-center gap-1">
-                             <Calendar className="w-4 h-4" />
-                             <span>Customer since {formatDateForDisplay(customer.createdAt)}</span>
-                           </div>
+                          {!customer.phone && (
+                            <div className="flex items-center gap-1 text-gray-400">
+                              <Phone className="w-4 h-4" />
+                              <span>No phone</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>Customer since {formatDateForDisplay(customer.createdAt)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setDrawerOpen(true);
-                        }}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                        title="View Customer Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setDrawerOpen(true);
-                        }}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
-                        title="Edit Customer"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setDrawerOpen(true);
-                        }}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                        title="Delete Customer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
                   </div>
                 </div>
-              ))}
+               );
+               })}
             </div>
           )}
                  </div>
@@ -496,14 +452,6 @@ function CustomersPageContent() {
          </div>
          )}
 
-         {/* Customer Details Drawer */}
-        <CustomerDetailsDrawer
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-          customer={selectedCustomer}
-          onSave={handleSaveCustomer}
-          onDelete={handleDeleteCustomer}
-        />
       </div>
     </AdminLayout>
   );

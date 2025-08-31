@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, Tag, User, CheckCircle, AlertCircle, Clock as ClockIcon, Calendar as CalendarIcon, Tag as TagIcon, User as UserIcon, Activity, TrendingUp, BarChart3, FileText, Settings, Repeat, X, Edit, Target, Flag, Truck, UserCheck, Phone, SortAsc, SortDesc } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Clock, Tag, User, CheckCircle, AlertCircle, Clock as ClockIcon, Calendar as CalendarIcon, Tag as TagIcon, User as UserIcon, Activity, TrendingUp, BarChart3, FileText, Settings, Repeat, X, Edit, Target, Flag, Truck, UserCheck, Phone, SortAsc, SortDesc, MoreVertical, Trash2, Play, Pause, Square } from 'lucide-react';
 import { AuthService, auth } from '@/lib/firebase';
 import { Task } from '@/lib/firebase';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -85,6 +85,17 @@ function TasksPageContent() {
     recurringInterval: 1,
     recurringEndDate: ''
   });
+
+  // Task Actions State
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isUpdatingTask, setIsUpdatingTask] = useState(false);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+  const [showTaskActions, setShowTaskActions] = useState<string | null>(null); // Task ID for which actions are shown
+  
+  // View State
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
   // Load tasks on component mount
   useEffect(() => {
@@ -210,6 +221,204 @@ function TasksPageContent() {
       setIsSubmittingTask(false);
     }
   };
+
+  // Task Actions Functions
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(task);
+    
+    // Helper function to safely format date for input field
+    const formatDateForInput = (date: any): string => {
+      try {
+        let dateObj: Date;
+        if (date instanceof Date) {
+          dateObj = date;
+        } else if (typeof date === 'object' && date !== null && 'toDate' in date) {
+          // Handle Firestore Timestamp
+          dateObj = (date as any).toDate();
+        } else {
+          dateObj = new Date(date);
+        }
+        
+        // Check if the date is valid
+        if (isNaN(dateObj.getTime())) {
+          return '';
+        }
+        
+        return dateObj.toISOString().split('T')[0];
+      } catch (error) {
+        console.error('Error formatting date:', error);
+        return '';
+      }
+    };
+
+    setTaskForm({
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      category: task.category,
+      dueDate: formatDateForInput(task.dueDate),
+      estimatedTime: task.estimatedTime?.toString() || '',
+      tags: task.tags.join(', '),
+      notes: task.notes,
+      relatedToType: task.relatedTo?.type || '',
+      relatedToId: task.relatedTo?.id || '',
+      relatedToName: task.relatedTo?.name || '',
+      isRecurring: !!task.recurring,
+      recurringType: task.recurring?.type || 'weekly',
+      recurringInterval: task.recurring?.interval || 1,
+      recurringEndDate: task.recurring?.endDate ? formatDateForInput(task.recurring.endDate) : ''
+    });
+    setShowEditTaskModal(true);
+    setShowTaskActions(null);
+  };
+
+  const handleUpdateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTask || !user) return;
+    
+    setIsUpdatingTask(true);
+    
+    try {
+      const updatedTaskData: any = {
+        title: taskForm.title,
+        description: taskForm.description,
+        status: taskForm.status,
+        priority: taskForm.priority,
+        category: taskForm.category,
+        dueDate: new Date(taskForm.dueDate),
+        tags: taskForm.tags ? taskForm.tags.split(',').map(tag => tag.trim()) : [],
+        notes: taskForm.notes,
+        updatedAt: new Date()
+      };
+
+      // Only add estimatedTime if it has a value
+      if (taskForm.estimatedTime) {
+        updatedTaskData.estimatedTime = parseInt(taskForm.estimatedTime);
+      }
+
+      // Only add relatedTo if all required fields are present
+      if (taskForm.relatedToType && taskForm.relatedToId && taskForm.relatedToName) {
+        updatedTaskData.relatedTo = {
+          type: taskForm.relatedToType as 'lead' | 'order' | 'customer',
+          id: taskForm.relatedToId,
+          name: taskForm.relatedToName
+        };
+      }
+
+      // Only add recurring if it's enabled and has valid data
+      if (taskForm.isRecurring) {
+        updatedTaskData.recurring = {
+          type: taskForm.recurringType,
+          interval: taskForm.recurringInterval
+        };
+        
+        // Only add endDate if it has a value
+        if (taskForm.recurringEndDate) {
+          updatedTaskData.recurring.endDate = new Date(taskForm.recurringEndDate);
+        }
+      }
+
+      // If status is being changed to completed, add completedAt
+      if (taskForm.status === 'completed' && selectedTask.status !== 'completed') {
+        updatedTaskData.completedAt = new Date();
+      }
+
+      // Update task in Firebase
+      await AuthService.updateTask(selectedTask.id!, updatedTaskData);
+      
+      // Update task in local state
+      setTasks(prev => prev.map(task => 
+        task.id === selectedTask.id 
+          ? { ...task, ...updatedTaskData }
+          : task
+      ));
+      
+      setShowEditTaskModal(false);
+      setSelectedTask(null);
+      showToast('Task updated successfully!', 'success');
+    } catch (error) {
+      console.error('Error updating task:', error);
+      showToast('Failed to update task', 'error');
+    } finally {
+      setIsUpdatingTask(false);
+    }
+  };
+
+  const handleDeleteTask = (task: Task) => {
+    setSelectedTask(task);
+    setShowDeleteConfirmModal(true);
+    setShowTaskActions(null);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!selectedTask) return;
+    
+    setIsDeletingTask(true);
+    
+    try {
+      await AuthService.deleteTask(selectedTask.id!);
+      
+      // Remove task from local state
+      setTasks(prev => prev.filter(task => task.id !== selectedTask.id));
+      
+      setShowDeleteConfirmModal(false);
+      setSelectedTask(null);
+      showToast('Task deleted successfully!', 'success');
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      showToast('Failed to delete task', 'error');
+    } finally {
+      setIsDeletingTask(false);
+    }
+  };
+
+  const handleStatusChange = async (task: Task, newStatus: Task['status']) => {
+    try {
+      const updatedTaskData: any = {
+        status: newStatus,
+        updatedAt: new Date()
+      };
+
+      // If status is being changed to completed, add completedAt
+      if (newStatus === 'completed' && task.status !== 'completed') {
+        updatedTaskData.completedAt = new Date();
+      }
+
+      // Update task in Firebase
+      await AuthService.updateTask(task.id!, updatedTaskData);
+      
+      // Update task in local state
+      setTasks(prev => prev.map(t => 
+        t.id === task.id 
+          ? { ...t, ...updatedTaskData }
+          : t
+      ));
+      
+      showToast(`Task status updated to ${newStatus.replace('_', ' ')}`, 'success');
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      showToast('Failed to update task status', 'error');
+    }
+  };
+
+  const toggleTaskActions = (taskId: string) => {
+    setShowTaskActions(showTaskActions === taskId ? null : taskId);
+  };
+
+  // Close actions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showTaskActions && !(event.target as Element).closest('.task-actions-dropdown')) {
+        setShowTaskActions(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTaskActions]);
 
   // Filter and search tasks
   const filteredTasks = useMemo(() => {
@@ -647,9 +856,44 @@ function TasksPageContent() {
             <p className="text-[#8B7A1A]">Organize, track, and complete your business tasks efficiently</p>
           </div>
           <div className="flex flex-wrap gap-3">
+            {/* View Toggle */}
+            <div className="flex items-center bg-[#F5F2E8] rounded-xl p-1">
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                  viewMode === 'cards'
+                    ? 'bg-white text-[#5E4E06] shadow-sm'
+                    : 'text-[#8B7A1A] hover:text-[#5E4E06]'
+                }`}
+              >
+                <div className="grid grid-cols-2 gap-0.5 w-4 h-4">
+                  <div className="bg-current rounded-sm"></div>
+                  <div className="bg-current rounded-sm"></div>
+                  <div className="bg-current rounded-sm"></div>
+                  <div className="bg-current rounded-sm"></div>
+                </div>
+                Cards
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                  viewMode === 'table'
+                    ? 'bg-white text-[#5E4E06] shadow-sm'
+                    : 'text-[#8B7A1A] hover:text-[#5E4E06]'
+                }`}
+              >
+                <div className="flex flex-col gap-0.5 w-4 h-4">
+                  <div className="bg-current rounded-sm h-0.5"></div>
+                  <div className="bg-current rounded-sm h-0.5"></div>
+                  <div className="bg-current rounded-sm h-0.5"></div>
+                </div>
+                Table
+              </button>
+            </div>
+
             <button
               onClick={() => setShowTaskAnalytics(true)}
-              className="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-200 text-sm font-medium flex items-center gap-2 shadow-sm"
+              className="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-200 text-sm font-medium flex items-center gap-2 shadow-sm cursor-pointer"
             >
               <BarChart3 className="w-4 h-4" />
               Analytics
@@ -657,7 +901,7 @@ function TasksPageContent() {
 
             <button
               onClick={() => setShowAddTaskModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 text-sm font-medium flex items-center gap-2 shadow-lg"
+              className="px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 text-sm font-medium flex items-center gap-2 shadow-lg cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               Add Task
@@ -777,7 +1021,7 @@ function TasksPageContent() {
             <span className="text-xs font-medium">Sort Order:</span>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors"
+              className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
               title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
             >
               {sortOrder === 'asc' ? <SortAsc className="w-4 h-4 text-[#8B7A1A]" /> : <SortDesc className="w-4 h-4 text-[#8B7A1A]" />}
@@ -801,7 +1045,245 @@ function TasksPageContent() {
               }
             </p>
           </div>
+        ) : viewMode === 'cards' ? (
+          // Card View
+          <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              {paginatedTasks.map((task) => (
+                <div 
+                  key={task.id} 
+                  className={`group relative bg-white border-2 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-[1.02] ${
+                    task.status === 'completed' 
+                      ? 'border-green-200 bg-green-50' 
+                      : isTaskOverdue(task) 
+                        ? 'border-red-200 bg-red-50' 
+                        : task.status === 'in_progress'
+                          ? 'border-blue-200 bg-blue-50'
+                          : 'border-[#D4AF37] bg-gradient-to-br from-white to-[#FDFCF7]'
+                  }`}
+                >
+                  {/* Status Indicator */}
+                  <div className={`absolute top-3 right-3 w-3 h-3 rounded-full ${
+                    task.status === 'completed' 
+                      ? 'bg-green-500' 
+                      : isTaskOverdue(task) 
+                        ? 'bg-red-500' 
+                        : task.status === 'in_progress'
+                          ? 'bg-blue-500'
+                          : 'bg-yellow-500'
+                  }`}></div>
+
+                  {/* Card Header */}
+                  <div className="p-4 sm:p-5">
+                    {/* Category and Priority Row */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-2 rounded-lg ${getCategoryColor(task.category)}`}>
+                          {getCategoryIcon(task.category)}
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                          {task.priority}
+                        </span>
+                      </div>
+                      
+                      {/* Task Actions */}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTaskActions(task.id!);
+                          }}
+                          className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                        >
+                          <MoreVertical className="w-4 h-4 text-[#8B7A1A]" />
+                        </button>
+                        
+                        {/* Actions Dropdown */}
+                        {showTaskActions === task.id && (
+                          <div className="task-actions-dropdown absolute right-0 top-8 z-10 bg-white border border-[#D4AF37] rounded-lg shadow-lg py-2 min-w-[160px]">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditTask(task);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit Task
+                            </button>
+                            
+                            {task.status !== 'pending' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(task, 'pending');
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                              >
+                                <Clock className="w-4 h-4" />
+                                Mark Pending
+                              </button>
+                            )}
+                            
+                            {task.status !== 'in_progress' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(task, 'in_progress');
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                              >
+                                <Play className="w-4 h-4" />
+                                Start Progress
+                              </button>
+                            )}
+                            
+                            {task.status !== 'completed' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(task, 'completed');
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Mark Complete
+                              </button>
+                            )}
+                            
+                            <div className="border-t border-[#F5F2E8] my-1"></div>
+                            
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTask(task);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete Task
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Task Title */}
+                    <h3 className="font-semibold text-[#5E4E06] text-lg mb-2 line-clamp-2 group-hover:text-[#8B7A1A] transition-colors">
+                      {task.title}
+                    </h3>
+
+                    {/* Task Description */}
+                    <p className="text-sm text-[#8B7A1A] mb-4 line-clamp-3">
+                      {task.description}
+                    </p>
+
+                    {/* Tags */}
+                    {task.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {task.tags.slice(0, 3).map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F5F2E8] text-[#8B7A1A]"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {task.tags.length > 3 && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F5F2E8] text-[#8B7A1A]">
+                            +{task.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Quick Status Actions */}
+                    <div className="flex items-center justify-between mb-4">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
+                        {task.status === 'completed' && <CheckCircle className="w-4 h-4 mr-1" />}
+                        {task.status === 'in_progress' && <Activity className="w-4 h-4 mr-1" />}
+                        {task.status === 'pending' && <Clock className="w-4 h-4 mr-1" />}
+                        {task.status.replace('_', ' ')}
+                      </span>
+                      
+                      <div className="flex gap-1">
+                        {task.status !== 'pending' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(task, 'pending');
+                            }}
+                            className="p-2 bg-yellow-100 hover:bg-yellow-200 rounded-lg text-yellow-700 transition-colors cursor-pointer"
+                            title="Mark as Pending"
+                          >
+                            <Clock className="w-4 h-4" />
+                          </button>
+                        )}
+                        {task.status !== 'in_progress' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(task, 'in_progress');
+                            }}
+                            className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg text-blue-700 transition-colors cursor-pointer"
+                            title="Start Progress"
+                          >
+                            <Play className="w-4 h-4" />
+                          </button>
+                        )}
+                        {task.status !== 'completed' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(task, 'completed');
+                            }}
+                            className="p-2 bg-green-100 hover:bg-green-200 rounded-lg text-green-700 transition-colors cursor-pointer"
+                            title="Mark Complete"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="flex items-center justify-between text-sm text-[#8B7A1A]">
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="w-4 h-4" />
+                        <span className={isTaskOverdue(task) ? 'text-red-600 font-medium' : ''}>
+                          {formatDate(task.dueDate)}
+                        </span>
+                      </div>
+                      
+                      {task.estimatedTime && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatTime(task.estimatedTime)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Overdue Warning */}
+                    {isTaskOverdue(task) && task.status !== 'completed' && (
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                        OVERDUE
+                      </div>
+                    )}
+
+                    {/* Completion Badge */}
+                    {task.status === 'completed' && (
+                      <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        COMPLETED
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
+          // Table View
           <>
             {/* Tasks Header */}
             <div className="px-3 sm:px-6 py-4 bg-[#F5F2E8] border-b border-[#E6DCC0]">
@@ -818,8 +1300,11 @@ function TasksPageContent() {
                 <div className="col-span-2">
                   <span className="whitespace-nowrap text-xs sm:text-sm">Category</span>
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <span className="whitespace-nowrap text-xs sm:text-sm">Due Date</span>
+                </div>
+                <div className="col-span-1">
+                  <span className="whitespace-nowrap text-xs sm:text-sm">Actions</span>
                 </div>
               </div>
             </div>
@@ -827,7 +1312,7 @@ function TasksPageContent() {
             {/* Tasks */}
             <div className="divide-y divide-[#F5F2E8]">
               {paginatedTasks.map((task) => (
-                <div key={task.id} className="px-3 sm:px-6 py-4 hover:bg-[#FDFCF7] transition-colors">
+                <div key={task.id} className="px-3 sm:px-6 py-4 hover:bg-[#FDFCF7] transition-colors relative">
                   <div className="grid grid-cols-12 gap-2 sm:gap-4 items-center">
                     {/* Task Title and Description */}
                     <div className="col-span-3">
@@ -865,11 +1350,43 @@ function TasksPageContent() {
                       </div>
                     </div>
 
-                    {/* Status */}
+                    {/* Status with Quick Actions */}
                     <div className="col-span-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                        {task.status.replace('_', ' ')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                          {task.status.replace('_', ' ')}
+                        </span>
+                        {/* Quick Status Change Buttons */}
+                        <div className="flex gap-1">
+                          {task.status !== 'pending' && (
+                            <button
+                              onClick={() => handleStatusChange(task, 'pending')}
+                              className="p-1 bg-yellow-100 hover:bg-yellow-200 rounded text-yellow-700 transition-colors cursor-pointer"
+                              title="Mark as Pending"
+                            >
+                              <Clock className="w-3 h-3" />
+                            </button>
+                          )}
+                          {task.status !== 'in_progress' && (
+                            <button
+                              onClick={() => handleStatusChange(task, 'in_progress')}
+                              className="p-1 bg-blue-100 hover:bg-blue-200 rounded text-blue-700 transition-colors cursor-pointer"
+                              title="Start Progress"
+                            >
+                              <Play className="w-3 h-3" />
+                            </button>
+                          )}
+                          {task.status !== 'completed' && (
+                            <button
+                              onClick={() => handleStatusChange(task, 'completed')}
+                              className="p-1 bg-green-100 hover:bg-green-200 rounded text-green-700 transition-colors cursor-pointer"
+                              title="Mark Complete"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Priority */}
@@ -887,12 +1404,77 @@ function TasksPageContent() {
                     </div>
 
                     {/* Due Date */}
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <div className="flex items-center gap-2">
                         <CalendarIcon className="w-4 h-4 text-[#8B7A1A]" />
                         <span className={`text-sm ${isTaskOverdue(task) ? 'text-red-600 font-medium' : 'text-[#8B7A1A]'}`}>
                           {formatDate(task.dueDate)}
                         </span>
+                      </div>
+                    </div>
+
+                    {/* Task Actions */}
+                    <div className="col-span-1 relative">
+                      <div className="flex items-center justify-end">
+                        <button
+                          onClick={() => toggleTaskActions(task.id!)}
+                          className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
+                        >
+                          <MoreVertical className="w-4 h-4 text-[#8B7A1A]" />
+                        </button>
+                        
+                        {/* Actions Dropdown */}
+                        {showTaskActions === task.id && (
+                          <div className="task-actions-dropdown absolute right-0 top-8 z-10 bg-white border border-[#D4AF37] rounded-lg shadow-lg py-2 min-w-[160px]">
+                            <button
+                              onClick={() => handleEditTask(task)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit Task
+                            </button>
+                            
+                            {task.status !== 'pending' && (
+                              <button
+                                onClick={() => handleStatusChange(task, 'pending')}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                              >
+                                <Clock className="w-4 h-4" />
+                                Mark Pending
+                              </button>
+                            )}
+                            
+                            {task.status !== 'in_progress' && (
+                              <button
+                                onClick={() => handleStatusChange(task, 'in_progress')}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                              >
+                                <Play className="w-4 h-4" />
+                                Start Progress
+                              </button>
+                            )}
+                            
+                            {task.status !== 'completed' && (
+                              <button
+                                onClick={() => handleStatusChange(task, 'completed')}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Mark Complete
+                              </button>
+                            )}
+                            
+                            <div className="border-t border-[#F5F2E8] my-1"></div>
+                            
+                            <button
+                              onClick={() => handleDeleteTask(task)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete Task
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -913,7 +1495,7 @@ function TasksPageContent() {
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-2 text-sm font-medium text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg hover:bg-[#F5F2E8] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm font-medium text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg hover:bg-[#F5F2E8] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Previous
             </button>
@@ -922,7 +1504,7 @@ function TasksPageContent() {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                  className={`px-3 py-2 text-sm font-medium rounded-lg cursor-pointer ${
                     currentPage === page
                       ? 'bg-[#D4AF37] text-white'
                       : 'text-[#5E4E06] bg-white border border-[#D4AF37] hover:bg-[#F5F2E8]'
@@ -935,7 +1517,7 @@ function TasksPageContent() {
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-3 py-2 text-sm font-medium text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg hover:bg-[#F5F2E8] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm font-medium text-[#5E4E06] bg-white border border-[#D4AF37] rounded-lg hover:bg-[#F5F2E8] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Next
             </button>
@@ -945,10 +1527,10 @@ function TasksPageContent() {
 
       {/* Task Analytics Modal */}
       {showTaskAnalytics && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4">
-          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[calc(100vh-5rem)] sm:max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[calc(100vh-2rem)] sm:max-h-[90vh] flex flex-col">
+            {/* Modal Header - Fixed */}
+            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37] flex-shrink-0">
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center">
                   <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -960,14 +1542,14 @@ function TasksPageContent() {
               </div>
               <button 
                 onClick={() => setShowTaskAnalytics(false)}
-                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200"
+                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200 cursor-pointer"
               >
                 <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
               {/* Key Metrics */}
               <div>
                 <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
@@ -1109,14 +1691,11 @@ function TasksPageContent() {
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex items-center justify-end p-4 sm:p-6 lg:p-8 border-t border-[#D4AF37]">
-                <button
-                  onClick={() => setShowTaskAnalytics(false)}
-                  className="px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-lg font-medium"
-                >
-                  Close
-                </button>
+              {/* Modal Footer - Fixed */}
+              <div className="flex items-center justify-end p-4 sm:p-6 lg:p-8 border-t border-[#D4AF37] flex-shrink-0">
+                <div className="text-sm text-[#8B7A1A]">
+                  Analytics data updated in real-time
+                </div>
               </div>
             </div>
           </div>
@@ -1125,17 +1704,20 @@ function TasksPageContent() {
 
       {/* Add Task Button */}
       <div className="fixed bottom-6 right-6">
-        <button className="bg-[#D4AF37] text-white p-4 rounded-full shadow-lg hover:bg-[#B8941F] transition-colors">
+        <button 
+          onClick={() => setShowAddTaskModal(true)}
+          className="bg-[#D4AF37] text-white p-4 rounded-full shadow-lg hover:bg-[#B8941F] transition-colors cursor-pointer"
+        >
           <Plus className="w-6 h-6" />
         </button>
       </div>
 
       {/* Add Task Modal */}
       {showAddTaskModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4">
-          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-5rem)] sm:max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37]">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[90vh] flex flex-col">
+            {/* Modal Header - Fixed */}
+            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37] flex-shrink-0">
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl sm:rounded-2xl flex items-center justify-center">
                   <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -1151,14 +1733,14 @@ function TasksPageContent() {
               </div>
               <button 
                 onClick={() => setShowAddTaskModal(false)}
-                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200"
+                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200 cursor-pointer"
               >
                 <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <form onSubmit={handleSubmitTask} className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+            {/* Modal Content - Scrollable */}
+            <form onSubmit={handleSubmitTask} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
               {/* Basic Information */}
               <div>
                 <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
@@ -1364,19 +1946,19 @@ function TasksPageContent() {
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex items-center justify-end space-x-4 pt-8 border-t border-[#D4AF37]">
+              {/* Modal Footer - Fixed */}
+              <div className="flex items-center justify-end space-x-4 p-4 sm:p-6 lg:p-8 border-t border-[#D4AF37] flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddTaskModal(false)}
-                  className="px-6 py-3 text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-xl transition-colors duration-200 font-medium"
+                  className="px-6 py-3 text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-xl transition-colors duration-200 font-medium cursor-pointer"
                   disabled={isSubmittingTask}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   disabled={isSubmittingTask}
                 >
                   {isSubmittingTask ? (
@@ -1393,6 +1975,331 @@ function TasksPageContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Modal */}
+      {showEditTaskModal && selectedTask && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[90vh] flex flex-col">
+            {/* Modal Header - Fixed */}
+            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37] flex-shrink-0">
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl sm:rounded-2xl flex items-center justify-center">
+                  <Edit className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06]">
+                    Edit Task: {selectedTask.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#8B7A1A]">
+                    Update the details of this task
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowEditTaskModal(false)}
+                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200 cursor-pointer"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
+              </button>
+            </div>
+
+            {/* Modal Content - Scrollable */}
+            <form onSubmit={handleUpdateTask} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+              {/* Basic Information */}
+              <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Task Information
+                </h4>
+                <div className="space-y-4 sm:space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Title *</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={taskForm.title}
+                      onChange={handleTaskInputChange}
+                      required
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
+                      placeholder="Enter task title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Description *</label>
+                    <textarea
+                      name="description"
+                      value={taskForm.description}
+                      onChange={handleTaskInputChange}
+                      required
+                      rows={3}
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base resize-none"
+                      placeholder="Describe the task in detail"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Task Details */}
+              <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Task Details
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Category *</label>
+                    <select
+                      name="category"
+                      value={taskForm.category}
+                      onChange={handleTaskInputChange}
+                      required
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                    >
+                      <option value="follow_up">Follow Up</option>
+                      <option value="meeting">Meeting</option>
+                      <option value="delivery">Delivery</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="support">Support</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Priority *</label>
+                    <select
+                      name="priority"
+                      value={taskForm.priority}
+                      onChange={handleTaskInputChange}
+                      required
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Status *</label>
+                    <select
+                      name="status"
+                      value={taskForm.status}
+                      onChange={handleTaskInputChange}
+                      required
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06]"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Due Date *</label>
+                    <input
+                      type="date"
+                      name="dueDate"
+                      value={taskForm.dueDate}
+                      onChange={handleTaskInputChange}
+                      required
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Estimated Time (minutes)</label>
+                    <input
+                      type="number"
+                      name="estimatedTime"
+                      value={taskForm.estimatedTime}
+                      onChange={handleTaskInputChange}
+                      min="1"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
+                      placeholder="e.g., 30, 60, 120"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                  <Tag className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Additional Information
+                </h4>
+                <div className="space-y-4 sm:space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Tags</label>
+                    <input
+                      type="text"
+                      name="tags"
+                      value={taskForm.tags}
+                      onChange={handleTaskInputChange}
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base"
+                      placeholder="Enter tags separated by commas (e.g., urgent, follow-up, customer)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Notes</label>
+                    <textarea
+                      name="notes"
+                      value={taskForm.notes}
+                      onChange={handleTaskInputChange}
+                      rows={3}
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] placeholder-[#8B7A1A] text-sm sm:text-base resize-none"
+                      placeholder="Add any additional notes or context"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Recurring Task Settings */}
+              <div>
+                <h4 className="text-lg sm:text-xl font-semibold text-[#5E4E06] mb-4 sm:mb-6 flex items-center">
+                  <Repeat className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-[#D4AF37]" />
+                  Recurring Task (Optional)
+                </h4>
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      name="isRecurring"
+                      checked={taskForm.isRecurring}
+                      onChange={(e) => setTaskForm(prev => ({ ...prev, isRecurring: e.target.checked }))}
+                      className="w-4 h-4 text-[#D4AF37] border-[#D4AF37] rounded focus:ring-[#D4AF37]"
+                    />
+                    <label className="text-sm font-medium text-[#5E4E06]">Make this a recurring task</label>
+                  </div>
+                  
+                  {taskForm.isRecurring && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pl-7">
+                      <div>
+                        <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Repeat Every</label>
+                        <input
+                          type="number"
+                          name="recurringInterval"
+                          value={taskForm.recurringInterval}
+                          onChange={handleTaskInputChange}
+                          min="1"
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">Period</label>
+                        <select
+                          name="recurringType"
+                          value={taskForm.recurringType}
+                          onChange={handleTaskInputChange}
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
+                        >
+                          <option value="daily">Day(s)</option>
+                          <option value="weekly">Week(s)</option>
+                          <option value="monthly">Month(s)</option>
+                          <option value="yearly">Year(s)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-[#5E4E06] mb-2 sm:mb-3">End Date (Optional)</label>
+                        <input
+                          type="date"
+                          name="recurringEndDate"
+                          value={taskForm.recurringEndDate}
+                          onChange={handleTaskInputChange}
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-[#D4AF37] rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-[#5E4E06] text-sm sm:text-base"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer - Fixed */}
+              <div className="flex items-center justify-end space-x-4 p-4 sm:p-6 lg:p-8 border-t border-[#D4AF37] flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowEditTaskModal(false)}
+                  className="px-6 py-3 text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-xl transition-colors duration-200 font-medium cursor-pointer"
+                  disabled={isUpdatingTask}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  disabled={isUpdatingTask}
+                >
+                  {isUpdatingTask ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4" />
+                      <span>Update Task</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmModal && selectedTask && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[90vh] flex flex-col">
+            {/* Modal Header - Fixed */}
+            <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-[#D4AF37] flex-shrink-0">
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500 rounded-xl sm:rounded-2xl flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#5E4E06]">
+                    Delete Task: {selectedTask.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#8B7A1A]">
+                    Are you sure you want to delete this task? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="p-2 sm:p-3 hover:bg-[#F5F2E8] rounded-lg sm:rounded-xl transition-colors duration-200 cursor-pointer"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B7A1A]" />
+              </button>
+            </div>
+
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 text-center">
+              <p className="text-lg text-[#5E4E06]">This action will permanently delete the task.</p>
+              <div className="flex justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirmModal(false)}
+                  className="px-8 py-3 text-[#8B7A1A] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-xl transition-colors duration-200 font-medium cursor-pointer"
+                  disabled={isDeletingTask}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteTask}
+                  className="px-8 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors duration-200 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isDeletingTask}
+                >
+                  {isDeletingTask ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  )}
+                  {isDeletingTask ? 'Deleting...' : 'Delete Task'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

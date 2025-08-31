@@ -871,8 +871,7 @@ export default function AuraClient() {
               Why Choose Aura?
             </h2>
             <a
-              href="/pdfs/DTM_Brochure.pdf"
-              download="Aura-Natural-Wall-Plaster-Brochure.pdf"
+              href="https://drive.google.com/file/d/1QfoCAyWMuFvHy9bZiLzBoaRINkjOjXaJ/view?usp=sharing"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105"

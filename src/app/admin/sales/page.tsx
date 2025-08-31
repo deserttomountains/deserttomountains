@@ -528,7 +528,7 @@ function SalesPageContent() {
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === 1
                           ? 'text-[#8B7A1A] bg-[#F5F2E8] cursor-not-allowed'
-                          : 'text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37]'
+                          : 'text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37] cursor-pointer'
                       }`}
                     >
                       Previous
@@ -553,7 +553,7 @@ function SalesPageContent() {
                             <button
                               key={1}
                               onClick={() => handlePageChange(1)}
-                              className="px-3 py-2 rounded-lg text-sm font-medium text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37] transition-colors"
+                              className="px-3 py-2 rounded-lg text-sm font-medium text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37] transition-colors cursor-pointer"
                             >
                               1
                             </button>
@@ -573,7 +573,7 @@ function SalesPageContent() {
                             <button
                               key={i}
                               onClick={() => handlePageChange(i)}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                                 i === currentPage
                                   ? 'text-white bg-[#D4AF37] border border-[#D4AF37]'
                                   : 'text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37]'
@@ -597,7 +597,7 @@ function SalesPageContent() {
                             <button
                               key={totalPages}
                               onClick={() => handlePageChange(totalPages)}
-                              className="px-3 py-2 rounded-lg text-sm font-medium text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37] transition-colors"
+                              className="px-3 py-2 rounded-lg text-sm font-medium text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37] transition-colors cursor-pointer"
                             >
                               {totalPages}
                             </button>
@@ -615,7 +615,7 @@ function SalesPageContent() {
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === totalPages
                           ? 'text-[#8B7A1A] bg-[#F5F2E8] cursor-not-allowed'
-                          : 'text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37]'
+                          : 'text-[#5E4E06] bg-[#FFFBEA] hover:bg-[#F5F2E8] border border-[#D4AF37] cursor-pointer'
                       }`}
                     >
                       Next
@@ -629,37 +629,37 @@ function SalesPageContent() {
 
         {/* Order Details Modal */}
         {orderDetailsOpen && selectedOrder && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-[#F5F2E8]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#D4AF37] rounded-xl flex items-center justify-center">
-                    <Package className="w-5 h-5 text-white" />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+              {/* Modal Header - Fixed */}
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[#F5F2E8] flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#D4AF37] rounded-xl flex items-center justify-center">
+                    <Package className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-[#5E4E06]">Order Details</h2>
-                    <p className="text-[#8B7A1A] text-sm">Order #{selectedOrder.orderId}</p>
+                    <h2 className="text-lg sm:text-xl font-bold text-[#5E4E06]">Order Details</h2>
+                    <p className="text-[#8B7A1A] text-xs sm:text-sm">Order #{selectedOrder.orderId}</p>
                   </div>
                 </div>
                 <button
                   onClick={handleCloseOrderDetails}
-                  className="p-2 text-[#8B7A1A] hover:text-[#5E4E06] hover:bg-[#F5F2E8] rounded-lg transition-colors"
+                  className="p-2 text-[#8B7A1A] hover:text-[#5E4E06] hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
-              {/* Modal Content */}
-              <div className="p-6 space-y-6">
+              {/* Modal Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Order Status and Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-[#F8F6F0] rounded-lg p-4">
-                    <h3 className="font-semibold text-[#5E4E06] mb-3">Order Information</h3>
-                    <div className="space-y-2 text-sm">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                  <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
+                    <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Order Information</h3>
+                    <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Order ID:</span>
-                        <span className="font-medium text-[#5E4E06]">{selectedOrder.orderId}</span>
+                        <span className="font-medium text-[#5E4E06] break-all">{selectedOrder.orderId}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Status:</span>
@@ -689,16 +689,16 @@ function SalesPageContent() {
                     </div>
                   </div>
 
-                  <div className="bg-[#F8F6F0] rounded-lg p-4">
-                    <h3 className="font-semibold text-[#5E4E06] mb-3">Customer Information</h3>
-                    <div className="space-y-2 text-sm">
+                  <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
+                    <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Customer Information</h3>
+                    <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Name:</span>
-                        <span className="font-medium text-[#5E4E06]">{selectedOrder.customerName}</span>
+                        <span className="font-medium text-[#5E4E06] break-all">{selectedOrder.customerName}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Email:</span>
-                        <span className="font-medium text-[#5E4E06]">{selectedOrder.customerEmail}</span>
+                        <span className="font-medium text-[#5E4E06] break-all">{selectedOrder.customerEmail}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Phone:</span>
@@ -706,21 +706,21 @@ function SalesPageContent() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Customer ID:</span>
-                        <span className="font-medium text-[#5E4E06]">{selectedOrder.customerId}</span>
+                        <span className="font-medium text-[#5E4E06] break-all">{selectedOrder.customerId}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Order Items */}
-                <div className="bg-[#F8F6F0] rounded-lg p-4">
-                  <h3 className="font-semibold text-[#5E4E06] mb-3">Order Items</h3>
+                <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
+                  <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Order Items</h3>
                   <div className="space-y-3">
                     {selectedOrder.items.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg">
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white rounded-lg gap-2 sm:gap-0">
                         <div className="flex-1">
-                          <p className="font-medium text-[#5E4E06]">{item.productName}</p>
-                          <div className="flex items-center gap-4 text-sm text-[#8B7A1A] mt-1">
+                          <p className="font-medium text-[#5E4E06] text-sm sm:text-base">{item.productName}</p>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-[#8B7A1A] mt-1">
                             <span>Type: {item.productType}</span>
                             {item.variant && <span>Variant: {item.variant}</span>}
                             {item.shades && item.shades.length > 0 && (
@@ -728,10 +728,10 @@ function SalesPageContent() {
                             )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-[#5E4E06]">₹{item.unitPrice.toLocaleString()}</p>
-                          <p className="text-sm text-[#8B7A1A]">Qty: {item.quantity}</p>
-                          <p className="font-semibold text-[#5E4E06]">₹{item.totalPrice.toLocaleString()}</p>
+                        <div className="text-right sm:text-right">
+                          <p className="font-medium text-[#5E4E06] text-sm sm:text-base">₹{item.unitPrice.toLocaleString()}</p>
+                          <p className="text-xs sm:text-sm text-[#8B7A1A]">Qty: {item.quantity}</p>
+                          <p className="font-semibold text-[#5E4E06] text-sm sm:text-base">₹{item.totalPrice.toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
@@ -739,9 +739,9 @@ function SalesPageContent() {
                 </div>
 
                 {/* Financial Summary */}
-                <div className="bg-[#F8F6F0] rounded-lg p-4">
-                  <h3 className="font-semibold text-[#5E4E06] mb-3">Financial Summary</h3>
-                  <div className="space-y-2 text-sm">
+                <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
+                  <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Financial Summary</h3>
+                  <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
                       <span className="text-[#8B7A1A]">Subtotal:</span>
                       <span className="font-medium text-[#5E4E06]">₹{selectedOrder.totalAmount.toLocaleString()}</span>
@@ -755,148 +755,148 @@ function SalesPageContent() {
                       <span className="font-medium text-[#5E4E06]">₹{selectedOrder.shipping.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-[#E6DCC0]">
-                      <span className="font-semibold text-[#5E4E06]">Total Amount:</span>
-                      <span className="font-bold text-lg text-[#5E4E06]">₹{selectedOrder.finalAmount.toLocaleString()}</span>
+                      <span className="font-semibold text-[#5E4E06] text-sm sm:text-base">Total Amount:</span>
+                      <span className="font-bold text-base sm:text-lg text-[#5E4E06]">₹{selectedOrder.finalAmount.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Shipping Information */}
                 {selectedOrder.shippingAddress && (
-                  <div className="bg-[#F8F6F0] rounded-lg p-4">
-                    <h3 className="font-semibold text-[#5E4E06] mb-3">Shipping Address</h3>
-                    <div className="text-sm text-[#5E4E06]">
-                      <p>{selectedOrder.shippingAddress.street}</p>
-                      <p>{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}</p>
+                  <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
+                    <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Shipping Address</h3>
+                    <div className="text-xs sm:text-sm text-[#5E4E06]">
+                      <p className="break-all">{selectedOrder.shippingAddress.street}</p>
+                      <p className="break-all">{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}</p>
                       <p>{selectedOrder.shippingAddress.country}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Additional Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">
                   {selectedOrder.estimatedDelivery && (
-                    <div className="bg-[#F8F6F0] rounded-lg p-4">
-                      <h3 className="font-semibold text-[#5E4E06] mb-3">Delivery Information</h3>
-                      <div className="space-y-2 text-sm">
+                    <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
+                      <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Delivery Information</h3>
+                      <div className="space-y-2 text-xs sm:text-sm">
                         <div className="flex justify-between">
                           <span className="text-[#8B7A1A]">Estimated Delivery:</span>
-                          <span className="font-medium text-[#5E4E06]">{formatDateForDisplay(selectedOrder.estimatedDelivery)}</span>
+                          <span className="font-medium text-[#5E4E06] break-all">{formatDateForDisplay(selectedOrder.estimatedDelivery)}</span>
                         </div>
                         {selectedOrder.actualDelivery && (
                           <div className="flex justify-between">
                             <span className="text-[#8B7A1A]">Actual Delivery:</span>
-                            <span className="font-medium text-[#5E4E06]">{formatDateForDisplay(selectedOrder.actualDelivery)}</span>
+                            <span className="font-medium text-[#5E4E06] break-all">{formatDateForDisplay(selectedOrder.actualDelivery)}</span>
                           </div>
                         )}
                         {selectedOrder.trackingNumber && (
                           <div className="flex justify-between">
                             <span className="text-[#8B7A1A]">Tracking Number:</span>
-                            <span className="font-medium text-[#5E4E06]">{selectedOrder.trackingNumber}</span>
+                            <span className="font-medium text-[#5E4E06] break-all">{selectedOrder.trackingNumber}</span>
                           </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  <div className="bg-[#F8F6F0] rounded-lg p-4">
-                    <h3 className="font-semibold text-[#5E4E06] mb-3">Additional Details</h3>
-                    <div className="space-y-2 text-sm">
+                  <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
+                    <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Additional Details</h3>
+                    <div className="space-y-2 text-xs sm:text-sm">
                       {selectedOrder.transactionId && (
                         <div className="flex justify-between">
                           <span className="text-[#8B7A1A]">Transaction ID:</span>
-                          <span className="font-medium text-[#5E4E06]">{selectedOrder.transactionId}</span>
+                          <span className="font-medium text-[#5E4E06] break-all">{selectedOrder.transactionId}</span>
                         </div>
                       )}
                       {selectedOrder.notes && (
                         <div>
                           <span className="text-[#8B7A1A]">Notes:</span>
-                          <p className="font-medium text-[#5E4E06] mt-1">{selectedOrder.notes}</p>
+                          <p className="font-medium text-[#5E4E06] mt-1 break-all">{selectedOrder.notes}</p>
                         </div>
                       )}
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Created:</span>
-                        <span className="font-medium text-[#5E4E06]">{formatDateForDisplay(selectedOrder.createdAt)}</span>
+                        <span className="font-medium text-[#5E4E06] break-all">{formatDateForDisplay(selectedOrder.createdAt)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Last Updated:</span>
-                        <span className="font-medium text-[#5E4E06]">{formatDateForDisplay(selectedOrder.updatedAt)}</span>
+                        <span className="font-medium text-[#5E4E06] break-all">{formatDateForDisplay(selectedOrder.updatedAt)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+                            </div>
 
-                             {/* Modal Footer */}
-               <div className="flex items-center justify-between p-6 border-t border-[#F5F2E8]">
-                                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-[#8B7A1A]">Update Status:</span>
-                    
-                    {/* Debug: Show current status */}
-                    <span className="text-xs text-gray-500">Current: {selectedOrder.status}</span>
-                    
-                    <select
-                      key={`status-${selectedOrder.id}-${selectedOrder.status}`}
-                      value={selectedOrder.status}
-                      onChange={async (e) => {
-                        const newStatus = e.target.value as Order['status'];
-                        console.log('Status change requested:', selectedOrder.status, '->', newStatus);
+              {/* Modal Footer - Fixed */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 border-t border-[#F5F2E8] gap-4 sm:gap-0 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <span className="text-xs sm:text-sm text-[#8B7A1A]">Update Status:</span>
+                  
+                  {/* Debug: Show current status */}
+                  <span className="text-xs text-gray-500">Current: {selectedOrder.status}</span>
+                  
+                  <select
+                    key={`status-${selectedOrder.id}-${selectedOrder.status}`}
+                    value={selectedOrder.status}
+                    onChange={async (e) => {
+                      const newStatus = e.target.value as Order['status'];
+                      console.log('Status change requested:', selectedOrder.status, '->', newStatus);
+                      
+                      try {
+                        // Create a completely new object to force React re-render
+                        const updatedOrder = {
+                          ...selectedOrder,
+                          status: newStatus,
+                          updatedAt: new Date()
+                        };
                         
-                        try {
-                          // Create a completely new object to force React re-render
-                          const updatedOrder = {
-                            ...selectedOrder,
-                            status: newStatus,
-                            updatedAt: new Date()
-                          };
-                          
-                          console.log('Updating selectedOrder:', updatedOrder);
-                          setSelectedOrder(updatedOrder);
-                          
-                          // Update the orders list
-                          const updatedOrders = orders.map(order => 
-                            order.id === selectedOrder.id 
-                              ? updatedOrder
-                              : order
-                          );
-                          console.log('Updating orders list with:', updatedOrders);
-                          setOrders(updatedOrders);
-                          
-                          // Then update Firebase
-                          console.log('Updating Firebase with status:', newStatus);
-                          if (selectedOrder.id) {
-                            await AuthService.updateOrderStatus(selectedOrder.id, newStatus);
-                          }
-                          
-                          showToast('Order status updated successfully', 'success');
-                          console.log('Status update completed successfully');
-                        } catch (error) {
-                          console.error('Error updating order status:', error);
-                          showToast('Error updating order status', 'error');
-                          
-                          // Revert local state if Firebase update failed
-                          setSelectedOrder(selectedOrder);
-                          setOrders(orders);
+                        console.log('Updating selectedOrder:', updatedOrder);
+                        setSelectedOrder(updatedOrder);
+                        
+                        // Update the orders list
+                        const updatedOrders = orders.map(order => 
+                          order.id === selectedOrder.id 
+                            ? updatedOrder
+                            : order
+                        );
+                        console.log('Updating orders list with:', updatedOrders);
+                        setOrders(updatedOrders);
+                        
+                        // Then update Firebase
+                        console.log('Updating Firebase with status:', newStatus);
+                        if (selectedOrder.id) {
+                          await AuthService.updateOrderStatus(selectedOrder.id, newStatus);
                         }
-                      }}
-                      className="px-3 py-2 border border-[#D4AF37] rounded-lg text-[#5E4E06] bg-white focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
-                    >
-                     <option value="pending">Pending</option>
-                     <option value="confirmed">Confirmed</option>
-                     <option value="processing">Processing</option>
-                     <option value="shipped">Shipped</option>
-                     <option value="out_for_delivery">Out for Delivery</option>
-                     <option value="delivered">Delivered</option>
-                     <option value="cancelled">Cancelled</option>
-                   </select>
-                 </div>
-                 <button
-                   onClick={handleCloseOrderDetails}
-                   className="px-4 py-2 text-[#5E4E06] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-lg transition-colors"
-                 >
-                   Close
-                 </button>
+                        
+                        showToast('Order status updated successfully', 'success');
+                        console.log('Status update completed successfully');
+                      } catch (error) {
+                        console.error('Error updating order status:', error);
+                        showToast('Error updating order status', 'error');
+                        
+                        // Revert local state if Firebase update failed
+                        setSelectedOrder(selectedOrder);
+                        setOrders(orders);
+                      }
+                    }}
+                    className="px-2 sm:px-3 py-2 border border-[#D4AF37] rounded-lg text-[#5E4E06] bg-white focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent text-xs sm:text-sm cursor-pointer"
+                  >
+                   <option value="pending">Pending</option>
+                   <option value="confirmed">Confirmed</option>
+                   <option value="processing">Processing</option>
+                   <option value="shipped">Shipped</option>
+                   <option value="out_for_delivery">Out for Delivery</option>
+                   <option value="delivered">Delivered</option>
+                   <option value="cancelled">Cancelled</option>
+                 </select>
                </div>
+               <button
+                 onClick={handleCloseOrderDetails}
+                 className="px-3 sm:px-4 py-2 text-[#5E4E06] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-lg transition-colors text-sm sm:text-base cursor-pointer"
+               >
+                 Close
+               </button>
+             </div>
             </div>
           </div>
         )}

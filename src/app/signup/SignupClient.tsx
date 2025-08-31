@@ -394,15 +394,15 @@ export default function SignupClient() {
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-sm font-medium text-[#5E4E06] mb-2">Phone Number</label>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-2">Phone Number</label>
                     <PhoneInput
                       country={'in'}
                       value={formData.phone}
                       onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
-                      inputClass="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#D4AF37] focus:outline-none transition-colors"
-                      containerClass="phone-input-container"
-                      buttonClass="phone-input-button"
-                      dropdownClass="phone-input-dropdown"
+                      inputClass={styles.phoneInput}
+                      containerClass={styles.phoneContainer}
+                      buttonClass={styles.phoneButton}
+                      dropdownClass={styles.phoneDropdown}
                       enableSearch={true}
                       searchPlaceholder="Search countries..."
                       inputProps={{
@@ -412,7 +412,9 @@ export default function SignupClient() {
                       preferredCountries={['in', 'us', 'gb']}
                     />
                     {errors.phone && (
-                      <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                      <p className="mt-2 text-sm text-red-600 font-medium">
+                        {errors.phone}
+                      </p>
                     )}
                   </div>
                 )}

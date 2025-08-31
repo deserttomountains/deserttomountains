@@ -1616,39 +1616,43 @@ function QuotesPageContent() {
                   {/* Discount Section - Mobile Optimized */}
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-[#8B7A1A] mb-3">Discount</label>
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-3">
-                      <button
-                        onClick={() => {
-                          setQuoteForm(prev => ({ 
-                            ...prev, 
-                            discountType: 'percentage',
-                            discount: 0
-                          }));
-                        }}
-                        className={`px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer touch-manipulation ${
-                          quoteForm.discountType === 'percentage'
-                            ? 'bg-[#D4AF37] text-white shadow-lg scale-105'
-                            : 'bg-white text-[#8B7A1A] hover:bg-[#F5F2E8] active:bg-[#E6DCC0] border border-[#D4AF37]'
-                        }`}
-                      >
-                        Percentage (%)
-                      </button>
-                      <button
-                        onClick={() => {
-                          setQuoteForm(prev => ({ 
-                            ...prev, 
-                            discountType: 'amount',
-                            discount: 0
-                          }));
-                        }}
-                        className={`px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer touch-manipulation ${
-                          quoteForm.discountType === 'percentage'
-                            ? 'bg-white text-[#8B7A1A] hover:bg-[#F5F2E8] active:bg-[#E6DCC0] border border-[#D4AF37]'
-                            : 'bg-[#D4AF37] text-white shadow-lg scale-105'
-                        }`}
-                      >
-                        Amount (₹)
-                      </button>
+                    
+                    {/* Discount Type Selection - Tab Style */}
+                    <div className="bg-white rounded-lg sm:rounded-xl border border-[#D4AF37] p-1 mb-3 sm:mb-4">
+                      <div className="flex">
+                        <button
+                          onClick={() => {
+                            setQuoteForm(prev => ({ 
+                              ...prev, 
+                              discountType: 'percentage',
+                              discount: 0
+                            }));
+                          }}
+                          className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md sm:rounded-lg font-medium transition-all duration-200 cursor-pointer touch-manipulation text-xs sm:text-sm ${
+                            quoteForm.discountType === 'percentage'
+                              ? 'bg-[#D4AF37] text-white shadow-sm'
+                              : 'bg-transparent text-[#8B7A1A] hover:bg-[#F5F2E8] active:bg-[#E6DCC0]'
+                          }`}
+                        >
+                          Percentage (%)
+                        </button>
+                        <button
+                          onClick={() => {
+                            setQuoteForm(prev => ({ 
+                              ...prev, 
+                              discountType: 'amount',
+                              discount: 0
+                            }));
+                          }}
+                          className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md sm:rounded-lg font-medium transition-all duration-200 cursor-pointer touch-manipulation text-xs sm:text-sm ${
+                            quoteForm.discountType === 'amount'
+                              ? 'bg-[#D4AF37] text-white shadow-sm'
+                              : 'bg-transparent text-[#8B7A1A] hover:bg-[#F5F2E8] active:bg-[#E6DCC0]'
+                          }`}
+                        >
+                          Amount (₹)
+                        </button>
+                      </div>
                     </div>
                     
                     {/* Discount Input - Full Width on Mobile */}

@@ -171,14 +171,21 @@ export default function AccountSettingsPage() {
       // Update Firestore profile with all data
       if (user) {
         const firestoreProfile = await AuthService.getUserProfile(user.uid);
+        
+        // Don't update email if it's the primary login credential
+        const emailToSave = isEmailPrimaryLogin() ? firestoreProfile?.email || user.email || '' : email;
+        
+        // Don't update phone if it's the primary login credential
+        const phoneToSave = isPhonePrimaryLogin() ? firestoreProfile?.phone || user.phoneNumber || '' : phone;
+        
         const updatedProfile = {
           ...firestoreProfile,
           uid: user.uid, // Ensure uid is always a string
           role: (firestoreProfile?.role ?? 'customer') as 'customer' | 'admin', // Always a valid UserRole
           firstName: name.split(' ')[0] || '',
           lastName: name.split(' ').slice(1).join(' '),
-          phone: phone, // Use the phone from form state
-          email: email,
+          phone: phoneToSave, // Use the phone from form state or keep existing if primary
+          email: emailToSave, // Use the email from form state or keep existing if primary
           address: {
             addressLine1,
             addressLine2,
@@ -214,6 +221,34 @@ export default function AccountSettingsPage() {
     return hasEmailProvider || hasGoogleProvider;
   }
 
+  // Check if current email is the primary login credential
+  function isEmailPrimaryLogin() {
+    if (!user) return false;
+    
+    const providers = user.providerData;
+    const emailProvider = providers.find(p => p.providerId === 'password');
+    const googleProvider = providers.find(p => p.providerId === 'google.com');
+    
+    // If user has email/password provider and the email matches, it's primary
+    // OR if user has Google provider (which uses email as primary credential)
+    const isPrimary = (emailProvider && emailProvider.email === user.email) || 
+                     (googleProvider && googleProvider.email === user.email);
+    
+    return isPrimary;
+  }
+
+  // Check if current phone is the primary login credential
+  function isPhonePrimaryLogin() {
+    if (!user) return false;
+    
+    const providers = user.providerData;
+    const phoneProvider = providers.find(p => p.providerId === 'phone');
+    
+    // If user has phone provider and the phone matches, it's primary
+    const isPrimary = phoneProvider && phoneProvider.phoneNumber === user.phoneNumber;
+    return isPrimary;
+  }
+
   async function handleResetPassword() {
     if (!user?.email) {
       showToast("No email associated with this account", 'error');
@@ -231,7 +266,7 @@ export default function AccountSettingsPage() {
 
 
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <DashboardLayout active="Settings">
         <div className="max-w-5xl mx-auto pt-24 pb-12 px-2 md:px-0">
@@ -239,7 +274,9 @@ export default function AccountSettingsPage() {
             <div className="flex items-center justify-center py-20">
               <div className="flex items-center gap-4">
                 <Loader2 className="w-8 h-8 text-[#D4AF37] animate-spin" />
-                <span className="text-lg font-semibold text-[#5E4E06]">Loading your profile...</span>
+                <span className="text-lg font-semibold text-[#5E4E06]">
+                  {!user ? 'Please log in to view settings...' : 'Loading your profile...'}
+                </span>
               </div>
             </div>
           </div>
@@ -291,26 +328,77 @@ export default function AccountSettingsPage() {
                       </div>
                     )}
                   </div>
-                  {/* Email field - always editable */}
+                  {/* Email field - disabled if it's the primary login credential */}
                   <div>
-                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Email Address</label>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">
+                      Email Address
+                      {isEmailPrimaryLogin() && (
+                        <span className="ml-2 text-xs text-[#D4AF37] bg-[#F5F2E8] px-2 py-1 rounded-full">
+                          Primary Login
+                        </span>
+                      )}
+                    </label>
                     <input
-                      className={`w-full border rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:outline-none ${
-                        errors.email 
-                          ? 'border-red-500 focus:ring-red-500' 
-                          : 'border-[#E6DCC0] focus:ring-[#D4AF37]'
+                      className={`w-full border rounded-xl px-3 py-2 focus:ring-2 focus:outline-none ${
+                        isEmailPrimaryLogin()
+                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300'
+                          : errors.email 
+                            ? 'bg-white text-[#5E4E06] border-red-500 focus:ring-red-500' 
+                            : 'bg-white text-[#5E4E06] border-[#E6DCC0] focus:ring-[#D4AF37]'
                       }`}
                       value={email}
                       onChange={e => {
-                        setEmail(e.target.value);
-                        if (errors.email) clearErrors();
+                        if (!isEmailPrimaryLogin()) {
+                          setEmail(e.target.value);
+                          if (errors.email) clearErrors();
+                        }
                       }}
                       placeholder="Enter your email"
+                      disabled={isEmailPrimaryLogin()}
                     />
+                    {isEmailPrimaryLogin() && (
+                      <div className="flex items-center gap-1 mt-1 text-[#8B7A1A] text-sm">
+                        <Shield className="w-4 h-4" />
+                        This email is used for login and cannot be changed here
+                      </div>
+                    )}
                     {errors.email && (
                       <div className="flex items-center gap-1 mt-1 text-red-500 text-sm">
                         <AlertCircle className="w-4 h-4" />
                         {errors.email}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Phone Number Field - disabled if it's the primary login credential */}
+                  <div>
+                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">
+                      Phone Number
+                      {isPhonePrimaryLogin() && (
+                        <span className="ml-2 text-xs text-[#D4AF37] bg-[#F5F2E8] px-2 py-1 rounded-full">
+                          Primary Login
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      className={`w-full border rounded-xl px-3 py-2 focus:ring-2 focus:outline-none ${
+                        isPhonePrimaryLogin()
+                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300'
+                          : 'bg-white text-[#5E4E06] border-[#E6DCC0] focus:ring-[#D4AF37]'
+                      }`}
+                      value={phone}
+                      onChange={e => {
+                        if (!isPhonePrimaryLogin()) {
+                          setPhone(e.target.value);
+                        }
+                      }}
+                      placeholder="Enter your phone number"
+                      disabled={isPhonePrimaryLogin()}
+                    />
+                    {isPhonePrimaryLogin() && (
+                      <div className="flex items-center gap-1 mt-1 text-[#8B7A1A] text-sm">
+                        <Shield className="w-4 h-4" />
+                        This phone number is used for login and cannot be changed here
                       </div>
                     )}
                   </div>
@@ -451,21 +539,38 @@ export default function AccountSettingsPage() {
                     Reset Password
                   </button>
                   <div className="text-xs text-[#8B7A1A] mt-1">Password reset is available for email and Google accounts.</div>
+                  
+                  {/* Information about changing primary login credentials */}
+                  {(isEmailPrimaryLogin() || isPhonePrimaryLogin()) && (
+                    <div className="mt-4 p-4 bg-[#F5F2E8] rounded-xl border border-[#D4AF37]/30">
+                      <h3 className="font-semibold text-[#5E4E06] mb-2 flex items-center gap-2">
+                        <Shield className="w-4 h-4" />
+                        Primary Login Credentials
+                      </h3>
+                      <p className="text-sm text-[#8B7A1A] mb-3">
+                        Your primary login credentials cannot be changed from this page for security reasons.
+                      </p>
+                      <div className="text-xs text-[#8B7A1A] space-y-1">
+                        {isEmailPrimaryLogin() && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-3 h-3" />
+                            <span>Email: {user?.email}</span>
+                          </div>
+                        )}
+                        {isPhonePrimaryLogin() && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3 h-3" />
+                            <span>Phone: {user?.phoneNumber}</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-[#8B7A1A] mt-2">
+                        To change your primary login credentials, please contact support or create a new account.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
-
-              
-
-                  {/* Phone Number Field */}
-                  <div>
-                    <label className="block text-sm font-semibold text-[#8B7A1A] mb-1">Phone Number</label>
-                    <input
-                      className="w-full border border-[#E6DCC0] rounded-xl px-3 py-2 bg-white text-[#5E4E06] focus:ring-2 focus:ring-[#D4AF37] focus:outline-none"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                      placeholder="Enter your phone number"
-                    />
-                                    </div>
 
                 </div>
               </div>

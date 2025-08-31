@@ -424,7 +424,7 @@ export default function PaymentPage() {
                   type="button"
                   key={gateway.id}
                   onClick={() => setSelectedGateway(gateway.id)}
-                  className={`w-full p-4 rounded-lg border-2 transition-all duration-300 focus:outline-none text-left ${
+                  className={`w-full p-4 rounded-lg border-2 transition-all duration-300 focus:outline-none text-left cursor-pointer ${
                     selectedGateway === gateway.id
                       ? 'border-[#D4AF37] bg-[#FFF8DC]'
                       : 'border-[#E5E5E5] bg-white hover:border-[#D4AF37]/50'
@@ -459,7 +459,7 @@ export default function PaymentPage() {
                   className={`w-full px-6 py-3 font-semibold rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-2 text-base ${
                     isProcessing || cart.length === 0
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-[#5E4E06] text-white hover:bg-[#8B7A1A] hover:shadow-md'
+                      : 'bg-[#5E4E06] text-white hover:bg-[#8B7A1A] hover:shadow-md cursor-pointer'
                   }`}
                 >
                   {isProcessing ? (
