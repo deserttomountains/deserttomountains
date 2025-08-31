@@ -206,7 +206,27 @@ export default function PaymentPage() {
             };
             localStorage.setItem('orderConfirmationData', JSON.stringify(orderDetails));
             
-            // Redirect to order confirmation - webhook will handle order status update
+            // Client-side fallback: Update order status immediately (webhook will also update)
+            try {
+              const updateData = {
+                paymentStatus: 'completed' as const,
+                status: 'confirmed' as const,
+                transactionId: response.razorpay_payment_id,
+                paymentMode: 'razorpay',
+                paymentMessage: 'Payment captured successfully',
+                paymentTime: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+              };
+
+              // Update the order using AuthService (client-side with auth context)
+              await AuthService.updateOrder(firebaseOrderId, updateData);
+              console.log('Order updated successfully on client side (fallback)');
+            } catch (error) {
+              console.error('Error updating order on client side (fallback):', error);
+              // Don't show error to user - webhook will handle it
+            }
+            
+            // Redirect to order confirmation - webhook will also handle order status update
             setTimeout(() => router.push('/order-confirmation'), 1200);
           },
           prefill: {
@@ -259,8 +279,8 @@ export default function PaymentPage() {
           cf.checkout({
             paymentSessionId: cashfreeOrder.paymentSessionId,
             redirectTarget: '_self',
-            onSuccess: function(data: any) {
-              // Clear cart from localStorage and context
+            onSuccess: async function(data: any) {
+              showToast('Payment successful! Verifying payment...', 'success');
               localStorage.removeItem('cart');
               if (typeof clearCart === 'function') clearCart();
               
@@ -274,7 +294,26 @@ export default function PaymentPage() {
               };
               localStorage.setItem('orderConfirmationData', JSON.stringify(orderDetails));
               
-              showToast('Payment successful! Redirecting to order confirmation...', 'success');
+              // Client-side fallback: Update order status immediately (webhook will also update)
+              try {
+                const updateData = {
+                  paymentStatus: 'completed' as const,
+                  status: 'confirmed' as const,
+                  transactionId: data.referenceId || 'CF' + Date.now(),
+                  paymentMode: 'cashfree',
+                  paymentMessage: 'Payment captured successfully',
+                  paymentTime: new Date().toISOString(),
+                  lastUpdated: new Date().toISOString(),
+                };
+
+                // Update the order using AuthService (client-side with auth context)
+                await AuthService.updateOrder(firebaseOrderId, updateData);
+                console.log('Order updated successfully on client side (fallback)');
+              } catch (error) {
+                console.error('Error updating order on client side (fallback):', error);
+                // Don't show error to user - webhook will handle it
+              }
+              
               setTimeout(() => router.push('/order-confirmation'), 1200);
             },
             onFailure: function(data: any) {

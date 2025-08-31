@@ -125,17 +125,22 @@ export async function POST(request: NextRequest) {
     console.log(`Razorpay payment ${paymentStatus} for order: ${orderId}`);
     console.log(`Payment ID: ${paymentId}, Firebase Order ID: ${firebase_order_id}`);
     
-    // Update order status in Firebase if we have the Firebase order ID
-    if (firebase_order_id && paymentStatus === 'completed') {
+    // Update order status in Firebase - find order by Razorpay order ID
+    if (paymentStatus === 'completed') {
       try {
-        console.log(`Attempting to update order with Firebase ID: ${firebase_order_id}`);
+        console.log(`Attempting to find order with Razorpay order ID: ${orderId}`);
         
-        // Use direct Firestore operations
-        const orderDocRef = doc(serverDb, 'orders', firebase_order_id);
-        const orderDoc = await getDoc(orderDocRef);
+        // Query orders collection to find the order with matching Razorpay order ID
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        const ordersRef = collection(serverDb, 'orders');
+        const q = query(ordersRef, where('orderId', '==', orderId));
+        const querySnapshot = await getDocs(q);
         
-        if (orderDoc.exists()) {
+        if (!querySnapshot.empty) {
+          const orderDoc = querySnapshot.docs[0];
           const orderData = orderDoc.data();
+          const firebaseOrderId = orderDoc.id;
+          
           console.log(`Order found: ${orderData.orderId}, current status: ${orderData.status}, payment status: ${orderData.paymentStatus}`);
           
           const updateData = {
@@ -159,17 +164,51 @@ export async function POST(request: NextRequest) {
           console.log(`Updating order with data:`, updateData);
           
           // Update using direct Firestore operations
-          await updateDoc(orderDocRef, updateData);
-          console.log(`Order ${firebase_order_id} updated successfully with payment status: ${paymentStatus}`);
+          await updateDoc(doc(serverDb, 'orders', firebaseOrderId), updateData);
+          console.log(`Order ${firebaseOrderId} updated successfully with payment status: ${paymentStatus}`);
         } else {
-          console.warn(`Order ${firebase_order_id} not found in Firebase`);
+          console.warn(`Order with Razorpay order ID ${orderId} not found in Firebase`);
+          
+          // Fallback: try to find by firebase_order_id if provided
+          if (firebase_order_id) {
+            console.log(`Trying fallback with Firebase order ID: ${firebase_order_id}`);
+            const orderDocRef = doc(serverDb, 'orders', firebase_order_id);
+            const orderDoc = await getDoc(orderDocRef);
+            
+            if (orderDoc.exists()) {
+              const orderData = orderDoc.data();
+              console.log(`Order found via fallback: ${orderData.orderId}, current status: ${orderData.status}, payment status: ${orderData.paymentStatus}`);
+              
+              const updateData = {
+                paymentStatus,
+                status: paymentStatus === 'completed' ? 'confirmed' : 'pending',
+                transactionId: paymentId,
+                paymentMode: 'razorpay',
+                paymentMessage: status || paymentDetails?.status || 'unknown',
+                paymentTime: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+              };
+
+              if (paymentDetails) {
+                updateData.paymentMessage = `${paymentDetails.status} - ${paymentDetails.method || 'unknown method'}`;
+                if (paymentDetails.error_code) {
+                  updateData.paymentMessage += ` (Error: ${paymentDetails.error_code})`;
+                }
+              }
+
+              await updateDoc(orderDocRef, updateData);
+              console.log(`Order ${firebase_order_id} updated successfully via fallback with payment status: ${paymentStatus}`);
+            } else {
+              console.warn(`Order ${firebase_order_id} not found in Firebase via fallback`);
+            }
+          }
         }
       } catch (error) {
         console.error('Error updating order in Firebase:', error);
         // Don't fail the webhook if Firebase update fails
       }
     } else {
-      console.log('No Firebase order ID provided or payment not completed - skipping order update');
+      console.log(`Payment not completed (${paymentStatus}) - skipping order update`);
     }
 
     return NextResponse.json({ 

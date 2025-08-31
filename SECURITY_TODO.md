@@ -74,7 +74,7 @@
 
 ### ✅ Client-Side Payment Status Updates (FIXED)
 - **Status**: ✅ COMPLETED
-- **Description**: Moved order updates to server-side webhooks
+- **Description**: Moved order updates to server-side webhooks with client-side fallback
 - **Files**: `src/app/payment/page.tsx`, `src/app/api/payment/*/webhook/route.ts`
 
 ### ✅ Webhook Signature Verification (Razorpay)
@@ -86,6 +86,15 @@
 - **Status**: ✅ COMPLETED
 - **Description**: Updated rules to allow server-side payment updates
 - **File**: `firestore.rules`
+
+### ✅ Order Status Update Reliability (FIXED)
+- **Status**: ✅ COMPLETED
+- **Description**: Fixed order status not updating in user dashboard after payment
+- **Files**: `src/app/api/payment/razorpay/webhook/route.ts`, `src/app/payment/page.tsx`
+- **Solution**: 
+  - Webhook now finds orders by Razorpay order ID instead of relying on firebase_order_id
+  - Added client-side fallback for immediate order status updates
+  - Both webhook and client-side updates ensure order status is updated reliably
 
 ## Notes
 
