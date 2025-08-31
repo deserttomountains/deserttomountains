@@ -62,6 +62,15 @@ class CashfreeService {
     this.baseUrl = this.environment === 'PROD' 
       ? 'https://api.cashfree.com/pg' 
       : 'https://sandbox.cashfree.com/pg';
+    
+    // Log configuration for debugging
+    console.log('Cashfree Service Configuration:', {
+      environment: this.environment,
+      baseUrl: this.baseUrl,
+      clientId: this.clientId.substring(0, 10) + '...', // Log partial for security
+      hasClientSecret: !!this.clientSecret,
+      hasWebhookSecret: !!this.webhookSecret
+    });
   }
 
   private getAuthHeaders(): HeadersInit {

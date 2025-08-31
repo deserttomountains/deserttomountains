@@ -285,7 +285,9 @@ export default function PaymentPage() {
         // 3. Load Cashfree Drop-in JS and open payment modal
         await loadCashfreeScript();
         // @ts-ignore
-        const cf = window.Cashfree && window.Cashfree({ mode: 'sandbox' });
+        const cf = window.Cashfree && window.Cashfree({ 
+          mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'PROD' ? 'production' : 'sandbox' 
+        });
         if (cf && typeof cf.checkout === 'function') {
           cf.checkout({
             paymentSessionId: cashfreeOrder.paymentSessionId,
