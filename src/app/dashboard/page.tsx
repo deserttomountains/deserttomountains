@@ -53,12 +53,6 @@ function DashboardPageContent() {
           );
 
           unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
-            // Check if user is still authenticated before processing data
-            if (!auth.currentUser) {
-              console.log('User no longer authenticated, skipping order update');
-              return;
-            }
-            
             const userOrders = snapshot.docs.map(doc => ({
               id: doc.id,
               ...doc.data()
@@ -77,21 +71,11 @@ function DashboardPageContent() {
             setTotalOrders(userOrders.length); // Set total count
           }, (error) => {
             console.error('Error listening to orders:', error);
-            // Check if it's a permission error (user signed out)
-            if (error instanceof Error && error.message.includes('permission')) {
-              console.warn('Permission denied for orders, user may be signing out');
-              return;
-            }
             // Fallback to localStorage if Firestore fails
             const fallbackOrders = JSON.parse(localStorage.getItem('orders') || '[]');
             setRecentOrders(fallbackOrders.slice(0, 3));
             setTotalOrders(fallbackOrders.length);
           });
-          
-          // Register the listener for cleanup during logout
-          if (unsubscribe) {
-            AuthService.registerListenerForCleanup(unsubscribe);
-          }
         }
       } catch (error) {
         console.error('Error loading user profile:', error);
@@ -109,8 +93,6 @@ function DashboardPageContent() {
     // Cleanup function
     return () => {
       if (unsubscribe) {
-        console.log('Cleaning up orders listener');
-        AuthService.unregisterListener(unsubscribe);
         unsubscribe();
       }
     };
