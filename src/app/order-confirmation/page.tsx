@@ -55,7 +55,7 @@ function OrderConfirmationContent() {
       });
 
       // Show order placed toast
-      showToast('Order placed successfully!', 'success');
+      showToast('Order placed successfully! Payment verification in progress...', 'success');
 
       // Clear order confirmation data after displaying
       localStorage.removeItem('orderConfirmationData');
