@@ -96,18 +96,18 @@ function QuotesPageContent() {
     // Dhunee Products
     {
       id: 'dhunee-100',
-      name: 'Dhunee Organic Incense',
+      name: 'Dhunee Organic Incense - Small',
       category: 'Dhunee',
-      price: 1200,
-      unit: 'per pack (100 sticks)',
+      price: 249,
+      unit: 'per pack',
       description: 'Natural organic incense sticks'
     },
     {
       id: 'dhunee-200',
-      name: 'Dhunee Organic Incense',
+      name: 'Dhunee Organic Incense - Large',
       category: 'Dhunee',
-      price: 2000,
-      unit: 'per pack (200 sticks)',
+      price: 400,
+      unit: 'per pack',
       description: 'Natural organic incense sticks'
     }
   ];

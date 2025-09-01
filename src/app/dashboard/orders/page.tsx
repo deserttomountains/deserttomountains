@@ -399,6 +399,17 @@ export default function OrdersPage() {
                         }`}>
                           {selectedOrder.paymentStatus.charAt(0).toUpperCase() + selectedOrder.paymentStatus.slice(1)}
                         </span>
+                        {/* Payment Pending Note */}
+                        {selectedOrder.paymentStatus === 'pending' && (
+                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-blue-800 text-sm font-medium">
+                              💡 Payment Note:
+                            </p>
+                            <p className="text-blue-700 text-xs mt-1">
+                              If you have already paid and money is deducted from your account but the status shows as pending, please don't worry. Contact us and we will resolve your issue promptly.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                     {selectedOrder.paymentMethod && (
