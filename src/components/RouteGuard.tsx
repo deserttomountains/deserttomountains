@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { UserRole } from '@/lib/firebase';
@@ -20,6 +20,7 @@ export const RouteGuard = ({
   const router = useRouter();
   const pathname = usePathname();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Memoize the authentication check to prevent unnecessary re-runs
   const authCheck = useMemo(() => {
@@ -51,6 +52,16 @@ export const RouteGuard = ({
     return { shouldRedirect: false, redirectPath: null };
   }, [user, role, loading, requiredRole, redirectTo, pathname]);
 
+  // Handle redirects
+  const handleRedirect = useCallback((redirectPath: string) => {
+    if (!isRedirecting) {
+      console.log('RouteGuard: Redirecting to:', redirectPath);
+      setIsRedirecting(true);
+      router.push(redirectPath);
+    }
+  }, [isRedirecting, router]);
+
+  // Main authentication effect
   useEffect(() => {
     console.log('RouteGuard: Checking access...', {
       user: user?.uid,
@@ -59,26 +70,29 @@ export const RouteGuard = ({
       requiredRole,
       redirectTo,
       currentPath: pathname,
-      authCheck
+      authCheck,
+      hasInitialized
     });
     
-    if (!loading && authCheck.shouldRedirect && !isRedirecting) {
-      console.log('RouteGuard: Redirecting to:', authCheck.redirectPath);
-      setIsRedirecting(true);
-      router.push(authCheck.redirectPath!);
-    } else if (!loading && !authCheck.shouldRedirect) {
-      console.log('RouteGuard: Access granted');
-      setIsRedirecting(false);
+    if (!loading) {
+      if (authCheck.shouldRedirect && !isRedirecting) {
+        handleRedirect(authCheck.redirectPath!);
+      } else if (!authCheck.shouldRedirect) {
+        console.log('RouteGuard: Access granted');
+        setIsRedirecting(false);
+        setHasInitialized(true);
+      }
     }
-  }, [authCheck, loading, router, isRedirecting]);
+  }, [authCheck, loading, isRedirecting, handleRedirect, hasInitialized]);
 
   // Reset redirecting state when pathname changes (but don't re-run auth check)
   useEffect(() => {
-    if (user && role && (!requiredRole || role === requiredRole)) {
+    if (hasInitialized && user && role && (!requiredRole || role === requiredRole)) {
       // User is authenticated and has the right role, just reset redirecting state
+      console.log('RouteGuard: Pathname changed, resetting redirect state');
       setIsRedirecting(false);
     }
-  }, [pathname, user, role, requiredRole]);
+  }, [pathname, hasInitialized, user, role, requiredRole]);
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -107,12 +121,36 @@ export const RouteGuard = ({
   return <>{children}</>;
 };
 
-// Specific route guards for common use cases
-export const AdminRouteGuard = ({ children }: { children: React.ReactNode }) => (
-  <RouteGuard requiredRole="admin" redirectTo="/dashboard">
-    {children}
-  </RouteGuard>
-);
+// Enhanced AdminRouteGuard with better state management
+export const AdminRouteGuard = ({ children }: { children: React.ReactNode }) => {
+  const { user, role, loading } = useAuth();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Only initialize once when user is confirmed as admin
+  useEffect(() => {
+    if (!loading && user && role === 'admin' && !isInitialized) {
+      console.log('AdminRouteGuard: Initialized for admin user');
+      setIsInitialized(true);
+    }
+  }, [user, role, loading, isInitialized]);
+
+  // Show loading until we're sure the user is admin
+  if (loading || !isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
+      </div>
+    );
+  }
+
+  // If not admin, redirect
+  if (role !== 'admin') {
+    return null; // Will be handled by RouteGuard
+  }
+
+  // Render admin content
+  return <>{children}</>;
+};
 
 export const CustomerRouteGuard = ({ children }: { children: React.ReactNode }) => (
   <RouteGuard requiredRole="customer" redirectTo="/admin">

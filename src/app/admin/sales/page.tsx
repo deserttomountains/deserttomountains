@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { AuthService, auth, Order } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
-import { AdminRouteGuard } from '@/components/RouteGuard';
+
 import AdminLayout from '../components/AdminLayout';
 import { Target, TrendingUp, Package, DollarSign, Calendar, BarChart3, Filter, Search, Eye, Edit, Truck, CheckCircle, Clock, AlertCircle, X } from 'lucide-react';
 
@@ -906,9 +906,5 @@ function SalesPageContent() {
 }
 
 export default function SalesPage() {
-  return (
-    <AdminRouteGuard>
-      <SalesPageContent />
-    </AdminRouteGuard>
-  );
+  return <SalesPageContent />;
 }

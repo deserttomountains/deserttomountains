@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { AuthService, auth, Lead } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
-import { AdminRouteGuard } from '@/components/RouteGuard';
+
 import AdminLayout from '../components/AdminLayout';
 import { Plus, Search, Edit, Trash2, UserPlus, X, Repeat, Filter, Users, MessageSquare } from 'lucide-react';
 
@@ -1219,9 +1219,5 @@ function LeadsPageContent() {
 }
 
 export default function LeadsPage() {
-  return (
-    <AdminRouteGuard>
-      <LeadsPageContent />
-    </AdminRouteGuard>
-  );
+  return <LeadsPageContent />;
 }

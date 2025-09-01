@@ -1,7 +1,9 @@
 "use client";
 
 import { Menu } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { useRouter, usePathname } from 'next/navigation';
 import AdminSidebar from './AdminSidebar';
 
 interface AdminLayoutProps {
@@ -12,6 +14,35 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, userProfile, onLogout }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, role, loading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Check authentication once at layout level
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        console.log('AdminLayout: No user, redirecting to login');
+        router.push('/login?redirect=' + encodeURIComponent(pathname));
+        return;
+      }
+      
+      if (role !== 'admin') {
+        console.log('AdminLayout: User is not admin, redirecting to dashboard');
+        router.push('/dashboard');
+        return;
+      }
+    }
+  }, [user, role, loading, router, pathname]);
+
+  // Show loading while checking authentication
+  if (loading || !user || role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] via-[#F5F2E8] to-[#E6DCC0]">

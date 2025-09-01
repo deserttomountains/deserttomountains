@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { AuthService, auth, Quote, Lead } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
-import { AdminRouteGuard } from '@/components/RouteGuard';
+
 import AdminLayout from '../components/AdminLayout';
 import { FileText, Plus, Eye, Download, MoreVertical, X, Edit, Trash2, ExternalLink, Search, Filter } from 'lucide-react';
 import { downloadQuotePDF, previewQuotePDF } from '@/utils/puppeteerPDFGenerator';
@@ -2213,9 +2213,5 @@ function QuotesPageContent() {
 }
 
 export default function QuotesPage() {
-  return (
-    <AdminRouteGuard>
-      <QuotesPageContent />
-    </AdminRouteGuard>
-  );
+  return <QuotesPageContent />;
 }

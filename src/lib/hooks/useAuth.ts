@@ -31,8 +31,8 @@ export const useAuth = () => {
       
       if (user && !isSigningOut) {
         try {
-          // Set loading to false immediately to prevent UI blocking
-          setAuthState(prev => ({ ...prev, loading: false }));
+          // Keep loading true until we have both user and role
+          setAuthState(prev => ({ ...prev, user, loading: true }));
           
           // Get user profile and role in parallel for better performance
           const [profile, role] = await Promise.all([

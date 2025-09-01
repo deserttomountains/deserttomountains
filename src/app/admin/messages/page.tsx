@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { AuthService, auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
-import { AdminRouteGuard } from '@/components/RouteGuard';
+
 import AdminLayout from '../components/AdminLayout';
 import { MessageSquare, Send } from 'lucide-react';
 
@@ -101,9 +101,5 @@ function MessagesPageContent() {
 }
 
 export default function MessagesPage() {
-  return (
-    <AdminRouteGuard>
-      <MessagesPageContent />
-    </AdminRouteGuard>
-  );
+  return <MessagesPageContent />;
 }
