@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { UserRole } from '@/lib/firebase';
@@ -21,6 +21,36 @@ export const RouteGuard = ({
   const pathname = usePathname();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  // Memoize the authentication check to prevent unnecessary re-runs
+  const authCheck = useMemo(() => {
+    if (loading) return { shouldRedirect: false, redirectPath: null };
+    
+    // If user is not authenticated
+    if (!user) {
+      return { 
+        shouldRedirect: true, 
+        redirectPath: `/login?redirect=${encodeURIComponent(pathname)}` 
+      };
+    }
+    
+    // If role is required and user doesn't have the required role
+    if (requiredRole && role !== requiredRole) {
+      if (redirectTo) {
+        return { shouldRedirect: true, redirectPath: redirectTo };
+      } else {
+        // Default redirect based on user's actual role
+        if (role === 'admin') {
+          return { shouldRedirect: true, redirectPath: '/admin' };
+        } else {
+          return { shouldRedirect: true, redirectPath: '/dashboard' };
+        }
+      }
+    }
+    
+    // Access granted
+    return { shouldRedirect: false, redirectPath: null };
+  }, [user, role, loading, requiredRole, redirectTo, pathname]);
+
   useEffect(() => {
     console.log('RouteGuard: Checking access...', {
       user: user?.uid,
@@ -28,59 +58,27 @@ export const RouteGuard = ({
       loading,
       requiredRole,
       redirectTo,
-      currentPath: pathname
+      currentPath: pathname,
+      authCheck
     });
     
-    if (!loading) {
-      // Add small delay to ensure auth state is stable and prevent race conditions
-      const timer = setTimeout(() => {
-        // Prevent infinite redirects
-        if (isRedirecting) {
-          console.log('RouteGuard: Already redirecting, skipping...');
-          return;
-        }
-
-        // If user is not authenticated, redirect to login with current path as redirect
-        if (!user) {
-          console.log('RouteGuard: No user, redirecting to login with redirect:', pathname);
-          setIsRedirecting(true);
-          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-          return;
-        }
-
-        // If role is required and user doesn't have the required role
-        if (requiredRole && role !== requiredRole) {
-          console.log('RouteGuard: Role mismatch, redirecting...', {
-            requiredRole,
-            actualRole: role
-          });
-          setIsRedirecting(true);
-          if (redirectTo) {
-            router.push(redirectTo);
-          } else {
-            // Default redirect based on user's actual role
-            if (role === 'admin') {
-              router.push('/admin');
-            } else {
-              router.push('/dashboard');
-            }
-          }
-          return;
-        }
-        
-        console.log('RouteGuard: Access granted');
-        // Reset redirecting state when access is granted
-        setIsRedirecting(false);
-      }, 100); // Small delay to prevent race conditions
-
-      return () => clearTimeout(timer);
+    if (!loading && authCheck.shouldRedirect && !isRedirecting) {
+      console.log('RouteGuard: Redirecting to:', authCheck.redirectPath);
+      setIsRedirecting(true);
+      router.push(authCheck.redirectPath!);
+    } else if (!loading && !authCheck.shouldRedirect) {
+      console.log('RouteGuard: Access granted');
+      setIsRedirecting(false);
     }
-  }, [user, role, loading, requiredRole, redirectTo, router, pathname]);
+  }, [authCheck, loading, router, isRedirecting]);
 
-  // Reset redirecting state when pathname changes
+  // Reset redirecting state when pathname changes (but don't re-run auth check)
   useEffect(() => {
-    setIsRedirecting(false);
-  }, [pathname]);
+    if (user && role && (!requiredRole || role === requiredRole)) {
+      // User is authenticated and has the right role, just reset redirecting state
+      setIsRedirecting(false);
+    }
+  }, [pathname, user, role, requiredRole]);
 
   // Show loading spinner while checking authentication
   if (loading) {
