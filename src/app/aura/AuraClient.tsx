@@ -223,6 +223,17 @@ export default function AuraClient() {
     setIsAddingToCart(true);
 
     try {
+      // Create shades array from selected colors
+      const selectedShades = selectedColors.map(colorId => {
+        const color = sampleColors.find(c => c.id === colorId);
+        return {
+          shadeId: colorId,
+          shadeName: color?.name || "",
+          shadeHex: color?.hex || "",
+          quantity: 1, // Each sample has quantity 1
+        };
+      });
+
       const cartItem = {
         id: 2,
         name: selectedSamplePack === 13 
@@ -232,6 +243,7 @@ export default function AuraClient() {
         price: selectedPack?.price || 0,
         quantity: 1,
         subtitle: "Choose your favorite shades",
+        shades: selectedShades,
       };
       addToCart(cartItem);
       showToast("Added to cart!", "success");
@@ -1200,7 +1212,7 @@ export default function AuraClient() {
               </p>
               <div className="aspect-video bg-gray-200 rounded-xl overflow-hidden">
                 <iframe
-                  src="https://www.youtube.com/embed/NqhIR2jV1Jc"
+                  src="https://www.youtube.com/embed/ZCdHECitApw"
                   title="Introduction to Aura"
                   className="w-full h-full"
                   frameBorder="0"
@@ -1221,7 +1233,7 @@ export default function AuraClient() {
               </p>
               <div className="aspect-video bg-gray-200 rounded-xl overflow-hidden">
                 <iframe
-                  src="https://www.youtube.com/embed/JFsBu5BIw0o"
+                  src="https://www.youtube.com/embed/OkDnrCKpNaM"
                   title="Aura Application Guide"
                   className="w-full h-full"
                   frameBorder="0"

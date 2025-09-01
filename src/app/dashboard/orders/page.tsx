@@ -42,6 +42,12 @@ const convertFirestoreDate = (date: any): Date | null => {
       return new Date(seconds * 1000 + nanoseconds / 1000000);
     }
     
+    // Handle empty objects or objects without date properties
+    if (date && typeof date === 'object' && Object.keys(date).length === 0) {
+      console.warn('Empty object passed to convertFirestoreDate, returning null');
+      return null;
+    }
+    
     console.warn('Unable to convert date:', date, typeof date, 'Keys:', date && typeof date === 'object' ? Object.keys(date) : 'N/A');
     return null;
   } catch (error) {
@@ -94,7 +100,32 @@ export default function OrdersPage() {
     try {
       setError(null);
       const userOrders = await AuthService.getUserOrders(user.uid);
-      setOrders(userOrders);
+      
+      // Convert dates and ensure orderDate is set
+      const convertedOrders = userOrders.map(order => {
+        // If orderDate is missing, use createdAt as fallback
+        let orderDate = convertFirestoreDate(order.orderDate);
+        if (!orderDate) {
+          orderDate = convertFirestoreDate(order.createdAt) || new Date();
+          // Update the order in database if orderDate was missing
+          if (order.id && !order.orderDate) {
+            AuthService.updateOrder(order.id, { orderDate }).catch(error => {
+              console.error('Error updating missing orderDate:', error);
+            });
+          }
+        }
+        
+        return {
+          ...order,
+          orderDate: orderDate,
+          createdAt: convertFirestoreDate(order.createdAt) || new Date(),
+          updatedAt: convertFirestoreDate(order.updatedAt) || new Date(),
+          estimatedDelivery: order.estimatedDelivery ? convertFirestoreDate(order.estimatedDelivery) || undefined : undefined,
+          actualDelivery: order.actualDelivery ? convertFirestoreDate(order.actualDelivery) || undefined : undefined
+        };
+      });
+      
+      setOrders(convertedOrders);
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError('Failed to load orders. Please try again.');
@@ -353,8 +384,8 @@ export default function OrdersPage() {
 
         {/* Order Details Modal */}
         {selectedOrder && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl border-2 border-[#D4AF37] max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 pt-20">
+            <div className="bg-white rounded-3xl shadow-2xl border-2 border-[#D4AF37] max-w-2xl w-full max-h-[85vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-[#5E4E06]">Order Details</h2>
@@ -376,7 +407,7 @@ export default function OrdersPage() {
                     <div>
                       <p className="text-[#8B7A1A] text-sm">Order Date</p>
                       <p className="font-semibold text-[#5E4E06]">
-                        {formatDate(selectedOrder.createdAt)}
+                        {formatDate(selectedOrder.orderDate || selectedOrder.createdAt)}
                       </p>
                     </div>
                     <div>
@@ -399,17 +430,6 @@ export default function OrdersPage() {
                         }`}>
                           {selectedOrder.paymentStatus.charAt(0).toUpperCase() + selectedOrder.paymentStatus.slice(1)}
                         </span>
-                        {/* Payment Pending Note */}
-                        {selectedOrder.paymentStatus === 'pending' && (
-                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-blue-800 text-sm font-medium">
-                              💡 Payment Note:
-                            </p>
-                            <p className="text-blue-700 text-xs mt-1">
-                              If you have already paid and money is deducted from your account but the status shows as pending, please don't worry. Contact us and we will resolve your issue promptly.
-                            </p>
-                          </div>
-                        )}
                       </div>
                     )}
                     {selectedOrder.paymentMethod && (
@@ -470,6 +490,27 @@ export default function OrdersPage() {
                       <div className="p-3 bg-gray-50 rounded-xl">
                         <p className="text-[#8B7A1A]">{selectedOrder.notes}</p>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Payment Pending Note - Full Width at Bottom */}
+                  {selectedOrder.paymentStatus === 'pending' && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg w-full">
+                      <p className="text-blue-800 text-sm font-medium">
+                        💡 Payment Note:
+                      </p>
+                      <p className="text-blue-700 text-sm mt-2 leading-relaxed">
+                        If you have already paid and money is deducted from your account but the status shows as pending, please don't worry.{' '}
+                        <a 
+                          href="/contact" 
+                          className="text-blue-800 font-medium underline hover:text-blue-900 transition-colors"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Contact us
+                        </a>{' '}
+                        and we will resolve your issue promptly.
+                      </p>
                     </div>
                   )}
                 </div>
