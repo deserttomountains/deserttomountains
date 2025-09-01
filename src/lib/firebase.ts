@@ -1078,12 +1078,17 @@ export class AuthService {
 
     try {
       const { addDoc, collection } = await import('firebase/firestore');
-      const cleanOrderData = removeUndefined(orderData);
-      const orderRef = await addDoc(collection(db, 'orders'), {
-        ...cleanOrderData,
+      
+      // Ensure orderDate is always set
+      const orderDataWithDefaults = {
+        ...orderData,
+        orderDate: orderData.orderDate || new Date(),
         createdAt: new Date(),
         updatedAt: new Date()
-      });
+      };
+      
+      const cleanOrderData = removeUndefined(orderDataWithDefaults);
+      const orderRef = await addDoc(collection(db, 'orders'), cleanOrderData);
       return orderRef.id;
     } catch (error) {
       console.error('Error creating order:', error);

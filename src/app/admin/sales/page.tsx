@@ -48,7 +48,9 @@ function SalesPageContent() {
       try {
         setOrdersLoading(true);
         const fetchedOrders = await AuthService.getOrders();
-        setOrders(fetchedOrders);
+        // Convert Firestore dates to proper Date objects
+        const convertedOrders = fetchedOrders.map(convertOrderDates);
+        setOrders(convertedOrders);
       } catch (error) {
         console.error('Error loading orders:', error);
         showToast('Error loading orders', 'error');
@@ -213,9 +215,37 @@ function SalesPageContent() {
   };
 
   // Open order details modal
-  const handleViewOrderDetails = (order: Order) => {
+  const handleViewOrderDetails = async (order: Order) => {
     setSelectedOrder(order);
     setOrderDetailsOpen(true);
+    
+    // Auto-set estimated delivery to 10 days if payment is completed and no delivery date is set
+    if (order.paymentStatus === 'completed' && !safeDateConversion(order.estimatedDelivery)) {
+      try {
+        const tenDaysFromNow = getDefaultDeliveryDate();
+        
+        await AuthService.updateOrder(order.id!, {
+          estimatedDelivery: tenDaysFromNow
+        });
+        
+        // Update the order in local state
+        setSelectedOrder({
+          ...order,
+          estimatedDelivery: tenDaysFromNow
+        });
+        
+                                // Update the orders list
+                        const updatedOrders = orders.map(o => 
+                          o.id === order.id ? convertOrderDates({ ...o, estimatedDelivery: tenDaysFromNow }) : o
+                        );
+                        setOrders(updatedOrders);
+        
+        console.log('Auto-set estimated delivery to 10 days from now');
+      } catch (error) {
+        console.error('Error auto-setting delivery date:', error);
+        // Don't show error toast as this is automatic
+      }
+    }
   };
 
   // Close order details modal
@@ -224,28 +254,100 @@ function SalesPageContent() {
     setOrderDetailsOpen(false);
   };
 
+  // Calculate default delivery date (10 days from now)
+  const getDefaultDeliveryDate = (): Date => {
+    return new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+  };
+
+  // Safely convert any date value to a valid Date object
+  const safeDateConversion = (dateValue: any): Date | null => {
+    try {
+      if (!dateValue) return null;
+      
+      if (dateValue instanceof Date) {
+        return isNaN(dateValue.getTime()) ? null : dateValue;
+      }
+      
+      if (dateValue && typeof dateValue === 'object' && dateValue.toDate) {
+        // Handle Firestore Timestamp
+        const converted = dateValue.toDate();
+        return isNaN(converted.getTime()) ? null : converted;
+      }
+      
+      if (typeof dateValue === 'string') {
+        const parsed = new Date(dateValue);
+        return isNaN(parsed.getTime()) ? null : parsed;
+      }
+      
+      if (typeof dateValue === 'number') {
+        const parsed = new Date(dateValue);
+        return isNaN(parsed.getTime()) ? null : parsed;
+      }
+      
+      // Additional debugging for unknown types
+      console.log('Unknown date type in safeDateConversion:', {
+        value: dateValue,
+        type: typeof dateValue,
+        constructor: dateValue?.constructor?.name
+      });
+      
+      return null;
+    } catch (error) {
+      console.error('Error converting date:', dateValue, error);
+      return null;
+    }
+  };
+
+  // Safely format date for display
+  const safeDateToISOString = (dateValue: any): string => {
+    const validDate = safeDateConversion(dateValue);
+    if (!validDate) {
+      return getDefaultDeliveryDate().toISOString().split('T')[0];
+    }
+    return validDate.toISOString().split('T')[0];
+  };
+
+  // Convert Firestore dates to proper Date objects
+  const convertOrderDates = (order: Order): Order => {
+    const convertedEstimatedDelivery = order.estimatedDelivery ? safeDateConversion(order.estimatedDelivery) : undefined;
+    const convertedActualDelivery = order.actualDelivery ? safeDateConversion(order.actualDelivery) : undefined;
+    
+    // Ensure orderDate is always set - if missing, use createdAt as fallback
+    let orderDate = safeDateConversion(order.orderDate);
+    if (!orderDate) {
+      orderDate = safeDateConversion(order.createdAt) || new Date();
+      // If orderDate was missing, update it in the database
+      if (order.id && !order.orderDate) {
+        AuthService.updateOrder(order.id, { orderDate }).catch(error => {
+          console.error('Error updating missing orderDate:', error);
+        });
+      }
+    }
+    
+    return {
+      ...order,
+      orderDate: orderDate,
+      createdAt: safeDateConversion(order.createdAt) || new Date(),
+      updatedAt: safeDateConversion(order.updatedAt) || new Date(),
+      estimatedDelivery: convertedEstimatedDelivery || undefined,
+      actualDelivery: convertedActualDelivery || undefined
+    };
+  };
+
   // Format date for display (handles Firestore Timestamps and other date formats)
   const formatDateForDisplay = (dateValue: any): string => {
     try {
-      const convertToDate = (dateValue: any): Date => {
-        if (dateValue instanceof Date) {
-          return dateValue;
-        }
-        if (dateValue && typeof dateValue === 'object' && dateValue.toDate) {
-          return dateValue.toDate();
-        }
-        if (typeof dateValue === 'string') {
-          return new Date(dateValue);
-        }
-        return new Date();
-      };
-      const date = convertToDate(dateValue);
-      return date.toLocaleDateString('en-IN', {
+      const validDate = safeDateConversion(dateValue);
+      if (!validDate) {
+        return 'N/A';
+      }
+      return validDate.toLocaleDateString('en-IN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
       });
     } catch (error) {
+      console.error('Error formatting date:', dateValue, error);
       return 'N/A';
     }
   };
@@ -671,7 +773,9 @@ function SalesPageContent() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Order Date:</span>
-                        <span className="font-medium text-[#5E4E06]">{formatDateForDisplay(selectedOrder.orderDate)}</span>
+                        <span className="font-medium text-[#5E4E06]">
+                          {formatDateForDisplay(selectedOrder.orderDate || selectedOrder.createdAt)}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[#8B7A1A]">Payment Status:</span>
@@ -767,39 +871,145 @@ function SalesPageContent() {
                 {selectedOrder.shippingAddress && (
                   <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
                     <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Shipping Address</h3>
-                    <div className="text-xs sm:text-sm text-[#5E4E06]">
-                      <p className="break-all">{selectedOrder.shippingAddress.street}</p>
-                      <p className="break-all">{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}</p>
-                      <p>{selectedOrder.shippingAddress.country}</p>
+                    <div className="text-xs sm:text-sm text-[#5E4E06] space-y-2">
+                      {/* Customer Details */}
+                      <div className="border-b border-[#E8E0D0] pb-2 mb-2">
+                        <p className="font-medium text-[#5E4E06]">Full Name: <span className="font-normal">{selectedOrder.customerName}</span></p>
+                        <p className="font-medium text-[#5E4E06]">Email: <span className="font-normal">{selectedOrder.customerEmail}</span></p>
+                        <p className="font-medium text-[#5E4E06]">Phone: <span className="font-normal">{selectedOrder.customerPhone}</span></p>
+                      </div>
+                      
+                      {/* Address Details */}
+                      {selectedOrder.shippingAddress.addressLine1 && (
+                        <p className="break-all"><span className="font-medium">Address Line 1:</span> {selectedOrder.shippingAddress.addressLine1}</p>
+                      )}
+                      {selectedOrder.shippingAddress.street && (
+                        <p className="break-all"><span className="font-medium">Street:</span> {selectedOrder.shippingAddress.street}</p>
+                      )}
+                      {selectedOrder.shippingAddress.addressLine2 && (
+                        <p className="break-all"><span className="font-medium">Address Line 2:</span> {selectedOrder.shippingAddress.addressLine2}</p>
+                      )}
+                      <p className="break-all">
+                        <span className="font-medium">City:</span> {selectedOrder.shippingAddress.city}
+                        {selectedOrder.shippingAddress.state && <span>, State: {selectedOrder.shippingAddress.state}</span>}
+                        {selectedOrder.shippingAddress.pincode && <span>, Postal Code: {selectedOrder.shippingAddress.pincode}</span>}
+                      </p>
+                      {selectedOrder.shippingAddress.country && (
+                        <p className="break-all"><span className="font-medium">Country:</span> {selectedOrder.shippingAddress.country}</p>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Additional Information */}
                 <div className="grid grid-cols-1 gap-4 sm:gap-6">
-                  {selectedOrder.estimatedDelivery && (
-                    <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
-                      <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Delivery Information</h3>
-                      <div className="space-y-2 text-xs sm:text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-[#8B7A1A]">Estimated Delivery:</span>
-                          <span className="font-medium text-[#5E4E06] break-all">{formatDateForDisplay(selectedOrder.estimatedDelivery)}</span>
-                        </div>
-                        {selectedOrder.actualDelivery && (
-                          <div className="flex justify-between">
-                            <span className="text-[#8B7A1A]">Actual Delivery:</span>
-                            <span className="font-medium text-[#5E4E06] break-all">{formatDateForDisplay(selectedOrder.actualDelivery)}</span>
-                          </div>
-                        )}
-                        {selectedOrder.trackingNumber && (
-                          <div className="flex justify-between">
-                            <span className="text-[#8B7A1A]">Tracking Number:</span>
-                            <span className="font-medium text-[#5E4E06] break-all">{selectedOrder.trackingNumber}</span>
-                          </div>
-                        )}
+                  {/* Delivery Information - Always Show */}
+                  <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
+                    <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Delivery Information</h3>
+                    <div className="space-y-3 text-xs sm:text-sm">
+                      {/* Payment Status */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#8B7A1A]">Payment Status:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedOrder.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                          selectedOrder.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {selectedOrder.paymentStatus.charAt(0).toUpperCase() + selectedOrder.paymentStatus.slice(1)}
+                        </span>
                       </div>
+
+                      {/* Estimated Delivery Section */}
+                      {selectedOrder.paymentStatus === 'completed' ? (
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[#8B7A1A]">Estimated Delivery:</span>
+                            <span className="font-medium text-[#5E4E06] break-all">
+                              {safeDateConversion(selectedOrder.estimatedDelivery) ? 
+                                formatDateForDisplay(selectedOrder.estimatedDelivery) : 
+                                'Not set'
+                              }
+                            </span>
+                          </div>
+                          
+                          {/* Calendar Input for Admin */}
+                          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                            <span className="text-[#8B7A1A] whitespace-nowrap">Set Delivery Date:</span>
+                            <div className="flex gap-2 items-center">
+                              <input
+                                type="date"
+                                className="px-3 py-1 border border-[#D4C4A8] rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-[#5E4E06] focus:border-transparent"
+                                min={new Date().toISOString().split('T')[0]}
+                                value={safeDateToISOString(selectedOrder.estimatedDelivery)}
+                                onChange={(e) => {
+                                  try {
+                                    const newDate = new Date(e.target.value);
+                                    if (!isNaN(newDate.getTime())) {
+                                      setSelectedOrder({
+                                        ...selectedOrder,
+                                        estimatedDelivery: newDate
+                                      });
+                                    }
+                                  } catch (error) {
+                                    console.error('Error setting date:', error);
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const newDate = safeDateConversion(selectedOrder.estimatedDelivery) || 
+                                      getDefaultDeliveryDate();
+                                    
+                                    await AuthService.updateOrder(selectedOrder.id!, {
+                                      estimatedDelivery: newDate
+                                    });
+                                    
+                                    // Update local state
+                                    const updatedOrders = orders.map(order => 
+                                      order.id === selectedOrder.id ? 
+                                        convertOrderDates({ ...order, estimatedDelivery: newDate }) : order
+                                    );
+                                    setOrders(updatedOrders);
+                                    
+                                    showToast('Delivery date updated successfully!', 'success');
+                                  } catch (error) {
+                                    console.error('Error updating delivery date:', error);
+                                    showToast('Failed to update delivery date', 'error');
+                                  }
+                                }}
+                                className="px-3 py-1 bg-[#5E4E06] text-white text-xs rounded-md hover:bg-[#4A3D05] transition-colors cursor-pointer"
+                              >
+                                Update
+                              </button>
+                            </div>
+                          </div>
+
+
+                        </div>
+                      ) : (
+                        <div className="text-center py-2">
+                          <span className="text-[#8B7A1A] font-medium">Payment Pending - Cannot set delivery date</span>
+                        </div>
+                      )}
+
+                      {/* Actual Delivery */}
+                      {selectedOrder.actualDelivery && (
+                        <div className="flex justify-between">
+                          <span className="text-[#8B7A1A]">Actual Delivery:</span>
+                          <span className="font-medium text-[#5E4E06] break-all">{formatDateForDisplay(selectedOrder.actualDelivery)}</span>
+                        </div>
+                      )}
+
+                      {/* Tracking Number */}
+                      {selectedOrder.trackingNumber && (
+                        <div className="flex justify-between">
+                          <span className="text-[#8B7A1A]">Tracking Number:</span>
+                          <span className="font-medium text-[#5E4E06] break-all">{selectedOrder.trackingNumber}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
 
                   <div className="bg-[#F8F6F0] rounded-lg p-3 sm:p-4">
                     <h3 className="font-semibold text-[#5E4E06] mb-3 text-sm sm:text-base">Additional Details</h3>
@@ -858,7 +1068,7 @@ function SalesPageContent() {
                         // Update the orders list
                         const updatedOrders = orders.map(order => 
                           order.id === selectedOrder.id 
-                            ? updatedOrder
+                            ? convertOrderDates(updatedOrder)
                             : order
                         );
                         console.log('Updating orders list with:', updatedOrders);
@@ -892,12 +1102,7 @@ function SalesPageContent() {
                    <option value="cancelled">Cancelled</option>
                  </select>
                </div>
-               <button
-                 onClick={handleCloseOrderDetails}
-                 className="px-3 sm:px-4 py-2 text-[#5E4E06] bg-[#F5F2E8] hover:bg-[#E6DCC0] rounded-lg transition-colors text-sm sm:text-base cursor-pointer"
-               >
-                 Close
-               </button>
+
              </div>
             </div>
           </div>
