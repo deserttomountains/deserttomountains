@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     siteName: 'Desert to Mountains',
     images: [
       {
-        url: '/images/gallery/1.webp',
+        url: '/images/gallery/2.webp',
         width: 1200,
         height: 630,
         alt: 'Desert to Mountains Gallery - Natural Building Projects',
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Gallery | Desert to Mountains',
     description: 'Explore our gallery of natural building projects and sustainable construction work. See Aura plaster applications, eco-friendly materials in action, and beautiful natural finishes.',
-    images: ['/images/gallery/1.webp'],
+    images: ['/images/gallery/2.webp'],
   },
   robots: {
     index: true,

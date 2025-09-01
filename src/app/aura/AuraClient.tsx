@@ -228,7 +228,7 @@ export default function AuraClient() {
         name: selectedSamplePack === 13 
           ? "Mock Sample (12 + 1 Free Colors)" 
           : `Mock Sample (${selectedSamplePack} Colors)`,
-        image: "/images/gallery/1.webp",
+        image: "/images/gallery/61.webp",
         price: selectedPack?.price || 0,
         quantity: 1,
         subtitle: "Choose your favorite shades",

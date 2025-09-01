@@ -64,7 +64,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.8,
       images: [
-        `${baseUrl}/images/gallery/1.webp`,
         `${baseUrl}/images/gallery/2.webp`,
         `${baseUrl}/images/gallery/3.webp`,
         `${baseUrl}/images/gallery/4.webp`,
@@ -94,6 +93,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
         `${baseUrl}/images/gallery/30.webp`,
         `${baseUrl}/images/gallery/31.webp`,
         `${baseUrl}/images/gallery/32.webp`,
+        `${baseUrl}/images/gallery/1.webp`,
+        `${baseUrl}/images/gallery/61.webp`,
         `${baseUrl}/images/gallery/33.webp`
       ]
     },

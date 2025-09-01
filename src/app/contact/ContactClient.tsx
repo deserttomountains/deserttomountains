@@ -63,7 +63,8 @@ export default function ContactClient() {
   };
 
   const contactInfo = [
-    { icon: Mail, label: 'Email', value: 'info@deserttomountains.com', href: 'mailto:auranaturalplaster@gmail.com' },
+    { icon: Mail, label: 'Primary Email', value: 'auranaturalplaster@gmail.com', href: 'mailto:auranaturalplaster@gmail.com' },
+    { icon: Mail, label: 'Alternative Email', value: 'contact@deserttomountains.com', href: 'mailto:contact@deserttomountains.com' },
     { icon: Phone, label: 'Phone', value: '+91 81711 89456', href: 'tel:+918171189456' },
     { icon: MapPin, label: 'Address', value: '149, Shikargarh, Jodhpur, Rajasthan', href: null }
   ];

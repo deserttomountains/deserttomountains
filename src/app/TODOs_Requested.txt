@@ -100,3 +100,8 @@
 21. Test that manual navigation buttons work properly
 22. Test that logout flow works from all admin and dashboard pages
 23. Test that no React state update violations occur during logout
+26. Test that gallery metadata and sitemap reflect the new image order
+27. Test that contact page displays primary email as auranaturalplaster@gmail.com
+28. Test that contact page displays alternative email as contact@deserttomountains.com
+29. Test that both email addresses are clickable and open mail client
+30. Test that contact form submission works correctly with new email structure

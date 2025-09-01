@@ -15,12 +15,6 @@ interface GalleryItem {
 export default function GalleryClient() {
   const galleryItems: GalleryItem[] = [
     { 
-      id: 1, 
-      image: '/images/gallery/1.webp', 
-      mobileImage: '/images/gallery/1.webp?w=400&q=75', // Mobile optimized
-      alt: 'Gallery image 1' 
-    },
-    { 
       id: 2, 
       image: '/images/gallery/2.webp', 
       mobileImage: '/images/gallery/2.webp?w=400&q=75',
@@ -355,6 +349,18 @@ export default function GalleryClient() {
       image: '/images/gallery/59.webp', 
       mobileImage: '/images/gallery/59.webp?w=400&q=75',
       alt: 'Gallery image 59' 
+    },
+    { 
+      id: 60, 
+      image: '/images/gallery/1.webp', 
+      mobileImage: '/images/gallery/1.webp?w=400&q=75',
+      alt: 'Gallery image 1 (moved to bottom)' 
+    },
+    { 
+      id: 61, 
+      image: '/images/gallery/61.webp', 
+      mobileImage: '/images/gallery/61.webp?w=400&q=75',
+      alt: 'Gallery image 61' 
     },
   ];
 
