@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/components/ToastContext';
+import { AuthService } from '@/lib/firebase';
 
 interface OrderDetails {
   orderId: string;
@@ -30,10 +31,28 @@ function OrderConfirmationContent() {
     const orderConfirmationData = localStorage.getItem('orderConfirmationData');
     const checkoutData = localStorage.getItem('checkoutData');
     
+    console.log('Order Confirmation Debug:', {
+      orderId,
+      hasOrderConfirmationData: !!orderConfirmationData,
+      hasCheckoutData: !!checkoutData,
+      orderConfirmationData: orderConfirmationData ? JSON.parse(orderConfirmationData) : null
+    });
+    
     if (orderConfirmationData) {
       // Use stored order confirmation data from successful payment
       const parsedOrderData = JSON.parse(orderConfirmationData);
       const parsedCheckoutData = checkoutData ? JSON.parse(checkoutData) : {};
+      
+      // Process cart items to match the expected format
+      const processedItems = parsedOrderData.items.map((item: any) => ({
+        ...item,
+        type: item.type || 'sample', // Default to sample if type is not specified
+        variant: item.variant || 'sample', // Default to sample if variant is not specified
+        // Ensure shades are properly formatted
+        shades: item.shades ? item.shades.map((shade: any) => 
+          typeof shade === 'string' ? shade : shade.shadeName || shade
+        ) : []
+      }));
       
       setOrderDetails({
         orderId: parsedOrderData.orderId,
@@ -51,21 +70,28 @@ function OrderConfirmationContent() {
         paymentMethod: parsedOrderData.paymentMethod,
         transactionId: parsedOrderData.transactionId,
         shippingAddress: parsedCheckoutData.shippingAddress || {},
-        items: parsedOrderData.items || []
+        items: processedItems
       });
 
       // Show order placed toast
       showToast('Order placed successfully! Payment verification in progress...', 'success');
-
-      // Clear order confirmation data after displaying
-      localStorage.removeItem('orderConfirmationData');
-      localStorage.removeItem('checkoutData');
     } else if (checkoutData) {
       // Fallback to checkout data (for cases where order confirmation data is not available)
       const parsedCheckoutData = JSON.parse(checkoutData);
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       
       if (cart.length > 0) {
+        // Process cart items to match the expected format
+        const processedCartItems = cart.map((item: any) => ({
+          ...item,
+          type: item.type || 'sample', // Default to sample if type is not specified
+          variant: item.variant || 'sample', // Default to sample if variant is not specified
+          // Ensure shades are properly formatted
+          shades: item.shades ? item.shades.map((shade: any) => 
+            typeof shade === 'string' ? shade : shade.shadeName || shade
+          ) : []
+        }));
+        
         const totalAmount = cart.reduce((sum: number, item: any) => sum + item.price, 0);
         const shipping = 0; // Shipping fee will be calculated separately after order confirmation
         const finalTotal = totalAmount + shipping; // 5% GST already included in product prices
@@ -85,26 +111,86 @@ function OrderConfirmationContent() {
           totalAmount: finalTotal,
           paymentMethod: searchParams.get('paymentMethod') || 'Online Payment',
           shippingAddress: parsedCheckoutData.shippingAddress,
-          items: cart
+          items: processedCartItems
         });
 
         // Show order placed toast
         showToast('Order placed successfully!', 'success');
-
-        // Clear cart and checkout data after successful order
-        localStorage.removeItem('cart');
-        localStorage.removeItem('checkoutData');
       } else {
-        // If no cart data, redirect to home
-        router.push('/');
+        // If no cart data, show message instead of redirecting
+        setOrderDetails(null);
+        showToast('No order data found. Please check your order history.', 'info');
       }
     } else {
-      // If no order data, redirect to home
-      router.push('/');
+      // If no order data, try to fetch from database as last resort
+      const orderIdFromUrl = searchParams.get('orderId');
+      if (orderIdFromUrl) {
+        console.log('Attempting to fetch order from database:', orderIdFromUrl);
+        // Try to fetch order from database
+        AuthService.getOrders().then(orders => {
+          const order = orders.find(o => o.orderId === orderIdFromUrl);
+          if (order) {
+            console.log('Found order in database:', order);
+            setOrderDetails({
+              orderId: order.orderId,
+              orderDate: order.orderDate ? new Date(order.orderDate).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }) : new Date().toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }),
+              estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }) : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }),
+              totalAmount: order.totalAmount || 0,
+              paymentMethod: order.paymentMode || 'Online Payment',
+              transactionId: order.transactionId,
+              shippingAddress: order.shippingAddress || {},
+              items: order.items || []
+            });
+            showToast('Order details retrieved successfully!', 'success');
+          } else {
+            console.log('Order not found in database');
+            setOrderDetails(null);
+            showToast('No order data found. Please check your order history.', 'info');
+          }
+        }).catch(error => {
+          console.error('Error fetching order from database:', error);
+          setOrderDetails(null);
+          showToast('No order data found. Please check your order history.', 'info');
+        });
+      } else {
+        // If no order data, show message instead of redirecting
+        setOrderDetails(null);
+        showToast('No order data found. Please check your order history.', 'info');
+      }
     }
     
     setIsLoading(false);
   }, [searchParams, router, showToast]);
+
+  // Clear localStorage data after component has mounted and order details are set
+  useEffect(() => {
+    if (orderDetails && !isLoading) {
+      // Clear order confirmation data after a short delay to ensure the page has rendered
+      const clearDataTimeout = setTimeout(() => {
+        localStorage.removeItem('orderConfirmationData');
+        localStorage.removeItem('checkoutData');
+        localStorage.removeItem('cart');
+      }, 2000); // 2 second delay
+
+      return () => clearTimeout(clearDataTimeout);
+    }
+  }, [orderDetails, isLoading]);
 
   const generateOrderId = () => {
     return 'DTM' + Date.now().toString().slice(-8) + Math.random().toString(36).substr(2, 4).toUpperCase();
@@ -124,9 +210,28 @@ function OrderConfirmationContent() {
   if (!orderDetails) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8F6F0] via-white to-[#F0EDE4]">
-        <div className="text-center">
-          <p className="text-[#5E4E06] font-semibold text-lg mb-4">Order not found</p>
-          <Link href="/" className="text-[#8B7A1A] hover:underline font-medium">Return to home</Link>
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="w-24 h-24 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full flex items-center justify-center mx-auto mb-8">
+            <Package className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-3xl font-black text-[#5E4E06] mb-4">Order Not Found</h2>
+          <p className="text-gray-600 mb-8 leading-relaxed">
+            We couldn't find the order details you're looking for. This might be because the order data has been cleared or the page was accessed directly.
+          </p>
+          <div className="space-y-4">
+            <Link 
+              href="/dashboard/orders" 
+              className="block w-full px-6 py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-2xl shadow-lg hover:scale-105 transition-all duration-300 text-center"
+            >
+              View My Orders
+            </Link>
+            <Link 
+              href="/" 
+              className="block w-full px-6 py-4 bg-white border-2 border-[#8B7A1A] text-[#5E4E06] font-bold rounded-2xl hover:bg-[#F8F6F0] transition-all duration-300 text-center"
+            >
+              Continue Shopping
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -180,31 +285,77 @@ function OrderConfirmationContent() {
                   <h2 className="text-3xl font-black text-gray-900">Order Summary</h2>
                 </div>
                 
-                <div className="space-y-4">
-                  {orderDetails.items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-4 p-6 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
-                      <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">
-                          {item.type === 'wallputty' ? 'WP' : 'SP'}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-gray-900 text-lg">{item.name}</h4>
-                        <p className="text-gray-600">
-                          {item.type === 'wallputty' && item.variant === 'pigmented' && item.shades
-                            ? `${item.totalQuantity} × 25kg`
-                            : item.type === 'sample'
-                            ? `${item.packSize} colors`
-                            : '25kg pack'
-                          }
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-black text-2xl text-[#5E4E06]">₹{item.price}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                                 <div className="space-y-4">
+                   {orderDetails.items.map((item, index) => (
+                     <div key={index} className="flex items-center gap-4 p-6 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
+                       <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
+                         <span className="text-white font-bold text-lg">
+                           {item.type === 'wallputty' ? 'WP' : 'SP'}
+                         </span>
+                       </div>
+                       <div className="flex-1">
+                         <h4 className="font-bold text-gray-900 text-lg">{item.name}</h4>
+                         <div className="space-y-1">
+                                                       <p className="text-gray-600">
+                              {item.type === 'wallputty' && item.variant === 'pigmented' && item.shades
+                                ? `${item.totalQuantity} × 25kg`
+                                : item.type === 'sample'
+                                ? `${item.shades?.length || 0} colors`
+                                : '25kg pack'
+                              }
+                            </p>
+                                                       {/* Color Details */}
+                            {item.type === 'wallputty' && item.variant === 'pigmented' && item.shades && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                <span className="text-sm font-medium text-[#5E4E06]">Colors:</span>
+                                {item.shades.map((shade: any, shadeIndex: number) => (
+                                  <span key={shadeIndex} className="px-2 py-1 bg-[#5E4E06]/10 text-[#5E4E06] text-xs font-medium rounded-full border border-[#5E4E06]/20">
+                                    {typeof shade === 'string' ? shade : shade.shadeName || shade}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {item.type === 'wallputty' && item.variant === 'sample' && item.shades && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                <span className="text-sm font-medium text-[#5E4E06]">Sample Colors:</span>
+                                {item.shades.map((shade: any, shadeIndex: number) => (
+                                  <span key={shadeIndex} className="px-2 py-1 bg-[#5E4E06]/10 text-[#5E4E06] text-xs font-medium rounded-full border border-[#5E4E06]/20">
+                                    {typeof shade === 'string' ? shade : shade.shadeName || shade}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {item.type === 'sample' && item.shades && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                <span className="text-sm font-medium text-[#5E4E06]">Sample Colors:</span>
+                                {item.shades.map((shade: any, shadeIndex: number) => (
+                                  <span key={shadeIndex} className="px-2 py-1 bg-[#5E4E06]/10 text-[#5E4E06] text-xs font-medium rounded-full border border-[#5E4E06]/20">
+                                    {typeof shade === 'string' ? shade : shade.shadeName || shade}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {item.type === 'wallputty' && item.variant === 'natural' && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-sm font-medium text-[#5E4E06]">Natural White</span>
+                                <div className="w-4 h-4 bg-white border border-gray-300 rounded-full"></div>
+                              </div>
+                            )}
+                           {/* Variant Type */}
+                           <p className="text-sm text-[#8B7A1A] font-medium capitalize">
+                             {item.type === 'wallputty' && item.variant === 'pigmented' && 'Pigmented Wall Putty'}
+                             {item.type === 'wallputty' && item.variant === 'sample' && 'Sample Pack'}
+                             {item.type === 'wallputty' && item.variant === 'natural' && 'Natural White'}
+                             {item.type === 'sample' && 'Sample Pack'}
+                           </p>
+                         </div>
+                       </div>
+                       <div className="text-right">
+                         <p className="font-black text-2xl text-[#5E4E06]">₹{item.price}</p>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
 
                 <div className="mt-8 pt-8 border-t-2 border-[#E8E4D8]">
                   <div className="flex justify-between items-center">
@@ -250,20 +401,47 @@ function OrderConfirmationContent() {
                     </div>
                   </div>
                   
-                  <div className="p-6 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
-                    <div className="flex items-start gap-4">
-                      <MapPin className="w-6 h-6 text-[#5E4E06] mt-1 flex-shrink-0" />
-                      <div>
-                        <p className="font-bold text-gray-900 mb-3">Shipping Address</p>
-                        <div className="text-gray-600 space-y-2">
-                          <p className="font-medium">{orderDetails.shippingAddress.fullName}</p>
-                          <p>{orderDetails.shippingAddress.address}</p>
-                          <p>{orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state} {orderDetails.shippingAddress.pincode}</p>
-                          <p className="font-medium">Phone: {orderDetails.shippingAddress.phone}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                                     <div className="p-6 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
+                     <div className="flex items-start gap-4">
+                       <MapPin className="w-6 h-6 text-[#5E4E06] mt-1 flex-shrink-0" />
+                       <div>
+                         <p className="font-bold text-gray-900 mb-3">Shipping Address</p>
+                         <div className="text-gray-600 space-y-2">
+                           <p className="font-medium">{orderDetails.shippingAddress.fullName || orderDetails.shippingAddress.customerName}</p>
+                           {orderDetails.shippingAddress.customerEmail && (
+                             <p className="text-sm">Email: {orderDetails.shippingAddress.customerEmail}</p>
+                           )}
+                           {orderDetails.shippingAddress.customerPhone && (
+                             <p className="text-sm">Phone: {orderDetails.shippingAddress.customerPhone}</p>
+                           )}
+                           {orderDetails.shippingAddress.addressLine1 && (
+                             <p>{orderDetails.shippingAddress.addressLine1}</p>
+                           )}
+                           {orderDetails.shippingAddress.street && (
+                             <p>{orderDetails.shippingAddress.street}</p>
+                           )}
+                           {orderDetails.shippingAddress.addressLine2 && (
+                             <p>{orderDetails.shippingAddress.addressLine2}</p>
+                           )}
+                           <p>
+                             {orderDetails.shippingAddress.city && `${orderDetails.shippingAddress.city}, `}
+                             {orderDetails.shippingAddress.state && `${orderDetails.shippingAddress.state} `}
+                             {orderDetails.shippingAddress.pincode && orderDetails.shippingAddress.pincode}
+                           </p>
+                           {orderDetails.shippingAddress.country && (
+                             <p>{orderDetails.shippingAddress.country}</p>
+                           )}
+                           {/* Fallback for old address format */}
+                           {!orderDetails.shippingAddress.addressLine1 && orderDetails.shippingAddress.address && (
+                             <p>{orderDetails.shippingAddress.address}</p>
+                           )}
+                           {!orderDetails.shippingAddress.customerPhone && orderDetails.shippingAddress.phone && (
+                             <p className="text-sm">Phone: {orderDetails.shippingAddress.phone}</p>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
                 </div>
               </div>
 
@@ -334,8 +512,16 @@ function OrderConfirmationContent() {
                 <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8">
                   <div className="space-y-4">
                     <Link 
-                      href="/"
+                      href="/dashboard/orders"
                       className="w-full px-6 py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-2xl shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 text-lg"
+                    >
+                      <ShoppingBag className="w-6 h-6" />
+                      View My Orders
+                    </Link>
+                    
+                    <Link 
+                      href="/"
+                      className="w-full px-6 py-4 bg-white border-2 border-[#8B7A1A] text-[#5E4E06] font-bold rounded-2xl hover:bg-[#F8F6F0] transition-all duration-300 flex items-center justify-center gap-3 text-lg"
                     >
                       <Home className="w-6 h-6" />
                       Continue Shopping
@@ -343,7 +529,7 @@ function OrderConfirmationContent() {
                     
                     <Link 
                       href="/aura"
-                      className="w-full px-6 py-4 bg-white border-2 border-[#8B7A1A] text-[#5E4E06] font-bold rounded-2xl hover:bg-[#F8F6F0] transition-all duration-300 flex items-center justify-center gap-3 text-lg"
+                      className="w-full px-6 py-4 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] border-2 border-[#E8E4D8] text-[#5E4E06] font-bold rounded-2xl hover:bg-[#E8E4D8] transition-all duration-300 flex items-center justify-center gap-3 text-lg"
                     >
                       <ShoppingBag className="w-6 h-6" />
                       Shop More Products
@@ -354,16 +540,16 @@ function OrderConfirmationContent() {
                 {/* Contact Support */}
                 <div className="bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-3xl border-2 border-[#E8E4D8] p-8">
                   <h4 className="font-bold text-gray-900 mb-6 text-lg">Need Help?</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-5 h-5 text-[#5E4E06]" />
-                      <span className="text-gray-700 font-medium">+91 98765 43210</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 text-[#5E4E06]" />
-                      <span className="text-gray-700 font-medium">support@deserttomountains.com</span>
-                    </div>
-                  </div>
+                                     <div className="space-y-4">
+                     <div className="flex items-center gap-3">
+                       <Phone className="w-5 h-5 text-[#5E4E06]" />
+                       <span className="text-gray-700 font-medium">+91 8171189456</span>
+                     </div>
+                     <div className="flex items-center gap-3">
+                       <Mail className="w-5 h-5 text-[#5E4E06]" />
+                       <span className="text-gray-700 font-medium">contact@deserttomountains.com</span>
+                     </div>
+                   </div>
                 </div>
               </div>
             </div>

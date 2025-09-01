@@ -9,6 +9,8 @@ export type CartItem = {
   price: number;
   quantity: number;
   subtitle?: string;
+  type?: string;
+  variant?: string;
   shades?: Array<{
     shadeId: string;
     shadeName: string;
@@ -47,13 +49,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Add item to cart (if exists, increase quantity)
   const addToCart = (item: CartItem) => {
+    console.log('=== ADDING TO CART DEBUG ===');
+    console.log('Item being added:', item);
+    console.log('Current cart before adding:', cart);
+    console.log('Item has shades:', !!item.shades);
+    console.log('Shades data:', item.shades);
+    console.log('User agent:', navigator.userAgent);
+    
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
         // Update existing item with new data (including new image) but preserve quantity
-        return prev.map(i => i.id === item.id ? { ...item, quantity: i.quantity + item.quantity } : i);
+        const updatedCart = prev.map(i => i.id === item.id ? { ...item, quantity: i.quantity + item.quantity } : i);
+        console.log('Updated existing item, new cart:', updatedCart);
+        return updatedCart;
       }
-      return [...prev, item];
+      const newCart = [...prev, item];
+      console.log('Added new item, new cart:', newCart);
+      return newCart;
     });
   };
 

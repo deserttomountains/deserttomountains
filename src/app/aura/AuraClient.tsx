@@ -183,6 +183,8 @@ export default function AuraClient() {
           price: pack.price,
           quantity: neutralQuantity,
           subtitle: "Natural Gypsum & Cow Dung",
+          type: "wallputty",
+          variant: "natural",
         };
       } else {
         // Pigmented wall plaster with shade details
@@ -205,6 +207,8 @@ export default function AuraClient() {
           quantity: getPigmentedTotalQty(),
           subtitle: "Pigmented Shades",
           shades: selectedShades,
+          type: "wallputty",
+          variant: "pigmented",
         };
       }
       addToCart(cartItem);
@@ -244,6 +248,8 @@ export default function AuraClient() {
         quantity: 1,
         subtitle: "Choose your favorite shades",
         shades: selectedShades,
+        type: "sample",
+        variant: "sample",
       };
       addToCart(cartItem);
       showToast("Added to cart!", "success");

@@ -127,28 +127,76 @@ export default function PaymentPage() {
       router.replace('/login?redirect=/payment');
       return;
     }
+    
+    // Debug: Log initial state
+    console.log('=== ORDER PLACEMENT DEBUG START ===');
+    console.log('User:', user.uid);
+    console.log('Cart length:', cart.length);
+    console.log('Cart items:', cart);
+    console.log('User agent:', navigator.userAgent);
+    console.log('Screen size:', window.screen.width, 'x', window.screen.height);
+    
     setIsProcessing(true);
     try {
       const checkoutData = JSON.parse(localStorage.getItem('checkoutData') || '{}');
       const orderId = `DTM${Date.now()}`;
+      
+      // Debug: Log cart processing
+      console.log('Processing cart items for order creation...');
+      
+      const processedItems = cart.map((item, index) => {
+        // Debug logging for shades
+        console.log(`Processing cart item ${index + 1}:`, {
+          itemId: item.id,
+          itemName: item.name,
+          hasShades: !!item.shades,
+          shadesLength: item.shades?.length || 0,
+          shadesData: item.shades,
+          itemType: typeof item.shades,
+          isArray: Array.isArray(item.shades)
+        });
+        
+        const processedShades = item.shades ? item.shades.map((s: any, shadeIndex: number) => {
+          console.log(`Processing shade ${shadeIndex + 1}:`, s);
+          // Handle both string and object formats
+          if (typeof s === 'string') return s;
+          if (s && typeof s === 'object' && s.shadeName) return s.shadeName;
+          return s || 'Unknown Shade';
+        }).filter(Boolean) : undefined;
+        
+        // Fallback: If no shades found but item name suggests it should have shades
+        const finalShades = processedShades && processedShades.length > 0 
+          ? processedShades 
+          : (item.name.toLowerCase().includes('sample') || item.name.toLowerCase().includes('color')) 
+            ? ['Default Shade'] // Fallback for sample items
+            : undefined;
+        
+        console.log(`Final processed shades for ${item.name}:`, finalShades);
+        
+        return {
+          productId: String(item.id),
+          productName: item.name,
+          productType: 'aura' as 'aura',
+          quantity: item.quantity || 1,
+          unitPrice: item.price,
+          totalPrice: (item.quantity || 1) * item.price,
+          variant: item.variant,
+          shades: finalShades
+        };
+      });
+      
+      console.log('Final processed items:', processedItems);
+      
       const orderData = {
         orderId,
         customerId: user.uid,
         customerName: checkoutData.shippingAddress?.name || user.displayName || 'Guest User',
         customerEmail: checkoutData.shippingAddress?.email || user.email || 'guest@example.com',
         customerPhone: checkoutData.shippingAddress?.phone || userProfile?.phone || '',
-        items: cart.map(item => ({
-          productId: String(item.id),
-          productName: item.name,
-          productType: 'aura' as 'aura', // Explicitly type as 'aura' to match OrderItem
-          quantity: item.quantity || 1,
-          unitPrice: item.price,
-          totalPrice: (item.quantity || 1) * item.price,
-          shades: item.shades?.map((s: any) => s.shadeName) || []
-        })),
+        items: processedItems,
         totalAmount: subtotal,
-        tax: 0, // 5% GST already included in product prices
-        shipping: 0, // Shipping fee will be calculated separately after order confirmation
+        tax: 0,
+        shipping: 0,
         finalAmount: total,
         status: 'pending' as const,
         paymentMethod: selectedGateway,
@@ -159,10 +207,14 @@ export default function PaymentPage() {
         notes: `Payment method: ${selectedGateway}`
       };
       
+      console.log('Order data to be saved:', orderData);
+      
       // 1. Save order in Firestore
+      console.log('Saving order to Firebase...');
       const firebaseOrderId = await AuthService.createOrder(orderData);
       
       console.log('Order created in Firebase with ID:', firebaseOrderId);
+      console.log('=== ORDER PLACEMENT DEBUG END ===');
       
       if (selectedGateway === 'razorpay') {
         // 2. Create Razorpay order via API

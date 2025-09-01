@@ -1088,6 +1088,15 @@ export class AuthService {
       };
       
       const cleanOrderData = removeUndefined(orderDataWithDefaults);
+      
+      // Debug logging for shades data
+      console.log('Saving order to Firebase with items:', cleanOrderData.items?.map((item: any) => ({
+        productName: item.productName,
+        hasShades: !!item.shades,
+        shadesLength: item.shades?.length || 0,
+        shades: item.shades
+      })));
+      
       const orderRef = await addDoc(collection(db, 'orders'), cleanOrderData);
       return orderRef.id;
     } catch (error) {
