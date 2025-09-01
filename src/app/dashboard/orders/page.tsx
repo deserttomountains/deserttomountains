@@ -262,34 +262,35 @@ export default function OrdersPage() {
               
               return (
                 <div key={order.id} className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-[#D4AF37] p-4 sm:p-6 hover:shadow-2xl transition-all">
-                  <div className="flex flex-col gap-4 sm:gap-0">
+                  {/* Mobile Layout - Vertical */}
+                  <div className="flex flex-col gap-4 sm:hidden">
                     {/* Order Header - Icon, ID, Date */}
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center">
-                        <StatusIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center">
+                        <StatusIcon className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        <div className="font-bold text-base sm:text-lg text-[#5E4E06]">
+                        <div className="font-bold text-base text-[#5E4E06]">
                           {order.orderId || `Order #${order.id?.slice(-8)}`}
                         </div>
-                        <div className="text-[#8B7A1A] text-xs sm:text-sm flex items-center gap-1">
-                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <div className="text-[#8B7A1A] text-xs flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
                           {formatDate(order.createdAt)}
                         </div>
                       </div>
                     </div>
                     
                     {/* Order Details - Status, Items, Price */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                      <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold border ${statusColors[status] || statusColors['pending']}`}>
+                    <div className="flex flex-col gap-3">
+                      <div className={`px-2 py-1 rounded-full text-xs font-bold border w-fit ${statusColors[status] || statusColors['pending']}`}>
                         {statusLabels[status] || status}
                       </div>
                       
-                      <div className="text-[#5E4E06] font-medium text-sm sm:text-base">
+                      <div className="text-[#5E4E06] font-medium text-sm">
                         {order.items?.length || 0} item{(order.items?.length || 0) > 1 ? 's' : ''}
                       </div>
                       
-                      <div className="text-[#8B7A1A] font-bold text-base sm:text-lg">
+                      <div className="text-[#8B7A1A] font-bold text-base">
                         {formatCurrency(order.finalAmount || order.totalAmount || 0)}
                       </div>
                     </div>
@@ -297,7 +298,49 @@ export default function OrdersPage() {
                     {/* View Details Button */}
                     <button 
                       onClick={() => handleViewDetails(order)}
-                      className="self-start sm:self-auto inline-flex items-center gap-2 px-4 sm:px-5 py-2 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl shadow hover:scale-105 transition-all duration-300 cursor-pointer text-sm sm:text-base"
+                      className="self-start inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl shadow hover:scale-105 transition-all duration-300 cursor-pointer text-sm"
+                    >
+                      <Eye className="w-4 h-4" /> View Details
+                    </button>
+                  </div>
+
+                  {/* Desktop Layout - Horizontal */}
+                  <div className="hidden sm:flex sm:items-center sm:justify-between">
+                    {/* Left Section - Order Info */}
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center">
+                        <StatusIcon className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-lg text-[#5E4E06]">
+                          {order.orderId || `Order #${order.id?.slice(-8)}`}
+                        </div>
+                        <div className="text-[#8B7A1A] text-sm flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {formatDate(order.createdAt)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Middle Section - Status, Items, Price */}
+                    <div className="flex items-center gap-6">
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[status] || statusColors['pending']}`}>
+                        {statusLabels[status] || status}
+                      </div>
+                      
+                      <div className="text-[#5E4E06] font-medium text-base">
+                        {order.items?.length || 0} item{(order.items?.length || 0) > 1 ? 's' : ''}
+                      </div>
+                      
+                      <div className="text-[#8B7A1A] font-bold text-lg">
+                        {formatCurrency(order.finalAmount || order.totalAmount || 0)}
+                      </div>
+                    </div>
+                    
+                    {/* Right Section - View Details Button */}
+                    <button 
+                      onClick={() => handleViewDetails(order)}
+                      className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl shadow hover:scale-105 transition-all duration-300 cursor-pointer text-base whitespace-nowrap"
                     >
                       <Eye className="w-4 h-4" /> View Details
                     </button>

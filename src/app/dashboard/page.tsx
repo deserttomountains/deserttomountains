@@ -299,7 +299,7 @@ function DashboardPageContent() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <button 
               onClick={() => router.push('/aura')}
-              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group"
+              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group cursor-pointer"
             >
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Package className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -309,7 +309,7 @@ function DashboardPageContent() {
 
             <button 
               onClick={() => router.push('/dhunee')}
-              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group"
+              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group cursor-pointer"
             >
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -319,7 +319,7 @@ function DashboardPageContent() {
 
             <button 
               onClick={() => router.push('/dashboard/orders')}
-              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group"
+              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group cursor-pointer"
             >
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -329,7 +329,7 @@ function DashboardPageContent() {
 
             <button 
               onClick={() => router.push('/dashboard/settings')}
-              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group"
+              className="flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 bg-gradient-to-br from-[#F8F6F0] to-[#F5F2E8] rounded-2xl border-2 border-[#D4AF37] hover:border-[#8B7A1A] transition-all duration-300 group cursor-pointer"
             >
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#8B7A1A] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
