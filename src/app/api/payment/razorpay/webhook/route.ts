@@ -151,6 +151,8 @@ export async function POST(request: NextRequest) {
             paymentMessage: status || paymentDetails?.status || 'unknown',
             paymentTime: new Date().toISOString(),
             lastUpdated: new Date().toISOString(),
+            // Set estimated delivery to 10 days from payment completion
+            estimatedDelivery: paymentStatus === 'completed' ? new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) : undefined
           };
 
           // Add additional payment details if available
@@ -187,6 +189,8 @@ export async function POST(request: NextRequest) {
                 paymentMessage: status || paymentDetails?.status || 'unknown',
                 paymentTime: new Date().toISOString(),
                 lastUpdated: new Date().toISOString(),
+                // Set estimated delivery to 10 days from payment completion
+                estimatedDelivery: paymentStatus === 'completed' ? new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) : undefined
               };
 
               if (paymentDetails) {

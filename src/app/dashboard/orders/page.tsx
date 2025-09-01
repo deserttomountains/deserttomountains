@@ -467,21 +467,92 @@ export default function OrdersPage() {
                   {selectedOrder.shippingAddress && (
                     <div>
                       <h3 className="text-lg font-bold text-[#5E4E06] mb-3">Shipping Address</h3>
-                      <div className="p-3 bg-gray-50 rounded-xl">
-                        <p className="text-[#5E4E06]">{selectedOrder.customerName}</p>
+                      <div className="p-3 bg-gray-50 rounded-xl space-y-2">
+                        {/* Customer Details */}
+                        <div className="border-b border-gray-200 pb-2 mb-2">
+                          <p className="font-medium text-[#5E4E06]">Full Name: <span className="font-normal">{selectedOrder.customerName}</span></p>
+                          <p className="font-medium text-[#5E4E06]">Email: <span className="font-normal">{selectedOrder.customerEmail}</span></p>
+                          <p className="font-medium text-[#5E4E06]">Phone: <span className="font-normal">{selectedOrder.customerPhone}</span></p>
+                        </div>
+                        
+                        {/* Address Details */}
+                        {selectedOrder.shippingAddress.addressLine1 && (
+                          <p className="text-[#8B7A1A]"><span className="font-medium">Address Line 1:</span> {selectedOrder.shippingAddress.addressLine1}</p>
+                        )}
                         {selectedOrder.shippingAddress.street && (
-                          <p className="text-[#8B7A1A]">{selectedOrder.shippingAddress.street}</p>
+                          <p className="text-[#8B7A1A]"><span className="font-medium">Street:</span> {selectedOrder.shippingAddress.street}</p>
                         )}
                         {selectedOrder.shippingAddress.addressLine2 && (
-                          <p className="text-[#8B7A1A]">{selectedOrder.shippingAddress.addressLine2}</p>
+                          <p className="text-[#8B7A1A]"><span className="font-medium">Address Line 2:</span> {selectedOrder.shippingAddress.addressLine2}</p>
                         )}
                         <p className="text-[#8B7A1A]">
-                          {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}
+                          <span className="font-medium">City:</span> {selectedOrder.shippingAddress.city}
+                          {selectedOrder.shippingAddress.state && <span>, State: {selectedOrder.shippingAddress.state}</span>}
+                          {selectedOrder.shippingAddress.pincode && <span>, Postal Code: {selectedOrder.shippingAddress.pincode}</span>}
                         </p>
-                        <p className="text-[#8B7A1A]">Phone: {selectedOrder.customerPhone}</p>
+                        {selectedOrder.shippingAddress.country && (
+                          <p className="text-[#8B7A1A]"><span className="font-medium">Country:</span> {selectedOrder.shippingAddress.country}</p>
+                        )}
                       </div>
                     </div>
                   )}
+
+                  {/* Estimated Delivery */}
+                  <div>
+                    <h3 className="text-lg font-bold text-[#5E4E06] mb-3">Estimated Delivery</h3>
+                    <div className="p-3 bg-gray-50 rounded-xl">
+                      {selectedOrder.paymentStatus === 'completed' ? (
+                        selectedOrder.estimatedDelivery ? (
+                          <div className="space-y-2">
+                            <p className="text-[#8B7A1A]">
+                              <span className="font-medium">Expected Delivery Date:</span> {formatDate(selectedOrder.estimatedDelivery)}
+                            </p>
+                            {selectedOrder.actualDelivery && (
+                              <p className="text-[#8B7A1A]">
+                                <span className="font-medium">Actual Delivery Date:</span> {formatDate(selectedOrder.actualDelivery)}
+                              </p>
+                            )}
+                            {selectedOrder.trackingNumber && (
+                              <p className="text-[#8B7A1A]">
+                                <span className="font-medium">Tracking Number:</span> {selectedOrder.trackingNumber}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-[#8B7A1A]">
+                            <span className="font-medium">Status:</span> Delivery date will be updated soon
+                          </p>
+                        )
+                      ) : selectedOrder.paymentStatus === 'pending' ? (
+                        <div className="space-y-2">
+                          <p className="text-[#8B7A1A]">
+                            <span className="font-medium">Status:</span> Payment Pending
+                          </p>
+                          <p className="text-[#8B7A1A] text-sm">
+                            Estimated delivery will be set to 10 days from payment completion
+                          </p>
+                        </div>
+                      ) : selectedOrder.paymentStatus === 'failed' ? (
+                        <div className="space-y-2">
+                          <p className="text-[#8B7A1A]">
+                            <span className="font-medium">Status:</span> Payment Failed
+                          </p>
+                          <p className="text-[#8B7A1A] text-sm">
+                            Please complete payment to get delivery estimate
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-[#8B7A1A]">
+                            <span className="font-medium">Status:</span> Payment {selectedOrder.paymentStatus}
+                          </p>
+                          <p className="text-[#8B7A1A] text-sm">
+                            Complete payment to get delivery estimate
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Order Notes */}
                   {selectedOrder.notes && (

@@ -222,6 +222,8 @@ export default function PaymentPage() {
                 paymentMessage: 'Payment captured successfully',
                 paymentTime: new Date().toISOString(),
                 lastUpdated: new Date().toISOString(),
+                // Set estimated delivery to 10 days from payment completion
+                estimatedDelivery: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
               };
 
               // Update the order using AuthService (client-side with auth context)
