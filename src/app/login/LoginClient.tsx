@@ -257,6 +257,26 @@ export default function LoginClient() {
       
       const userCredential = await AuthService.signInWithGoogle();
       
+      // Check if user profile exists, create if not
+      try {
+        const profile = await AuthService.getUserProfile(userCredential.user.uid);
+        if (!profile) {
+          console.warn('Profile not found after Google login, creating basic profile');
+          // Create a basic profile for Google users
+          await AuthService.createUserProfileDirect(userCredential.user, {
+            firstName: userCredential.user.displayName?.split(' ')[0] || '',
+            lastName: userCredential.user.displayName?.split(' ').slice(1).join(' ') || '',
+            phone: ''
+          });
+          console.log('Basic profile created for Google user');
+        } else {
+          console.log('Profile found for Google user:', profile);
+        }
+      } catch (profileError) {
+        console.warn('Profile check/creation failed, continuing with login:', profileError);
+        // Continue with login even if profile creation fails
+      }
+      
       // Check if we're in checkout flow
       const isCheckoutFlow = searchParams.get('checkout') === 'true';
       const redirectPath = searchParams.get('redirect');
@@ -271,7 +291,12 @@ export default function LoginClient() {
       }
     } catch (error) {
       console.error('LoginClient: Google login failed:', error);
-      setErrors({ general: (error as Error).message });
+      const errorMessage = (error as Error).message;
+      const errorSuggestion = (error as any).suggestion;
+      setErrors({ 
+        general: errorMessage,
+        suggestion: errorSuggestion
+      });
     } finally {
       setIsSubmitting(false);
     }

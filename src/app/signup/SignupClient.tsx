@@ -143,10 +143,7 @@ export default function SignupClient() {
       
       // Profile is automatically created by Firebase Functions, but we'll verify it exists
       try {
-        // Wait a bit for Firebase Functions to create the profile
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Check if profile was created
+        // Check if profile was created (no arbitrary delay)
         const profile = await AuthService.getUserProfile(userCredential.user.uid);
         if (!profile) {
           console.warn('Profile not created by Firebase Functions, creating manually');
@@ -155,11 +152,25 @@ export default function SignupClient() {
             lastName: formData.lastName,
             phone: formData.phone
           });
+          console.log('Profile created manually for email signup');
+        } else {
+          console.log('Profile found for email signup:', profile);
         }
         
         localStorage.removeItem('pendingSignup');
       } catch (profileError) {
-        console.warn('Profile creation check failed, continuing with redirect:', profileError);
+        console.warn('Profile creation check failed, creating fallback profile:', profileError);
+        try {
+          // Create profile as fallback
+          await AuthService.createUserProfileDirect(userCredential.user, {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: formData.phone
+          });
+          console.log('Fallback profile created for email signup');
+        } catch (fallbackError) {
+          console.error('Failed to create fallback profile:', fallbackError);
+        }
         localStorage.removeItem('pendingSignup');
       }
       
@@ -289,6 +300,8 @@ export default function SignupClient() {
             localStorage.removeItem('pendingSignup');
           }
         }
+      } else {
+        console.warn('No pending signup data found for phone signup');
       }
       
       await redirectBasedOnRole(userCredential.user.uid);
@@ -322,10 +335,7 @@ export default function SignupClient() {
       
       // Profile is automatically created by Firebase Functions, but we'll verify it exists
       try {
-        // Wait a bit for Firebase Functions to create the profile
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Check if profile was created
+        // Check if profile was created (no arbitrary delay)
         const profile = await AuthService.getUserProfile(userCredential.user.uid);
         if (!profile) {
           console.warn('Profile not created by Firebase Functions, creating manually');
@@ -334,11 +344,25 @@ export default function SignupClient() {
             lastName: formData.lastName,
             phone: formData.phone
           });
+          console.log('Profile created manually for Google signup');
+        } else {
+          console.log('Profile found for Google signup:', profile);
         }
         
         localStorage.removeItem('pendingSignup');
       } catch (profileError) {
-        console.warn('Profile creation check failed, continuing with redirect:', profileError);
+        console.warn('Profile creation check failed, creating fallback profile:', profileError);
+        try {
+          // Create profile as fallback
+          await AuthService.createUserProfileDirect(userCredential.user, {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: formData.phone
+          });
+          console.log('Fallback profile created for Google signup');
+        } catch (fallbackError) {
+          console.error('Failed to create fallback profile:', fallbackError);
+        }
         localStorage.removeItem('pendingSignup');
       }
       

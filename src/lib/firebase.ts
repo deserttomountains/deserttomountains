@@ -332,7 +332,19 @@ export class AuthService {
       console.log('User profile created successfully for:', user.uid);
     } catch (error) {
       console.error('Error creating user profile:', error);
-      throw new Error('Failed to create user profile');
+      
+      // Enhanced error handling with specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('permission-denied')) {
+          throw new Error('Permission denied. Please contact support for assistance.');
+        } else if (error.message.includes('unavailable')) {
+          throw new Error('Service temporarily unavailable. Please try again in a few minutes.');
+        } else if (error.message.includes('deadline-exceeded')) {
+          throw new Error('Request timed out. Please check your connection and try again.');
+        }
+      }
+      
+      throw new Error('Failed to create user profile. Please try again or contact support.');
     }
   }
 
@@ -362,7 +374,21 @@ export class AuthService {
       console.log('User profile created directly in Firestore for:', user.uid);
     } catch (error) {
       console.error('Error creating user profile directly:', error);
-      throw new Error('Failed to create user profile directly');
+      
+      // Enhanced error handling with specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('permission-denied')) {
+          throw new Error('Permission denied. Please contact support for assistance.');
+        } else if (error.message.includes('unavailable')) {
+          throw new Error('Service temporarily unavailable. Please try again in a few minutes.');
+        } else if (error.message.includes('deadline-exceeded')) {
+          throw new Error('Request timed out. Please check your connection and try again.');
+        } else if (error.message.includes('already-exists')) {
+          throw new Error('User profile already exists. Please try signing in instead.');
+        }
+      }
+      
+      throw new Error('Failed to create user profile directly. Please try again or contact support.');
     }
   }
 
@@ -1461,6 +1487,18 @@ export class AuthService {
       case 'auth/app-not-authorized':
         message = 'This app is not authorized to use Firebase Authentication.';
         suggestion = 'Please contact support for assistance.';
+        break;
+      case 'auth/user-disabled':
+        message = 'This account has been disabled.';
+        suggestion = 'Please contact support for assistance.';
+        break;
+      case 'auth/user-token-expired':
+        message = 'Your session has expired. Please sign in again.';
+        suggestion = 'Try signing in with your credentials.';
+        break;
+      case 'auth/requires-recent-login':
+        message = 'This operation requires recent authentication.';
+        suggestion = 'Please sign out and sign in again.';
         break;
       default:
         message = error.message || 'An unexpected error occurred.';

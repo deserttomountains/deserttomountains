@@ -31,9 +31,14 @@ export const useAuth = () => {
       
       if (user && !isSigningOut) {
         try {
-          // Get user profile and role
-          const profile = await AuthService.getUserProfile(user.uid);
-          const role = await AuthService.getUserRole(user.uid);
+          // Set loading to false immediately to prevent UI blocking
+          setAuthState(prev => ({ ...prev, loading: false }));
+          
+          // Get user profile and role in parallel for better performance
+          const [profile, role] = await Promise.all([
+            AuthService.getUserProfile(user.uid),
+            AuthService.getUserRole(user.uid)
+          ]);
           
           console.log('User profile loaded:', { 
             uid: user.uid, 
@@ -135,8 +140,8 @@ export const useAuth = () => {
     try {
       console.log('Redirecting based on role for user:', uid);
       
-      // Add a small delay to ensure Firebase auth state is fully updated
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Reduced delay to prevent race conditions while ensuring auth state is stable
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const role = await AuthService.getUserRole(uid);
       console.log('User role determined:', role);
