@@ -101,7 +101,7 @@ export default function AboutClient() {
               <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl p-8 border border-[#E8E4D8] shadow-2xl">
                 <div className="text-center">
                   <div className="w-24 h-24 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl">
-                    <Building className="w-12 h-12 text-white" />
+                    <Sparkles className="w-12 h-12 text-white" />
                   </div>
                   <h3 className="text-3xl font-black text-[#2A2418] mb-4">
                     Desert to Mountains

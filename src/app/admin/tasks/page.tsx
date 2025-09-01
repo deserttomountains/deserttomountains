@@ -1,7 +1,30 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, Tag, User, CheckCircle, AlertCircle, Clock as ClockIcon, Calendar as CalendarIcon, Tag as TagIcon, User as UserIcon, Activity, TrendingUp, BarChart3, FileText, Settings, Repeat, X, Edit, Target, Flag, Truck, UserCheck, Phone, SortAsc, SortDesc, MoreVertical, Trash2, Play, Pause, Square } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Clock, Tag, User, CheckCircle, AlertCircle, Clock as ClockIcon, Calendar as CalendarIcon, Tag as TagIcon, User as UserIcon, Activity, TrendingUp, BarChart3, FileText, Settings, Repeat, X, Edit, Target, Flag, Truck, UserCheck, Phone, SortAsc, SortDesc, MoreVertical, Trash2, Play, Pause, Square, Move } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverEvent,
+  useDroppable,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { AuthService, auth } from '@/lib/firebase';
 import { Task } from '@/lib/firebase';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -95,7 +118,30 @@ function TasksPageContent() {
   const [showTaskActions, setShowTaskActions] = useState<string | null>(null); // Task ID for which actions are shown
   
   // View State
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'table' | 'kanban'>('cards');
+  
+  // Handle view mode for mobile devices
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024; // lg breakpoint
+      if (isMobile && viewMode === 'kanban') {
+        setViewMode('cards'); // Switch to cards view on mobile
+      }
+    };
+
+    // Check on mount
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, [viewMode]);
+  
+  // Kanban State
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Load tasks on component mount
   useEffect(() => {
@@ -406,6 +452,46 @@ function TasksPageContent() {
     setShowTaskActions(showTaskActions === taskId ? null : taskId);
   };
 
+  // Smart dropdown positioning to prevent clipping
+  const [dropdownPosition, setDropdownPosition] = useState<{ [key: string]: any }>({});
+
+  useEffect(() => {
+    if (showTaskActions) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        const button = document.querySelector(`[data-task-id="${showTaskActions}"]`);
+        if (!button) return;
+        
+        const buttonRect = button.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const dropdownHeight = 250; // Estimate for dropdown height
+        
+        // Check if there's enough space below
+        const spaceBelow = viewportHeight - buttonRect.bottom;
+        const spaceAbove = buttonRect.top;
+        
+        // Add buffer to ensure dropdown doesn't touch viewport edges
+        if (spaceBelow >= (dropdownHeight + 20) || spaceBelow > spaceAbove) {
+          // Position below
+          setDropdownPosition({
+            [showTaskActions]: { top: '100%', marginTop: '8px' }
+          });
+        } else {
+          // Position above
+          setDropdownPosition({
+            [showTaskActions]: { bottom: '100%', marginBottom: '8px' }
+          });
+        }
+      }, 0);
+    } else {
+      setDropdownPosition({});
+    }
+  }, [showTaskActions]);
+
+  const getDropdownPosition = (taskId: string) => {
+    return dropdownPosition[taskId] || { top: '100%', marginTop: '8px' };
+  };
+
   // Close actions dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -419,6 +505,56 @@ function TasksPageContent() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showTaskActions]);
+
+  // DnD Sensors - Optimized for smooth dragging like Trello
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 3, // Reduced for more responsive dragging
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // DnD Handlers - Optimized for smooth real-time movement
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (active && over && active.id !== over.id) {
+      const activeTask = tasks.find(task => task.id === active.id);
+      
+      // Map column IDs to status values
+      const statusMap: { [key: string]: Task['status'] } = {
+        'pending': 'pending',
+        'in_progress': 'in_progress',
+        'completed': 'completed'
+      };
+      
+      const newStatus = statusMap[over.id as string];
+      
+      if (activeTask && newStatus && activeTask.status !== newStatus) {
+        await handleStatusChange(activeTask, newStatus);
+      }
+    }
+    
+    setActiveId(null);
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    // Real-time visual feedback during drag over
+    const { active, over } = event;
+    if (active && over) {
+      // Add smooth visual feedback for the drop zone
+    }
+  };
 
   // Filter and search tasks
   const filteredTasks = useMemo(() => {
@@ -754,6 +890,189 @@ function TasksPageContent() {
     }
   };
 
+  // Droppable Column Component for Kanban - Trello-like drop zones
+  const DroppableColumn = ({ 
+    id, 
+    title, 
+    icon, 
+    color, 
+    tasks, 
+    children 
+  }: { 
+    id: string; 
+    title: string; 
+    icon: React.ReactNode; 
+    color: string; 
+    tasks: Task[]; 
+    children: React.ReactNode; 
+  }) => {
+    const { setNodeRef, isOver } = useDroppable({ id });
+    
+    return (
+      <div className={`bg-[#F5F2E8] rounded-xl p-4 min-h-[600px] transition-all duration-150 ease-out ${
+        isOver 
+          ? 'bg-[#E6DCC0] border-2 border-[#D4AF37] shadow-lg scale-[1.02]' 
+          : 'border-2 border-transparent hover:border-[#D4AF37]/30'
+      }`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-[#5E4E06] flex items-center gap-2">
+            {icon}
+            {title}
+          </h3>
+          <span className={`${color} text-xs font-medium px-2 py-1 rounded-full transition-all duration-150 ${
+            isOver ? 'scale-110' : ''
+          }`}>
+            {tasks.length}
+          </span>
+        </div>
+        <div 
+          ref={setNodeRef} 
+          className={`space-y-3 min-h-[500px] transition-all duration-150 ${
+            isOver ? 'bg-[#D4AF37]/5 rounded-lg p-2' : ''
+          }`}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  };
+
+  // Sortable Task Card Component for Kanban - Trello-like smooth dragging
+  const SortableTaskCard = ({ task }: { task: Task }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ 
+      id: task.id!,
+      transition: {
+        duration: 150,
+        easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+      },
+    });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition: isDragging ? 'none' : transition, // No transition during drag for smooth movement
+      opacity: isDragging ? 0.9 : 1,
+      zIndex: isDragging ? 9999 : 'auto',
+      position: isDragging ? ('relative' as const) : ('static' as const),
+      cursor: isDragging ? 'grabbing' : 'grab',
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`group relative bg-white border-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-150 ease-out cursor-grab active:cursor-grabbing ${
+          isDragging 
+            ? 'shadow-2xl scale-[1.02] rotate-1 border-[#D4AF37] bg-white' 
+            : task.status === 'completed' 
+              ? 'border-green-200 bg-green-50 hover:shadow-lg' 
+              : isTaskOverdue(task) 
+                ? 'border-red-200 bg-red-50 hover:shadow-lg' 
+                : task.status === 'in_progress'
+                  ? 'border-blue-200 bg-blue-50 hover:shadow-lg'
+                  : 'border-[#D4AF37] bg-gradient-to-br from-white to-[#FDFCF7] hover:shadow-lg'
+        }`}
+        {...attributes}
+        {...listeners}
+      >
+        {/* Drag Handle */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Move className="w-4 h-4 text-[#8B7A1A]" />
+        </div>
+
+        {/* Status Indicator */}
+        <div className={`absolute top-2 left-2 w-2 h-2 rounded-full ${
+          task.status === 'completed' 
+            ? 'bg-green-500' 
+            : isTaskOverdue(task) 
+              ? 'bg-red-500' 
+              : task.status === 'in_progress'
+                ? 'bg-blue-500'
+                : 'bg-yellow-500'
+        }`}></div>
+
+        <div className="p-3">
+          {/* Task Title */}
+          <h4 className="font-medium text-[#5E4E06] text-sm mb-1 line-clamp-2">
+            {task.title}
+          </h4>
+
+          {/* Task Description */}
+          <p className="text-xs text-[#8B7A1A] mb-2 line-clamp-2">
+            {task.description}
+          </p>
+
+          {/* Priority and Category */}
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+              {task.priority}
+            </span>
+            <div className={`p-1 rounded ${getCategoryColor(task.category)}`}>
+              {getCategoryIcon(task.category)}
+            </div>
+          </div>
+
+          {/* Tags */}
+          {task.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {task.tags.slice(0, 2).map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-[#F5F2E8] text-[#8B7A1A]"
+                >
+                  {tag}
+                </span>
+              ))}
+              {task.tags.length > 2 && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-[#F5F2E8] text-[#8B7A1A]">
+                  +{task.tags.length - 2}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Due Date */}
+          <div className="flex items-center justify-between text-xs text-[#8B7A1A]">
+            <div className="flex items-center gap-1">
+              <CalendarIcon className="w-3 h-3" />
+              <span className={isTaskOverdue(task) ? 'text-red-600 font-medium' : ''}>
+                {formatDate(task.dueDate)}
+              </span>
+            </div>
+            
+            {task.estimatedTime && (
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <span>{formatTime(task.estimatedTime)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Overdue Warning */}
+          {isTaskOverdue(task) && task.status !== 'completed' && (
+            <div className="absolute top-1 left-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+              OVERDUE
+            </div>
+          )}
+
+          {/* Completion Badge */}
+          {task.status === 'completed' && (
+            <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              DONE
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -767,6 +1086,20 @@ function TasksPageContent() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      {/* Development Warning Banner */}
+      <div className="bg-yellow-500 border-b border-yellow-600 rounded-xl mb-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center py-3">
+            <div className="flex items-center">
+              <AlertCircle className="w-5 h-5 text-yellow-900 mr-2" />
+              <p className="text-yellow-900 font-semibold text-sm">
+                ⚠️ This page is currently under development. Features may be incomplete or subject to change.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200 shadow-sm">
@@ -872,7 +1205,7 @@ function TasksPageContent() {
                   <div className="bg-current rounded-sm"></div>
                   <div className="bg-current rounded-sm"></div>
                 </div>
-                Cards
+                <span className="hidden sm:inline">Cards</span>
               </button>
               <button
                 onClick={() => setViewMode('table')}
@@ -887,7 +1220,23 @@ function TasksPageContent() {
                   <div className="bg-current rounded-sm h-0.5"></div>
                   <div className="bg-current rounded-sm h-0.5"></div>
                 </div>
-                Table
+                <span className="hidden sm:inline">Table</span>
+              </button>
+              {/* Kanban button - hidden on mobile */}
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`hidden lg:flex px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 items-center gap-2 ${
+                  viewMode === 'kanban'
+                    ? 'bg-white text-[#5E4E06] shadow-sm'
+                    : 'text-[#8B7A1A] hover:text-[#5E4E06]'
+                }`}
+              >
+                <div className="flex gap-0.5 w-4 h-4">
+                  <div className="bg-current rounded-sm w-1"></div>
+                  <div className="bg-current rounded-sm w-1"></div>
+                  <div className="bg-current rounded-sm w-1"></div>
+                </div>
+                Kanban
               </button>
             </div>
 
@@ -1100,7 +1449,7 @@ function TasksPageContent() {
                         
                         {/* Actions Dropdown */}
                         {showTaskActions === task.id && (
-                          <div className="task-actions-dropdown absolute right-0 top-8 z-10 bg-white border border-[#D4AF37] rounded-lg shadow-lg py-2 min-w-[160px]">
+                          <div className="task-actions-dropdown absolute right-0 z-10 bg-white border border-[#D4AF37] rounded-lg shadow-lg py-2 min-w-[160px]" style={getDropdownPosition(task.id!)}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1282,11 +1631,11 @@ function TasksPageContent() {
               ))}
             </div>
           </div>
-        ) : (
-          // Table View
+        ) : viewMode === 'table' ? (
+          // Table View - Responsive for Mobile
           <>
-            {/* Tasks Header */}
-            <div className="px-3 sm:px-6 py-4 bg-[#F5F2E8] border-b border-[#E6DCC0]">
+            {/* Tasks Header - Hidden on Mobile */}
+            <div className="hidden md:block px-3 sm:px-6 py-4 bg-[#F5F2E8] border-b border-[#E6DCC0]">
               <div className="grid grid-cols-12 gap-2 sm:gap-4 text-xs sm:text-sm font-medium text-[#5E4E06]">
                 <div className="col-span-3">
                   <span className="whitespace-nowrap text-xs sm:text-sm">Task</span>
@@ -1309,11 +1658,168 @@ function TasksPageContent() {
               </div>
             </div>
 
-            {/* Tasks */}
+            {/* Tasks - Responsive Layout */}
             <div className="divide-y divide-[#F5F2E8]">
               {paginatedTasks.map((task) => (
                 <div key={task.id} className="px-3 sm:px-6 py-4 hover:bg-[#FDFCF7] transition-colors relative">
-                  <div className="grid grid-cols-12 gap-2 sm:gap-4 items-center">
+                  {/* Mobile Layout - Card Style */}
+                  <div className="md:hidden">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="flex-shrink-0 mt-1">
+                        {task.status === 'completed' ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : isTaskOverdue(task) ? (
+                          <AlertCircle className="w-5 h-5 text-red-600" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-[#8B7A1A]" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium text-[#5E4E06] text-sm">{task.title}</h3>
+                        <p className="text-xs text-[#8B7A1A] mt-1 line-clamp-2">{task.description}</p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <button
+                          data-task-id={task.id}
+                          onClick={() => toggleTaskActions(task.id!)}
+                          className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
+                        >
+                          <MoreVertical className="w-4 h-4 text-[#8B7A1A]" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mobile Status and Quick Actions */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                          {task.status.replace('_', ' ')}
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                          {task.priority}
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        {task.status !== 'pending' && (
+                          <button
+                            onClick={() => handleStatusChange(task, 'pending')}
+                            className="p-1.5 bg-yellow-100 hover:bg-yellow-200 rounded text-yellow-700 transition-colors cursor-pointer"
+                            title="Mark as Pending"
+                          >
+                            <Clock className="w-3 h-3" />
+                          </button>
+                        )}
+                        {task.status !== 'in_progress' && (
+                          <button
+                            onClick={() => handleStatusChange(task, 'in_progress')}
+                            className="p-1.5 bg-blue-100 hover:bg-blue-200 rounded text-blue-700 transition-colors cursor-pointer"
+                            title="Start Progress"
+                          >
+                            <Play className="w-3 h-3" />
+                          </button>
+                        )}
+                        {task.status !== 'completed' && (
+                          <button
+                            onClick={() => handleStatusChange(task, 'completed')}
+                            className="p-1.5 bg-green-100 hover:bg-green-200 rounded text-green-700 transition-colors cursor-pointer"
+                            title="Mark Complete"
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Mobile Category and Due Date */}
+                    <div className="flex items-center justify-between text-xs text-[#8B7A1A]">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task.category)}`}>
+                          {task.category.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CalendarIcon className="w-3 h-3" />
+                        <span className={isTaskOverdue(task) ? 'text-red-600 font-medium' : ''}>
+                          {formatDate(task.dueDate)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mobile Tags */}
+                    {task.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-3">
+                        {task.tags.slice(0, 2).map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F5F2E8] text-[#8B7A1A]"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {task.tags.length > 2 && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F5F2E8] text-[#8B7A1A]">
+                            +{task.tags.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                                         {/* Mobile Actions Dropdown */}
+                     {showTaskActions === task.id && (
+                       <div className="task-actions-dropdown absolute right-3 z-10 bg-white border border-[#D4AF37] rounded-lg shadow-lg py-2 min-w-[160px]" style={getDropdownPosition(task.id!)}>
+                        <button
+                          onClick={() => handleEditTask(task)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit Task
+                        </button>
+                        
+                        {task.status !== 'pending' && (
+                          <button
+                            onClick={() => handleStatusChange(task, 'pending')}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                          >
+                            <Clock className="w-4 h-4" />
+                            Mark Pending
+                          </button>
+                        )}
+                        
+                        {task.status !== 'in_progress' && (
+                          <button
+                            onClick={() => handleStatusChange(task, 'in_progress')}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                          >
+                            <Play className="w-4 h-4" />
+                            Start Progress
+                          </button>
+                        )}
+                        
+                        {task.status !== 'completed' && (
+                          <button
+                            onClick={() => handleStatusChange(task, 'completed')}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Mark Complete
+                          </button>
+                        )}
+                        
+                        <div className="border-t border-[#F5F2E8] my-1"></div>
+                        
+                        <button
+                          onClick={() => handleDeleteTask(task)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete Task
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Desktop Layout - Table Style */}
+                  <div className="hidden md:grid grid-cols-12 gap-2 sm:gap-4 items-center">
                     {/* Task Title and Description */}
                     <div className="col-span-3">
                       <div className="flex items-start gap-3">
@@ -1353,9 +1859,9 @@ function TasksPageContent() {
                     {/* Status with Quick Actions */}
                     <div className="col-span-2">
                       <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                          {task.status.replace('_', ' ')}
-                        </span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                        {task.status.replace('_', ' ')}
+                      </span>
                         {/* Quick Status Change Buttons */}
                         <div className="flex gap-1">
                           {task.status !== 'pending' && (
@@ -1417,6 +1923,7 @@ function TasksPageContent() {
                     <div className="col-span-1 relative">
                       <div className="flex items-center justify-end">
                         <button
+                          data-task-id={task.id}
                           onClick={() => toggleTaskActions(task.id!)}
                           className="p-2 hover:bg-[#F5F2E8] rounded-lg transition-colors cursor-pointer"
                         >
@@ -1425,7 +1932,7 @@ function TasksPageContent() {
                         
                         {/* Actions Dropdown */}
                         {showTaskActions === task.id && (
-                          <div className="task-actions-dropdown absolute right-0 top-8 z-10 bg-white border border-[#D4AF37] rounded-lg shadow-lg py-2 min-w-[160px]">
+                          <div className="task-actions-dropdown absolute right-0 z-10 bg-white border border-[#D4AF37] rounded-lg shadow-lg py-2 min-w-[160px]" style={getDropdownPosition(task.id!)}>
                             <button
                               onClick={() => handleEditTask(task)}
                               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#5E4E06] hover:bg-[#F5F2E8] transition-colors cursor-pointer"
@@ -1482,7 +1989,94 @@ function TasksPageContent() {
               ))}
             </div>
           </>
-        )}
+        ) : viewMode === 'kanban' ? (
+           // Kanban View
+           <DndContext
+             sensors={sensors}
+             collisionDetection={closestCenter}
+             onDragStart={handleDragStart}
+             onDragEnd={handleDragEnd}
+             onDragOver={handleDragOver}
+           >
+             <DragOverlay>
+               {activeId ? (
+                 <div className="bg-white border-2 border-[#D4AF37] rounded-lg shadow-2xl scale-[1.02] rotate-1 p-3 opacity-90">
+                   <div className="font-medium text-[#5E4E06] text-sm mb-1">
+                     {tasks.find(t => t.id === activeId)?.title}
+                   </div>
+                   <div className="text-xs text-[#8B7A1A]">
+                     {tasks.find(t => t.id === activeId)?.description}
+                   </div>
+                 </div>
+               ) : null}
+             </DragOverlay>
+             <div className="p-4 sm:p-6">
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                 {/* Pending Column */}
+                 <DroppableColumn
+                   id="pending"
+                   title="Pending"
+                   icon={<Clock className="w-5 h-5 text-yellow-600" />}
+                   color="bg-yellow-100 text-yellow-800"
+                   tasks={filteredTasks.filter(t => t.status === 'pending')}
+                 >
+                   <SortableContext
+                     items={filteredTasks.filter(t => t.status === 'pending').map(t => t.id!)}
+                     strategy={verticalListSortingStrategy}
+                   >
+                     {filteredTasks
+                       .filter(task => task.status === 'pending')
+                       .map((task) => (
+                         <SortableTaskCard key={task.id} task={task} />
+                       ))}
+                   </SortableContext>
+                 </DroppableColumn>
+
+                 {/* In Progress Column */}
+                 <DroppableColumn
+                   id="in_progress"
+                   title="In Progress"
+                   icon={<Activity className="w-5 h-5 text-blue-600" />}
+                   color="bg-blue-100 text-blue-800"
+                   tasks={filteredTasks.filter(t => t.status === 'in_progress')}
+                 >
+                   <SortableContext
+                     items={filteredTasks.filter(t => t.status === 'in_progress').map(t => t.id!)}
+                     strategy={verticalListSortingStrategy}
+                   >
+                     {filteredTasks
+                       .filter(task => task.status === 'in_progress')
+                       .map((task) => (
+                         <SortableTaskCard key={task.id} task={task} />
+                       ))}
+                   </SortableContext>
+                 </DroppableColumn>
+
+                 {/* Completed Column */}
+                 <DroppableColumn
+                   id="completed"
+                   title="Completed"
+                   icon={<CheckCircle className="w-5 h-5 text-green-600" />}
+                   color="bg-green-100 text-green-800"
+                   tasks={filteredTasks.filter(t => t.status === 'completed')}
+                 >
+                   <SortableContext
+                     items={filteredTasks.filter(t => t.status === 'completed').map(t => t.id!)}
+                     strategy={verticalListSortingStrategy}
+                   >
+                     {filteredTasks
+                       .filter(task => task.status === 'completed')
+                       .map((task) => (
+                         <SortableTaskCard key={task.id} task={task} />
+                       ))}
+                   </SortableContext>
+                 </DroppableColumn>
+
+
+               </div>
+             </div>
+           </DndContext>
+         ) : null}
       </div>
 
       {/* Pagination */}
@@ -1702,15 +2296,7 @@ function TasksPageContent() {
         </div>
       )}
 
-      {/* Add Task Button */}
-      <div className="fixed bottom-6 right-6">
-        <button 
-          onClick={() => setShowAddTaskModal(true)}
-          className="bg-[#D4AF37] text-white p-4 rounded-full shadow-lg hover:bg-[#B8941F] transition-colors cursor-pointer"
-        >
-          <Plus className="w-6 h-6" />
-        </button>
-      </div>
+
 
       {/* Add Task Modal */}
       {showAddTaskModal && (
