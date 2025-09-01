@@ -422,26 +422,18 @@ export class AuthService {
     return phone.replace(/[^\d+]/g, '');
   }
 
-  // Format phone number to E.164 standard
+  // Simple phone formatting - just add country code if missing
   static formatPhoneNumber(phone: string): string {
     if (!phone) return '';
     
-    // Remove all non-digit characters except +
-    let formatted = phone.replace(/[^\d+]/g, '');
-    
-    // If it doesn't start with +, assume it's missing the country code
-    if (!formatted.startsWith('+')) {
-      // Default to India (+91) if no country code - adjust as needed
-      formatted = '+91' + formatted;
+    // If it already has a country code, return as is
+    if (phone.startsWith('+')) {
+      return phone;
     }
     
-    // Ensure it follows E.164 format: +[country code][national number]
-    // Allow more flexible length for different country codes
-    if (formatted.length < 10 || formatted.length > 16) {
-      throw new Error('Phone number must be between 10-16 characters including country code');
-    }
-    
-    return formatted;
+    // Otherwise, add +91 prefix for India
+    const digits = phone.replace(/\D/g, '');
+    return '+91' + digits;
   }
 
   // Alternative phone number formatting for more flexible input
@@ -473,39 +465,25 @@ export class AuthService {
     return '+91' + formatted;
   }
 
-  // Validate phone number format - optimized for PhoneInput component
+  // Simple phone validation - accept any reasonable phone number
   static validatePhoneNumber(phone: string): { isValid: boolean; error?: string } {
     if (!phone) {
       return { isValid: false, error: 'Phone number is required' };
     }
     
-    // PhoneInput component already formats to E.164 format (+[country code][number])
-    // So we just need to check if it's a valid format
-    if (!phone.startsWith('+')) {
-      return { isValid: false, error: 'Phone number must include country code' };
-    }
+    // Remove any non-digit characters
+    const digits = phone.replace(/\D/g, '');
     
-    const phoneDigits = phone.replace(/\D/g, '');
-    
-    // Check minimum length (country code + national number)
-    if (phoneDigits.length < 11) {
+    // Very permissive validation - just check if it's not too short or too long
+    if (digits.length < 7) {
       return { isValid: false, error: 'Phone number is too short' };
     }
     
-    // Check maximum length (15 digits max for international numbers)
-    if (phoneDigits.length > 15) {
+    if (digits.length > 15) {
       return { isValid: false, error: 'Phone number is too long' };
     }
     
-    // Check for common invalid patterns
-    if (phoneDigits.match(/^0{2,}/)) {
-      return { isValid: false, error: 'Phone number cannot start with multiple zeros' };
-    }
-    
-    if (phoneDigits.match(/^1{10,}/)) {
-      return { isValid: false, error: 'Phone number appears to be invalid' };
-    }
-    
+    // Accept any phone number with reasonable length
     return { isValid: true };
   }
 

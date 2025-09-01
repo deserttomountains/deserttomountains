@@ -6,9 +6,7 @@ import {Mail, Lock, Eye, EyeOff, CheckCircle, Phone, Shield } from 'lucide-react
 import Link from 'next/link';
 import { AuthService, auth } from '@/lib/firebase';
 import { RecaptchaVerifier } from 'firebase/auth';
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
-import styles from './PhoneInputCustom.module.css';
+
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 
@@ -28,6 +26,7 @@ export default function LoginClient() {
   const [phoneVerificationSent, setPhoneVerificationSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
+
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const router = useRouter();
@@ -64,6 +63,8 @@ export default function LoginClient() {
     };
   }, []);
 
+
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -90,15 +91,11 @@ export default function LoginClient() {
         newErrors.password = 'Password is required';
       }
     } else {
-      if (!formData.phone.trim()) {
+      // Simple phone validation - just check if it's not empty
+      if (!formData.phone || !formData.phone.trim()) {
         newErrors.phone = 'Phone number is required';
-      } else {
-        // Use the new validation function from AuthService
-        const validation = AuthService.validatePhoneNumber(formData.phone);
-        if (!validation.isValid) {
-          newErrors.phone = validation.error || 'Invalid phone number';
-        }
       }
+      // No other restrictions - let users enter any phone number format
     }
 
     setErrors(newErrors);
@@ -180,10 +177,9 @@ export default function LoginClient() {
       console.log('Phone number type:', typeof formData.phone);
       console.log('Phone number length:', formData.phone.length);
       
-      // PhoneInput component already formats the phone number to E.164 format
-      // Just use the phone number as is
-      const formattedPhone = formData.phone;
-      console.log('Phone number from PhoneInput:', formattedPhone);
+      // Format the phone number for Firebase (E.164 format)
+      const formattedPhone = AuthService.formatPhoneNumber(formData.phone);
+      console.log('Phone number formatted for Firebase:', formattedPhone);
       
       const result = await AuthService.signInWithPhone(formattedPhone, recaptchaVerifierRef.current);
       setConfirmationResult(result);
@@ -222,7 +218,7 @@ export default function LoginClient() {
           console.warn('User profile not found after phone login, creating basic profile');
           // Create a basic profile for phone-only users
           await AuthService.createUserProfileDirect(userCredential.user, {
-            phone: formData.phone
+            phone: AuthService.formatPhoneNumber(formData.phone)
           });
         }
       } catch (profileError) {
@@ -462,29 +458,27 @@ export default function LoginClient() {
                 ) : (
                   <div>
                     <label className="block text-sm font-semibold text-[#8B7A1A] mb-2">Phone Number</label>
-                    <PhoneInput
-                      country={'in'}
-                      value={formData.phone}
-                      onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
-                      inputClass={styles.phoneInput}
-                      containerClass={styles.phoneContainer}
-                      buttonClass={styles.phoneButton}
-                      dropdownClass={styles.phoneDropdown}
-                      enableSearch={true}
-                      searchPlaceholder="Search countries..."
-                      inputProps={{
-                        placeholder: 'Enter your phone number'
-                      }}
-                      countryCodeEditable={false}
-                      preferredCountries={['in', 'us', 'gb']}
-                    />
+                    <div className="flex">
+                      <div className="flex items-center px-3 py-3 border-2 border-r-0 border-gray-200 rounded-l-xl bg-gray-50">
+                        <span className="text-sm font-medium text-gray-700">+91</span>
+                      </div>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-r-xl focus:border-[#D4AF37] focus:outline-none transition-colors"
+                        placeholder="Enter your phone number"
+                        maxLength={10}
+                      />
+                    </div>
                     {errors.phone && (
                       <p className="mt-2 text-sm text-red-600 font-medium">
                         {errors.phone}
                       </p>
                     )}
                     <p className="mt-2 text-xs text-gray-500">
-                      Select your country and enter your phone number. It will be automatically formatted.
+                      Enter your 10-digit phone number
                     </p>
                   </div>
                 )}
