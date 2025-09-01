@@ -33,9 +33,11 @@ export default function FormSubmissionsPage() {
   const handleLogout = async () => {
     try {
       await AuthService.signOut();
-      router.push('/login');
+      router.push('/logout');
     } catch (error) {
       console.error('Error logging out:', error);
+      // Still redirect to logout page even if there's an error
+      router.push('/logout');
     }
   };
 

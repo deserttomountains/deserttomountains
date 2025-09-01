@@ -34,11 +34,11 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     try {
       await AuthService.signOut();
-      router.push('/login');
+      router.push('/logout');
     } catch (error) {
       console.error('Error logging out:', error);
-      // Still redirect to login even if signOut fails
-      router.push('/login');
+      // Still redirect to logout page even if signOut fails
+      router.push('/logout');
     }
   };
 

@@ -45,12 +45,12 @@ export default function DashboardLayout({ active, children }: DashboardLayoutPro
       setUserProfile(null);
       
       await AuthService.signOut();
-      // Always redirect to login, even if there's an error
-      router.push('/login');
+      // Redirect to logout page for better user experience
+      router.push('/logout');
     } catch (error) {
       console.error('Error signing out:', error);
-      // Still redirect to login even if signOut fails
-      router.push('/login');
+      // Still redirect to logout page even if signOut fails
+      router.push('/logout');
     }
   };
 

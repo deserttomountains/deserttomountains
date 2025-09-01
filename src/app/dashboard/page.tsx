@@ -101,10 +101,10 @@ function DashboardPageContent() {
   const handleLogout = async () => {
     try {
       await AuthService.signOut();
-      router.push('/login');
+      router.push('/logout');
     } catch (error) {
       console.error('Error signing out:', error);
-      router.push('/login');
+      router.push('/logout');
     }
   };
 

@@ -95,3 +95,8 @@
 16. Test that admin navigation is smooth without authentication interruptions
 17. Test that admin layout handles authentication centrally
 18. Test that individual admin pages don't re-authenticate on navigation
+19. Test that logout page displays correctly with all elements
+20. Test that automatic redirect to login works after countdown
+21. Test that manual navigation buttons work properly
+22. Test that logout flow works from all admin and dashboard pages
+23. Test that no React state update violations occur during logout
