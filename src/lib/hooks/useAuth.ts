@@ -69,14 +69,58 @@ export const useAuth = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      // Cleanup any registered listeners
+      AuthService.unregisterListener(() => {
+        setAuthState({
+          user: null,
+          userProfile: null,
+          loading: false,
+          role: null
+        });
+      });
+    };
   }, [isSigningOut]);
 
   const signOut = async () => {
     try {
       setIsSigningOut(true);
+      
+      // Clear all local state first to prevent race conditions
+      setAuthState({
+        user: null,
+        userProfile: null,
+        loading: false,
+        role: null
+      });
+      
+      // Clear any stored data
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('pendingSignup');
+        sessionStorage.clear();
+        
+        // Clear any cached auth data
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('firebase') || key.includes('auth') || key.includes('user')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+      
+      // Register this component's cleanup for the AuthService
+      AuthService.registerListenerForCleanup(() => {
+        setAuthState({
+          user: null,
+          userProfile: null,
+          loading: false,
+          role: null
+        });
+      });
+      
       await AuthService.signOut();
-      // Redirect to login page instead of home page
+      
+      // Always redirect to login, even if there's an error
       router.push('/login');
     } catch (error) {
       console.error('Error signing out:', error);

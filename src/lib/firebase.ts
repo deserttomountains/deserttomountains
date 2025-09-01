@@ -336,6 +336,36 @@ export class AuthService {
     }
   }
 
+  // Direct Firestore profile creation as fallback when Firebase Functions fail
+  static async createUserProfileDirect(user: User, additionalData?: { firstName?: string; lastName?: string; phone?: string; address?: Address }): Promise<void> {
+    if (!this.isFirebaseConfigured()) {
+      throw new Error('Firebase is not configured. Please set up your Firebase credentials in .env.local');
+    }
+
+    try {
+      console.log('Creating user profile directly in Firestore for:', user.uid);
+      
+      const userProfile: UserProfile = {
+        uid: user.uid,
+        email: user.email || '',
+        role: 'customer', // Default role
+        firstName: additionalData?.firstName || '',
+        lastName: additionalData?.lastName || '',
+        phone: additionalData?.phone || '',
+        address: additionalData?.address || {},
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Use setDoc with merge option to avoid overwriting existing data
+      await setDoc(doc(db, 'users', user.uid), userProfile, { merge: true });
+      console.log('User profile created directly in Firestore for:', user.uid);
+    } catch (error) {
+      console.error('Error creating user profile directly:', error);
+      throw new Error('Failed to create user profile directly');
+    }
+  }
+
   // Check if user exists by email
   static async checkUserExistsByEmail(email: string): Promise<{ exists: boolean; uid?: string }> {
     if (!this.isFirebaseConfigured()) {
@@ -364,6 +394,93 @@ export class AuthService {
   static normalizePhoneNumber(phone: string): string {
     // Remove all non-digit characters except +
     return phone.replace(/[^\d+]/g, '');
+  }
+
+  // Format phone number to E.164 standard
+  static formatPhoneNumber(phone: string): string {
+    if (!phone) return '';
+    
+    // Remove all non-digit characters except +
+    let formatted = phone.replace(/[^\d+]/g, '');
+    
+    // If it doesn't start with +, assume it's missing the country code
+    if (!formatted.startsWith('+')) {
+      // Default to India (+91) if no country code - adjust as needed
+      formatted = '+91' + formatted;
+    }
+    
+    // Ensure it follows E.164 format: +[country code][national number]
+    // Allow more flexible length for different country codes
+    if (formatted.length < 10 || formatted.length > 16) {
+      throw new Error('Phone number must be between 10-16 characters including country code');
+    }
+    
+    return formatted;
+  }
+
+  // Alternative phone number formatting for more flexible input
+  static formatPhoneNumberFlexible(phone: string): string {
+    if (!phone) return '';
+    
+    // Remove all non-digit characters except +
+    let formatted = phone.replace(/[^\d+]/g, '');
+    
+    // Handle different input formats
+    if (formatted.startsWith('+')) {
+      // Already has country code
+      return formatted;
+    } else if (formatted.startsWith('91') && formatted.length >= 12) {
+      // Indian number starting with 91
+      return '+' + formatted;
+    } else if (formatted.startsWith('0') && formatted.length >= 11) {
+      // Indian number starting with 0
+      return '+91' + formatted.substring(1);
+    } else if (formatted.length === 10) {
+      // 10-digit Indian number
+      return '+91' + formatted;
+    } else if (formatted.length >= 10 && formatted.length <= 15) {
+      // Other valid length numbers
+      return '+' + formatted;
+    }
+    
+    // If none of the above, add +91 prefix
+    return '+91' + formatted;
+  }
+
+  // Validate phone number format - optimized for PhoneInput component
+  static validatePhoneNumber(phone: string): { isValid: boolean; error?: string } {
+    if (!phone) {
+      return { isValid: false, error: 'Phone number is required' };
+    }
+    
+    // PhoneInput component already formats to E.164 format (+[country code][number])
+    // So we just need to check if it's a valid format
+    if (!phone.startsWith('+')) {
+      return { isValid: false, error: 'Phone number must include country code' };
+    }
+    
+    const phoneDigits = phone.replace(/\D/g, '');
+    
+    // Check minimum length (country code + national number)
+    if (phoneDigits.length < 11) {
+      return { isValid: false, error: 'Phone number is too short' };
+    }
+    
+    // Check maximum length (15 digits max for international numbers)
+    if (phoneDigits.length > 15) {
+      return { isValid: false, error: 'Phone number is too long' };
+    }
+    
+    // Check for common invalid patterns
+    if (phoneDigits.match(/^0{2,}/)) {
+      return { isValid: false, error: 'Phone number cannot start with multiple zeros' };
+    }
+    
+    if (phoneDigits.match(/^1{10,}/)) {
+      return { isValid: false, error: 'Phone number appears to be invalid' };
+    }
+    
+    return { isValid: true };
   }
 
   // Verify phone number with SMS code
@@ -1274,58 +1391,87 @@ export class AuthService {
   // Handle authentication errors
   private static handleAuthError(error: AuthError): Error {
     let message = 'An error occurred during authentication.';
+    let suggestion = '';
     
     switch (error.code) {
       case 'auth/user-not-found':
         message = 'No account found with this email address.';
+        suggestion = 'Please check your email or create a new account.';
         break;
       case 'auth/wrong-password':
         message = 'Incorrect password. Please try again.';
+        suggestion = 'Make sure caps lock is off and try again.';
         break;
       case 'auth/invalid-email':
         message = 'Please enter a valid email address.';
+        suggestion = 'Check the format: example@domain.com';
         break;
       case 'auth/weak-password':
         message = 'Password should be at least 6 characters long.';
+        suggestion = 'Use a combination of letters, numbers, and symbols.';
         break;
       case 'auth/email-already-in-use':
         message = 'An account with this email already exists.';
+        suggestion = 'Try signing in instead or use a different email.';
         break;
       case 'auth/invalid-phone-number':
         message = 'Please enter a valid phone number.';
+        suggestion = 'Include country code: +1 234 567 8900';
         break;
       case 'auth/invalid-verification-code':
         message = 'Invalid verification code. Please try again.';
+        suggestion = 'Check your SMS and enter the 6-digit code.';
         break;
       case 'auth/captcha-check-failed':
         message = 'Captcha verification failed. Please try again.';
+        suggestion = 'Refresh the page and try again.';
         break;
       case 'auth/too-many-requests':
         message = 'Too many failed attempts. Please try again later.';
+        suggestion = 'Wait a few minutes before trying again.';
         break;
       case 'auth/popup-closed-by-user':
         message = 'Login popup was closed. Please try again.';
+        suggestion = 'Complete the authentication in the popup window.';
         break;
       case 'auth/popup-blocked':
         message = 'Login popup was blocked. Please allow popups and try again.';
+        suggestion = 'Check your browser settings and allow popups for this site.';
         break;
       case 'auth/account-exists-with-different-credential':
         message = 'An account already exists with the same email but different sign-in credentials.';
+        suggestion = 'Try signing in with the method you used originally.';
         break;
       case 'auth/credential-already-in-use':
         message = 'This phone number is already associated with another account.';
+        suggestion = 'Use a different phone number or sign in with the existing account.';
         break;
       case 'auth/operation-not-allowed':
         message = 'This sign-in method is not enabled. Please contact support.';
+        suggestion = 'Email us at support@deserttomountains.com';
         break;
       case 'auth/network-request-failed':
         message = 'Network error. Please check your connection and try again.';
+        suggestion = 'Check your internet connection and try again.';
+        break;
+      case 'auth/quota-exceeded':
+        message = 'SMS quota exceeded. Please try again later.';
+        suggestion = 'Wait a few hours or contact support.';
+        break;
+      case 'auth/app-not-authorized':
+        message = 'This app is not authorized to use Firebase Authentication.';
+        suggestion = 'Please contact support for assistance.';
         break;
       default:
         message = error.message || 'An unexpected error occurred.';
+        suggestion = 'Please try again or contact support if the problem persists.';
     }
     
-    return new Error(message);
+    const enhancedError = new Error(message);
+    (enhancedError as any).suggestion = suggestion;
+    (enhancedError as any).code = error.code;
+    
+    return enhancedError;
   }
 
   // Task Management Methods

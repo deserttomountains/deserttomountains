@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { UserRole } from '@/lib/firebase';
@@ -19,6 +19,7 @@ export const RouteGuard = ({
   const { user, role, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     console.log('RouteGuard: Checking access...', {
@@ -31,35 +32,55 @@ export const RouteGuard = ({
     });
     
     if (!loading) {
-      // If user is not authenticated, redirect to login with current path as redirect
-      if (!user) {
-        console.log('RouteGuard: No user, redirecting to login with redirect:', pathname);
-        router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-        return;
-      }
-
-      // If role is required and user doesn't have the required role
-      if (requiredRole && role !== requiredRole) {
-        console.log('RouteGuard: Role mismatch, redirecting...', {
-          requiredRole,
-          actualRole: role
-        });
-        if (redirectTo) {
-          router.push(redirectTo);
-        } else {
-          // Default redirect based on user's actual role
-          if (role === 'admin') {
-            router.push('/admin');
-          } else {
-            router.push('/dashboard');
-          }
+      // Add small delay to ensure auth state is stable and prevent race conditions
+      const timer = setTimeout(() => {
+        // Prevent infinite redirects
+        if (isRedirecting) {
+          console.log('RouteGuard: Already redirecting, skipping...');
+          return;
         }
-        return;
-      }
-      
-      console.log('RouteGuard: Access granted');
+
+        // If user is not authenticated, redirect to login with current path as redirect
+        if (!user) {
+          console.log('RouteGuard: No user, redirecting to login with redirect:', pathname);
+          setIsRedirecting(true);
+          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+          return;
+        }
+
+        // If role is required and user doesn't have the required role
+        if (requiredRole && role !== requiredRole) {
+          console.log('RouteGuard: Role mismatch, redirecting...', {
+            requiredRole,
+            actualRole: role
+          });
+          setIsRedirecting(true);
+          if (redirectTo) {
+            router.push(redirectTo);
+          } else {
+            // Default redirect based on user's actual role
+            if (role === 'admin') {
+              router.push('/admin');
+            } else {
+              router.push('/dashboard');
+            }
+          }
+          return;
+        }
+        
+        console.log('RouteGuard: Access granted');
+        // Reset redirecting state when access is granted
+        setIsRedirecting(false);
+      }, 100); // Small delay to prevent race conditions
+
+      return () => clearTimeout(timer);
     }
   }, [user, role, loading, requiredRole, redirectTo, router, pathname]);
+
+  // Reset redirecting state when pathname changes
+  useEffect(() => {
+    setIsRedirecting(false);
+  }, [pathname]);
 
   // Show loading spinner while checking authentication
   if (loading) {

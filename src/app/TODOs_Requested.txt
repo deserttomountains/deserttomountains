@@ -1,5 +1,37 @@
-1. Remove step on Aura page and add mock sample as separate popup, and Make Plaster type to Tabs instead of buttons
-2. Clear the default from the cart in below sticky bar, and disable the button until the product is added
-3. On Contact Page add secondary mail
-4. Download Brochure button on Aura Page.
-5. Make Pigmented price show default
+# Authentication Flow Fixes TODO
+
+## Priority: HIGH
+- [x] Fix Firebase configuration and environment variables (Already configured in .env.local)
+- [x] Fix phone authentication profile creation (Phone signup doesn't create profiles)
+- [x] Fix phone number validation and formatting
+- [x] Fix reCAPTCHA container positioning issues
+
+## Priority: MEDIUM  
+- [x] Improve logout flow and cleanup (Race conditions, multiple handlers)
+- [x] Fix auth state management and listener cleanup
+- [x] Enhance route protection timing (Prevent infinite redirects)
+- [x] Fix inconsistent profile creation across signup methods
+
+## Priority: LOW
+- [x] Add better error handling and fallbacks
+- [x] Improve user experience during authentication failures
+- [x] Add loading states and better feedback
+
+## Implementation Status:
+- [x] Phone authentication profile creation - COMPLETED
+- [x] Phone number validation - COMPLETED
+- [x] reCAPTCHA positioning - COMPLETED
+- [x] Logout flow improvements - COMPLETED
+- [x] Route protection timing - COMPLETED
+- [x] Error handling improvements - COMPLETED
+
+## Notes:
+- Firebase configuration is already properly set up in .env.local
+- Focus on fixing the actual authentication flow issues
+- Test each fix thoroughly before moving to the next
+
+## Recent Fixes Applied:
+- ✅ Fixed phone number validation to work with PhoneInput component
+- ✅ Removed custom formatting that was interfering with PhoneInput
+- ✅ Added helpful user guidance for phone number input
+- ✅ Optimized validation for E.164 format (+[country code][number])

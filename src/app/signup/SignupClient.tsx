@@ -44,6 +44,20 @@ export default function SignupClient() {
     }
   }, [user, loading, redirectBasedOnRole]);
 
+  // Cleanup reCAPTCHA on component unmount
+  useEffect(() => {
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+          recaptchaVerifierRef.current = null;
+        } catch (error) {
+          console.warn('Error cleaning up reCAPTCHA:', error);
+        }
+      }
+    };
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -84,12 +98,10 @@ export default function SignupClient() {
       if (!formData.phone.trim()) {
         newErrors.phone = 'Phone number is required';
       } else {
-        // Remove all non-digit characters for validation
-        const phoneDigits = formData.phone.replace(/\D/g, '');
-        if (phoneDigits.length < 10) {
-          newErrors.phone = 'Please enter a valid phone number (at least 10 digits)';
-        } else if (phoneDigits.length > 15) {
-          newErrors.phone = 'Phone number is too long';
+        // Use the new validation function from AuthService
+        const validation = AuthService.validatePhoneNumber(formData.phone);
+        if (!validation.isValid) {
+          newErrors.phone = validation.error || 'Invalid phone number';
         }
       }
     }
@@ -121,10 +133,44 @@ export default function SignupClient() {
         }
       );
       
-      // Profile is automatically created by Firebase Functions
+      // Store signup data for profile creation after authentication
+      localStorage.setItem('pendingSignup', JSON.stringify({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        method: 'email'
+      }));
+      
+      // Profile is automatically created by Firebase Functions, but we'll verify it exists
+      try {
+        // Wait a bit for Firebase Functions to create the profile
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Check if profile was created
+        const profile = await AuthService.getUserProfile(userCredential.user.uid);
+        if (!profile) {
+          console.warn('Profile not created by Firebase Functions, creating manually');
+          await AuthService.createUserProfile(userCredential.user, {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: formData.phone
+          });
+        }
+        
+        localStorage.removeItem('pendingSignup');
+      } catch (profileError) {
+        console.warn('Profile creation check failed, continuing with redirect:', profileError);
+        localStorage.removeItem('pendingSignup');
+      }
+      
       await redirectBasedOnRole(userCredential.user.uid);
     } catch (error) {
-      setErrors({ general: (error as Error).message });
+      const errorMessage = (error as Error).message;
+      const errorSuggestion = (error as any).suggestion;
+      setErrors({ 
+        general: errorMessage,
+        suggestion: errorSuggestion
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -144,10 +190,25 @@ export default function SignupClient() {
           return;
         }
 
-        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container-signup', {
-          size: 'invisible'
-        });
-        await recaptchaVerifierRef.current.render();
+        try {
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container-signup', {
+            size: 'invisible',
+            callback: () => {
+              console.log('reCAPTCHA verification successful');
+            },
+            'expired-callback': () => {
+              console.log('reCAPTCHA expired, please try again');
+              setErrors({ phone: 'reCAPTCHA expired, please try again' });
+            }
+          });
+          
+          await recaptchaVerifierRef.current.render();
+          console.log('reCAPTCHA rendered successfully');
+        } catch (recaptchaError) {
+          console.error('Error initializing reCAPTCHA:', recaptchaError);
+          setErrors({ phone: 'Failed to initialize reCAPTCHA. Please refresh and try again.' });
+          return;
+        }
       }
 
       // Send verification code
@@ -155,18 +216,29 @@ export default function SignupClient() {
       console.log('Phone number type:', typeof formData.phone);
       console.log('Phone number length:', formData.phone.length);
       
-      // Ensure phone number is in E.164 format
-      let formattedPhone = formData.phone;
-      if (!formattedPhone.startsWith('+')) {
-        formattedPhone = `+${formattedPhone}`;
-      }
-      console.log('Formatted phone number:', formattedPhone);
+      // PhoneInput component already formats the phone number to E.164 format
+      // Just use the phone number as is
+      const formattedPhone = formData.phone;
+      console.log('Phone number from PhoneInput:', formattedPhone);
       
       const result = await AuthService.signInWithPhone(formattedPhone, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       setPhoneVerificationSent(true);
+      
+      // Store signup data for profile creation after verification
+      localStorage.setItem('pendingSignup', JSON.stringify({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formattedPhone,
+        method: 'phone'
+      }));
     } catch (error) {
-      setErrors({ phone: (error as Error).message });
+      const errorMessage = (error as Error).message;
+      const errorSuggestion = (error as any).suggestion;
+      setErrors({ 
+        phone: errorMessage,
+        suggestion: errorSuggestion
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -182,10 +254,51 @@ export default function SignupClient() {
     try {
       const userCredential = await confirmationResult.confirm(verificationCode);
       
-      // Profile is automatically created by Firebase Functions
+      // Create user profile manually if Firebase Functions fail
+      const pendingSignup = localStorage.getItem('pendingSignup');
+      if (pendingSignup) {
+        try {
+          const signupData = JSON.parse(pendingSignup);
+          console.log('Creating user profile for phone signup:', signupData);
+          
+          // Create user profile with the stored signup data
+          await AuthService.createUserProfile(userCredential.user, {
+            firstName: signupData.firstName,
+            lastName: signupData.lastName,
+            phone: signupData.phone
+          });
+          
+          // Clear stored signup data
+          localStorage.removeItem('pendingSignup');
+          console.log('User profile created successfully for phone signup');
+        } catch (profileError) {
+          console.warn('Failed to create profile via Firebase Functions, using fallback:', profileError);
+          
+          // Try to create profile directly in Firestore as fallback
+          try {
+            await AuthService.createUserProfileDirect(userCredential.user, {
+              firstName: JSON.parse(pendingSignup).firstName,
+              lastName: JSON.parse(pendingSignup).lastName,
+              phone: JSON.parse(pendingSignup).phone
+            });
+            localStorage.removeItem('pendingSignup');
+            console.log('User profile created via fallback method');
+          } catch (fallbackError) {
+            console.error('Failed to create profile via fallback method:', fallbackError);
+            // Continue with login even if profile creation fails
+            localStorage.removeItem('pendingSignup');
+          }
+        }
+      }
+      
       await redirectBasedOnRole(userCredential.user.uid);
     } catch (error) {
-      setErrors({ verificationCode: (error as Error).message });
+      const errorMessage = (error as Error).message;
+      const errorSuggestion = (error as any).suggestion;
+      setErrors({ 
+        verificationCode: errorMessage,
+        suggestion: errorSuggestion
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -199,10 +312,44 @@ export default function SignupClient() {
       
       const userCredential = await AuthService.signInWithGoogle();
       
-      // Profile is automatically created by Firebase Functions
+      // Store signup data for profile creation after authentication
+      localStorage.setItem('pendingSignup', JSON.stringify({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        method: 'google'
+      }));
+      
+      // Profile is automatically created by Firebase Functions, but we'll verify it exists
+      try {
+        // Wait a bit for Firebase Functions to create the profile
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Check if profile was created
+        const profile = await AuthService.getUserProfile(userCredential.user.uid);
+        if (!profile) {
+          console.warn('Profile not created by Firebase Functions, creating manually');
+          await AuthService.createUserProfile(userCredential.user, {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: formData.phone
+          });
+        }
+        
+        localStorage.removeItem('pendingSignup');
+      } catch (profileError) {
+        console.warn('Profile creation check failed, continuing with redirect:', profileError);
+        localStorage.removeItem('pendingSignup');
+      }
+      
       await redirectBasedOnRole(userCredential.user.uid);
     } catch (error) {
-      setErrors({ general: (error as Error).message });
+      const errorMessage = (error as Error).message;
+      const errorSuggestion = (error as any).suggestion;
+      setErrors({ 
+        general: errorMessage,
+        suggestion: errorSuggestion
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -408,6 +555,8 @@ export default function SignupClient() {
                       inputProps={{
                         placeholder: 'Enter your phone number'
                       }}
+                      // Add helpful text below the input
+                      // The component will automatically format to +[country code][number]
                       countryCodeEditable={false}
                       preferredCountries={['in', 'us', 'gb']}
                     />
@@ -416,6 +565,9 @@ export default function SignupClient() {
                         {errors.phone}
                       </p>
                     )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      Select your country and enter your phone number. It will be automatically formatted.
+                    </p>
                   </div>
                 )}
 
@@ -563,7 +715,10 @@ export default function SignupClient() {
                 {/* Error Message */}
                 {errors.general && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                    <p className="text-sm text-red-600">{errors.general}</p>
+                    <p className="text-sm text-red-600 font-medium mb-2">{errors.general}</p>
+                    {errors.suggestion && (
+                      <p className="text-xs text-red-500">{errors.suggestion}</p>
+                    )}
                   </div>
                 )}
 
@@ -586,8 +741,13 @@ export default function SignupClient() {
       <div 
         id="recaptcha-container-signup" 
         ref={recaptchaRef} 
-        className="absolute bottom-2 left-2 opacity-0 pointer-events-none"
-        style={{ width: '100px', height: '50px' }}
+        className="fixed bottom-4 right-4 z-50"
+        style={{ 
+          width: '300px', 
+          height: '80px',
+          opacity: 0,
+          pointerEvents: 'none'
+        }}
       ></div>
     </div>
   );

@@ -33,37 +33,18 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 
 export default function TasksPage() {
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const { user, userProfile, signOut } = useAuth();
   const router = useRouter();
 
-  // Load user profile
+  // Redirect to login if not authenticated
   useEffect(() => {
-    const loadUserProfile = async () => {
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          const profile = await AuthService.getUserProfile(user.uid);
-          setUserProfile(profile);
-        }
-      } catch (error) {
-        console.error('Error loading user profile:', error);
-      }
-    };
-
-    loadUserProfile();
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await AuthService.signOut();
+    if (!user) {
       router.push('/login');
-    } catch (error) {
-      console.error('Error logging out:', error);
     }
-  };
+  }, [user, router]);
 
   return (
-    <AdminLayout userProfile={userProfile} onLogout={handleLogout}>
+    <AdminLayout userProfile={userProfile} onLogout={signOut}>
       <TasksPageContent />
     </AdminLayout>
   );

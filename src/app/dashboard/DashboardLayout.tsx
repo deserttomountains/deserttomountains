@@ -38,6 +38,12 @@ export default function DashboardLayout({ active, children }: DashboardLayoutPro
 
   const handleLogout = async () => {
     try {
+      // Prevent multiple logout attempts
+      if (loading) return;
+      
+      // Clear user profile immediately to prevent UI flicker
+      setUserProfile(null);
+      
       await AuthService.signOut();
       // Always redirect to login, even if there's an error
       router.push('/login');

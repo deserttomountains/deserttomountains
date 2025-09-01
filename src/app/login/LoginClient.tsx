@@ -50,6 +50,20 @@ export default function LoginClient() {
     }
   }, [user, loading, redirectBasedOnRole, searchParams, router]);
 
+  // Cleanup reCAPTCHA on component unmount
+  useEffect(() => {
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+          recaptchaVerifierRef.current = null;
+        } catch (error) {
+          console.warn('Error cleaning up reCAPTCHA:', error);
+        }
+      }
+    };
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -78,8 +92,12 @@ export default function LoginClient() {
     } else {
       if (!formData.phone.trim()) {
         newErrors.phone = 'Phone number is required';
-      } else if (formData.phone.length < 10) {
-        newErrors.phone = 'Please enter a valid phone number';
+      } else {
+        // Use the new validation function from AuthService
+        const validation = AuthService.validatePhoneNumber(formData.phone);
+        if (!validation.isValid) {
+          newErrors.phone = validation.error || 'Invalid phone number';
+        }
       }
     }
 
@@ -111,7 +129,12 @@ export default function LoginClient() {
         await redirectBasedOnRole(userCredential.user.uid);
       }
     } catch (error) {
-      setErrors({ general: (error as Error).message });
+      const errorMessage = (error as Error).message;
+      const errorSuggestion = (error as any).suggestion;
+      setErrors({ 
+        general: errorMessage,
+        suggestion: errorSuggestion
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -131,10 +154,25 @@ export default function LoginClient() {
           return;
         }
 
-        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container-login', {
-          size: 'invisible'
-        });
-        await recaptchaVerifierRef.current.render();
+        try {
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container-login', {
+            size: 'invisible',
+            callback: () => {
+              console.log('reCAPTCHA verification successful');
+            },
+            'expired-callback': () => {
+              console.log('reCAPTCHA expired, please try again');
+              setErrors({ phone: 'reCAPTCHA expired, please try again' });
+            }
+          });
+          
+          await recaptchaVerifierRef.current.render();
+          console.log('reCAPTCHA rendered successfully');
+        } catch (recaptchaError) {
+          console.error('Error initializing reCAPTCHA:', recaptchaError);
+          setErrors({ phone: 'Failed to initialize reCAPTCHA. Please refresh and try again.' });
+          return;
+        }
       }
 
       // Send verification code
@@ -142,18 +180,21 @@ export default function LoginClient() {
       console.log('Phone number type:', typeof formData.phone);
       console.log('Phone number length:', formData.phone.length);
       
-      // Ensure phone number is in E.164 format
-      let formattedPhone = formData.phone;
-      if (!formattedPhone.startsWith('+')) {
-        formattedPhone = `+${formattedPhone}`;
-      }
-      console.log('Formatted phone number:', formattedPhone);
+      // PhoneInput component already formats the phone number to E.164 format
+      // Just use the phone number as is
+      const formattedPhone = formData.phone;
+      console.log('Phone number from PhoneInput:', formattedPhone);
       
       const result = await AuthService.signInWithPhone(formattedPhone, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       setPhoneVerificationSent(true);
     } catch (error) {
-      setErrors({ phone: (error as Error).message });
+      const errorMessage = (error as Error).message;
+      const errorSuggestion = (error as any).suggestion;
+      setErrors({ 
+        phone: errorMessage,
+        suggestion: errorSuggestion
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -173,6 +214,20 @@ export default function LoginClient() {
       await AuthService.setPersistence(formData.rememberMe);
       
       const userCredential = await confirmationResult.confirm(verificationCode);
+      
+      // Check if user profile exists, create if not
+      try {
+        const profile = await AuthService.getUserProfile(userCredential.user.uid);
+        if (!profile) {
+          console.warn('User profile not found after phone login, creating basic profile');
+          // Create a basic profile for phone-only users
+          await AuthService.createUserProfileDirect(userCredential.user, {
+            phone: formData.phone
+          });
+        }
+      } catch (profileError) {
+        console.warn('Profile check failed, continuing with login:', profileError);
+      }
       
       // Check if we're in checkout flow
       const isCheckoutFlow = searchParams.get('checkout') === 'true';
@@ -228,7 +283,12 @@ export default function LoginClient() {
     try {
       // Show success message
     } catch (error) {
-      setErrors({ phone: (error as Error).message });
+      const errorMessage = (error as Error).message;
+      const errorSuggestion = (error as any).suggestion;
+      setErrors({ 
+        phone: errorMessage,
+        suggestion: errorSuggestion
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -398,6 +458,9 @@ export default function LoginClient() {
                         {errors.phone}
                       </p>
                     )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      Select your country and enter your phone number. It will be automatically formatted.
+                    </p>
                   </div>
                 )}
 
@@ -478,7 +541,10 @@ export default function LoginClient() {
                 {/* Error Message */}
                 {errors.general && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                    <p className="text-sm text-red-600">{errors.general}</p>
+                    <p className="text-sm text-red-600 font-medium mb-2">{errors.general}</p>
+                    {errors.suggestion && (
+                      <p className="text-xs text-red-500">{errors.suggestion}</p>
+                    )}
                   </div>
                 )}
 
@@ -506,8 +572,13 @@ export default function LoginClient() {
       <div 
         id="recaptcha-container-login" 
         ref={recaptchaRef} 
-        className="absolute bottom-2 left-2 opacity-0 pointer-events-none"
-        style={{ width: '100px', height: '50px' }}
+        className="fixed bottom-4 right-4 z-50"
+        style={{ 
+          width: '300px', 
+          height: '80px',
+          opacity: 0,
+          pointerEvents: 'none'
+        }}
       ></div>
     </div>
   );
