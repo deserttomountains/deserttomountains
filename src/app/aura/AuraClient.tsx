@@ -707,7 +707,7 @@ export default function AuraClient() {
             </p>
             <button
               onClick={() => setShowSampleModal(true)}
-              className="px-8 py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-3 mx-auto"
+              className="px-8 py-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-3 mx-auto cursor-pointer"
             >
               <Palette className="w-5 h-5" />
               Get Mock Samples
@@ -728,7 +728,7 @@ export default function AuraClient() {
               </div>
               <button
                 onClick={() => setShowSampleModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
               </button>
