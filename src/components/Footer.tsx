@@ -44,7 +44,7 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-[#5E4E06] mt-8 pt-8 text-center text-[#F5F2E8]">
-          <p>&copy; 2024 Desert to Mountains. All rights reserved.</p>
+          <p>&copy; 2025 Desert to Mountains. All rights reserved.</p>
           <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-[#E6C866]/80">
             <Link href="/privacy-policy" className="hover:underline transition-colors">Privacy Policy</Link>
             <span className="opacity-60">·</span>

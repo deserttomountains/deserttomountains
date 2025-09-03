@@ -326,27 +326,21 @@ export default function AboutClient() {
 
               <div className="space-y-6 text-lg leading-relaxed opacity-90">
                 <p>
-                  <strong className="text-[#E6C866]">
-                    Natural earthen plasters
-                  </strong>{" "}
-                  emerge as clear winners, defeating sand-cement plaster by a
-                  long stretch.
+                  We create and provide <strong className="text-[#E6C866]">
+                    natural, sustainable building solutions
+                  </strong> that transform how people live and work. Our mission is to bridge the gap between traditional wisdom and modern construction needs.
                 </p>
 
                 <p>
-                  Earthen plasters bridge the gulf between stellar masonry and
-                  beautiful, cosy wall surfaces. They close the gap between
-                  cold, emotionless concrete and your warmth-inducing living
-                  room.
+                  We do this because we deeply care for nature and believe in preserving our environment for future generations. Every product we create is designed to <strong className="text-[#E6C866]">
+                    minimize environmental impact while maximizing benefits for people and communities
+                  </strong>.
                 </p>
 
                 <p>
-                  Such organic-material based plasters aren't just great for the
-                  environment—
-                  <strong className="text-[#E6C866]">
-                    they're good for you and your overall wellness
-                  </strong>
-                  .
+                  By sourcing local materials and providing employment opportunities in local communities, we not only support sustainable practices but also contribute to <strong className="text-[#E6C866]">
+                    economic growth and social development
+                  </strong> in the regions we serve.
                 </p>
               </div>
 

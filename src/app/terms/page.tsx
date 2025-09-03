@@ -85,7 +85,7 @@ const sections = [
     content: (
       <ul className="list-disc ml-6">
         <li>Company Name: Desert to Mountains</li>
-        <li>Email: <a href="mailto:deserttomountains@gmail.com" className="text-[#5E4E06] underline">deserttomountains@gmail.com</a></li>
+        <li>Email: <a href="mailto:contact@deserttomountains.com" className="text-[#5E4E06] underline">contact@deserttomountains.com</a></li>
         <li>Phone: <a href="tel:+918171189456" className="text-[#5E4E06] underline">+91 81711 89456</a></li>
       </ul>
     )

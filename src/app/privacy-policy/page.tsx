@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     siteName: 'Desert to Mountains',
     images: [
       {
-        url: '/images/about_page_img.jpg',
+        url: '/images/aura_1.webp',
         width: 1200,
         height: 630,
         alt: 'Desert to Mountains Privacy Policy',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Privacy Policy | Desert to Mountains',
     description: 'Read Desert to Mountains Privacy Policy. Learn how we protect your personal information, use cookies, and maintain data security for our natural building solutions.',
-    images: ['/images/about_page_img.jpg'],
+    images: ['/images/aura_1.webp'],
   },
   robots: {
     index: true,
@@ -95,7 +95,7 @@ const sections = [
       <>
         <p>If You have any questions about this Privacy Policy, the practices of Platform or your dealings with the Website, You can contact us:</p>
         <ul className="list-disc ml-6">
-          <li>Email: <a href="mailto:deserttomountains@gmail.com" className="text-[#5E4E06] underline">deserttomountains@gmail.com</a></li>
+          <li>Email: <a href="mailto:contact@deserttomountains.com" className="text-[#5E4E06] underline">contact@deserttomountains.com</a></li>
           <li>Phone: <a href="tel:+918171189456" className="text-[#5E4E06] underline">+91 81711 89456</a></li>
         </ul>
       </>
@@ -108,7 +108,7 @@ export default function PrivacyPolicyPage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-[#E8E4D8]">
       <Navigation />
       {/* Hero Section */}
-      <section className="relative w-full h-64 flex items-center justify-center bg-cover bg-center" style={{backgroundImage: 'url(/images/about_page_img.jpg)'}}>
+      <section className="relative w-full h-64 flex items-center justify-center bg-cover bg-center" style={{backgroundImage: 'url(/images/aura.webp)'}}>
         <div className="absolute inset-0 bg-[#5E4E06]/70" />
         <div className="relative z-10 text-center">
           <h1 className="text-5xl font-extrabold text-white drop-shadow mb-2">Privacy Policy</h1>
