@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
 
 import AdminLayout from '../components/AdminLayout';
-import { Users, Search, Filter, Mail, Phone, Calendar } from 'lucide-react';
+import { Users, Search, Filter, Mail, Phone, Calendar, ArrowUpDown } from 'lucide-react';
 
 function CustomersPageContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -17,6 +17,8 @@ function CustomersPageContent() {
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customersError, setCustomersError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'createdAt' | 'name' | 'email' | 'phone'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -99,20 +101,65 @@ function CustomersPageContent() {
     }
   };
 
-  // Filtered customers based on search
+  // Filtered + sorted customers
   const filteredCustomers = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return customers;
+    let list = customers;
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      list = customers.filter(customer => 
+        customer.firstName?.toLowerCase().includes(searchLower) ||
+        customer.lastName?.toLowerCase().includes(searchLower) ||
+        customer.email.toLowerCase().includes(searchLower) ||
+        customer.phone?.toLowerCase().includes(searchLower)
+      );
     }
-    
-    const searchLower = searchTerm.toLowerCase();
-    return customers.filter(customer => 
-      customer.firstName?.toLowerCase().includes(searchLower) ||
-      customer.lastName?.toLowerCase().includes(searchLower) ||
-      customer.email.toLowerCase().includes(searchLower) ||
-      customer.phone?.toLowerCase().includes(searchLower)
-    );
-  }, [customers, searchTerm]);
+
+    const safeToDate = (val: any): Date | null => {
+      try {
+        if (!val) return null;
+        if (val instanceof Date) return val;
+        if (typeof val === 'object' && 'toDate' in val && typeof (val as any).toDate === 'function') return (val as any).toDate();
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+      } catch {
+        return null;
+      }
+    };
+
+    const getName = (c: UserProfile) => `${c.firstName || ''} ${c.lastName || ''}`.trim().toLowerCase();
+
+    const sorted = [...list].sort((a, b) => {
+      let aVal: any = null;
+      let bVal: any = null;
+
+      switch (sortBy) {
+        case 'createdAt':
+          aVal = safeToDate(a.createdAt)?.getTime() || 0;
+          bVal = safeToDate(b.createdAt)?.getTime() || 0;
+          break;
+        case 'name':
+          aVal = getName(a);
+          bVal = getName(b);
+          break;
+        case 'email':
+          aVal = (a.email || '').toLowerCase();
+          bVal = (b.email || '').toLowerCase();
+          break;
+        case 'phone':
+          aVal = (a.phone || '').toLowerCase();
+          bVal = (b.phone || '').toLowerCase();
+          break;
+      }
+
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+
+    return sorted;
+  }, [customers, searchTerm, sortBy, sortOrder]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredCustomers.length / customersPerPage);
@@ -168,7 +215,28 @@ function CustomersPageContent() {
                 <p className="text-[#8B7A1A] text-xs sm:text-sm">Manage your customer database</p>
               </div>
             </div>
-            
+            {/* Sorting controls */}
+            <div className="flex items-center gap-2">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="border border-[#D4AF37] text-[#5E4E06] rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
+              >
+                <option value="createdAt">Date created</option>
+                <option value="name">Name</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+              </select>
+              <button
+                onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+                className="flex items-center gap-1 border border-[#D4AF37] text-[#5E4E06] rounded-lg px-2 py-1 text-sm hover:bg-[#F5F2E8]"
+                aria-label="Toggle sort order"
+                title={`Sort ${sortOrder === 'asc' ? 'ascending' : 'descending'}`}
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                <span className="hidden sm:inline">{sortOrder === 'asc' ? 'Asc' : 'Desc'}</span>
+              </button>
+            </div>
           </div>
         </div>
 

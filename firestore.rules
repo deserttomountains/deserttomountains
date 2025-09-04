@@ -124,6 +124,157 @@ service cloud.firestore {
       allow read, write: if request.auth != null && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+    
+    // ===== MESSAGING SYSTEM COLLECTIONS =====
+    
+    // Customers collection - admin only with validation
+    match /customers/{customerId} {
+      // Admin access with validation
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Validation for customer creation
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp;
+      
+      // Validation for customer updates
+      allow update: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.updatedAt is timestamp;
+    }
+    
+    // Threads collection - admin only with validation
+    match /threads/{threadId} {
+      // Admin access with validation
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Validation for thread creation
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp;
+      
+      // Validation for thread updates
+      allow update: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.updatedAt is timestamp;
+      
+      // Messages subcollection - admin only
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        
+        // Validation for message creation
+        allow create: if request.auth != null &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+          request.resource.data.createdAt is timestamp;
+        
+        // Validation for message updates
+        allow update: if request.auth != null &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+          request.resource.data.updatedAt is timestamp;
+      }
+    }
+    
+    // Provider seen collection - admin only (for idempotency)
+    match /providerSeen/{providerId} {
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Template requests collection - admin only with validation
+    match /templateRequests/{requestId} {
+      // Admin access with validation
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Validation for template request creation
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        request.resource.data.createdBy == request.auth.uid;
+      
+      // Validation for template request updates
+      allow update: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.updatedAt is timestamp;
+    }
+    
+    // Campaigns collection - admin only with validation
+    match /campaigns/{campaignId} {
+      // Admin access with validation
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Validation for campaign creation
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        request.resource.data.createdBy == request.auth.uid;
+      
+      // Validation for campaign updates
+      allow update: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.updatedAt is timestamp;
+    }
+    
+    // Notifications collection - admin only with validation
+    match /notifications/{notificationId} {
+      // Admin access with validation
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Validation for notification creation
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.createdAt is timestamp;
+      
+      // Validation for notification updates
+      allow update: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.updatedAt is timestamp;
+    }
+    
+    // SLA rules collection - admin only with validation
+    match /slaRules/{ruleId} {
+      // Admin access with validation
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Validation for SLA rule creation
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        request.resource.data.createdBy == request.auth.uid;
+      
+      // Validation for SLA rule updates
+      allow update: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.updatedAt is timestamp;
+    }
+    
+    // SLA violations collection - admin only with validation
+    match /slaViolations/{violationId} {
+      // Admin access with validation
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Validation for SLA violation creation
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.createdAt is timestamp;
+      
+      // Validation for SLA violation updates
+      allow update: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        request.resource.data.updatedAt is timestamp;
+    }
   }
 }
 
