@@ -171,20 +171,24 @@ export function verifyHashedData(data: string, hashedData: string): boolean {
  * Validate request headers
  */
 export function validateHeaders(req: NextRequest): ValidationResult {
-  const requiredHeaders = ['user-agent', 'content-type'];
-  
-  for (const header of requiredHeaders) {
-    if (!req.headers.get(header)) {
-      return {
-        valid: false,
-        error: `Missing required header: ${header}`
-      };
-    }
+  // Always require user-agent
+  if (!req.headers.get('user-agent')) {
+    return {
+      valid: false,
+      error: 'Missing required header: user-agent'
+    };
   }
 
-  // Validate content type for POST requests
+  // Only validate content-type for POST requests
   if (req.method === 'POST') {
-    const contentType = req.headers.get('content-type') || '';
+    const contentType = req.headers.get('content-type');
+    if (!contentType) {
+      return {
+        valid: false,
+        error: 'Missing required header: content-type'
+      };
+    }
+    
     if (!contentType.includes('application/json')) {
       return {
         valid: false,

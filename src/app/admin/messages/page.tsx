@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { AuthService, auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
+import { useAuth } from '@/lib/hooks/useAuth';
 import AdminLayout from '../components/AdminLayout';
 import { MessageSquare, Send, Phone, Instagram, Clock, User, Filter } from 'lucide-react';
 import { Thread, Message } from '@/lib/messaging/types';
@@ -322,7 +323,7 @@ function MessagesPageContent() {
               {/* Thread Header */}
               <div className="bg-white border-b border-gray-200 p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       {selectedThread.channels.includes('whatsapp') && (
                         <Phone className="w-5 h-5 text-green-600" />
@@ -330,22 +331,22 @@ function MessagesPageContent() {
                       {selectedThread.channels.includes('instagram') && (
                         <Instagram className="w-5 h-5 text-pink-600" />
                       )}
-                    </div>
-                    <div>
+              </div>
+              <div>
                       <h3 className="font-semibold text-gray-900">
                         Customer {selectedThread.customerId.slice(-6)}
                       </h3>
                       <p className="text-sm text-gray-500">
                         {selectedThread.status} • {selectedThread.priority} priority
                       </p>
-                    </div>
-                  </div>
+              </div>
+            </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Clock className="w-4 h-4" />
                     {new Date(selectedThread.lastMessageAt).toLocaleString()}
                   </div>
-                </div>
-              </div>
+          </div>
+        </div>
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -448,5 +449,11 @@ function MessagesPageContent() {
 }
 
 export default function MessagesPage() {
-  return <MessagesPageContent />;
+  const { userProfile, signOut } = useAuth();
+
+  return (
+    <AdminLayout userProfile={userProfile} onLogout={signOut}>
+      <MessagesPageContent />
+    </AdminLayout>
+  );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { AuthService, auth, Quote, Lead } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 import AdminLayout from '../components/AdminLayout';
 import { FileText, Plus, Eye, Download, MoreVertical, X, Edit, Trash2, ExternalLink, Search, Filter } from 'lucide-react';
@@ -2215,5 +2216,11 @@ function QuotesPageContent() {
 }
 
 export default function QuotesPage() {
-  return <QuotesPageContent />;
+  const { userProfile, signOut } = useAuth();
+
+  return (
+    <AdminLayout userProfile={userProfile} onLogout={signOut}>
+      <QuotesPageContent />
+    </AdminLayout>
+  );
 }

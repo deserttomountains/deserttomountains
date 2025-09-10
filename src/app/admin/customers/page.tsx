@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { AuthService, auth, UserProfile } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastContext';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 import AdminLayout from '../components/AdminLayout';
 import { Users, Search, Filter, Mail, Phone, Calendar, ArrowUpDown } from 'lucide-react';
@@ -528,5 +529,11 @@ function CustomersPageContent() {
 }
 
 export default function CustomersPage() {
-  return <CustomersPageContent />;
+  const { userProfile, signOut } = useAuth();
+
+  return (
+    <AdminLayout userProfile={userProfile} onLogout={signOut}>
+      <CustomersPageContent />
+    </AdminLayout>
+  );
 }

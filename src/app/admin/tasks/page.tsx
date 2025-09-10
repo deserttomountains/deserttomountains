@@ -29,19 +29,10 @@ import { AuthService, auth } from '@/lib/firebase';
 import { Task } from '@/lib/firebase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useToast } from '@/components/ToastContext';
-import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 
 export default function TasksPage() {
-  const { user, userProfile, signOut } = useAuth();
-  const router = useRouter();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!user) {
-      router.push('/login');
-    }
-  }, [user, router]);
+  const { userProfile, signOut } = useAuth();
 
   return (
     <AdminLayout userProfile={userProfile} onLogout={signOut}>
