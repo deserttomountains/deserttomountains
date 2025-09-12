@@ -15,6 +15,7 @@ import {
   orderBy,
   updateDoc,
   addDoc,
+  deleteDoc,
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
@@ -29,9 +30,8 @@ export interface TemplateRequest {
   rejectionReason?: string;
   meta: {
     description: string;
-    exampleVariables: Record<string, string>;
     useCase: string;
-    targetAudience: string;
+    exampleVariables: Record<string, string>;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -40,11 +40,59 @@ export interface TemplateRequest {
 }
 
 export interface TemplateComponent {
-  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
-  format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  type: 'TEXT' | 'BUTTONS';
   text?: string;
-  example?: string;
   variables?: string[];
+  format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  mediaUrl?: string;
+  mediaFileName?: string;
+  mediaFileSize?: number;
+  mediaStorageId?: string; // Firebase Storage file ID
+  buttons?: TemplateButton[];
+}
+
+export interface TemplateButton {
+  type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+  text: string;
+  url?: string;
+  phone_number?: string;
+}
+
+
+export interface CreateTemplateRequest {
+  name: string;
+  language: string;
+  category: 'UTILITY' | 'MARKETING';
+  components: TemplateComponent[];
+  meta: {
+    description: string;
+    useCase: string;
+    exampleVariables: Record<string, string>;
+  };
+}
+
+export interface UpdateTemplateRequest {
+  components?: TemplateComponent[];
+  meta?: {
+    description?: string;
+    useCase?: string;
+    exampleVariables?: Record<string, string>;
+  };
+  status?: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
+export interface ListTemplatesRequest {
+  status?: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  category?: 'UTILITY' | 'MARKETING';
+  language?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListTemplatesResponse {
+  templates: TemplateRequest[];
+  total: number;
+  hasMore: boolean;
 }
 
 export interface TemplateApproval {
@@ -211,8 +259,8 @@ export function validateTemplate(template: Omit<TemplateRequest, 'id' | 'status'
       errors.push(`Component ${index + 1}: Type is required`);
     }
     
-    if (component.type === 'BODY' && !component.text) {
-      errors.push(`Component ${index + 1}: Body text is required`);
+    if (component.type === 'TEXT' && !component.text) {
+      errors.push(`Component ${index + 1}: Text content is required`);
     }
     
     if (component.text && component.text.length > 1024) {
@@ -225,9 +273,6 @@ export function validateTemplate(template: Omit<TemplateRequest, 'id' | 'status'
     errors.push('Description must be at least 10 characters long');
   }
   
-  if (!template.meta.useCase) {
-    errors.push('Use case is required');
-  }
   
   return {
     isValid: errors.length === 0,
@@ -260,9 +305,7 @@ export function generateTemplatePreview(
       preview += `  ${text}\n`;
     }
     
-    if (component.example) {
-      preview += `  Example: ${component.example}\n`;
-    }
+    // Example content is now handled through meta.exampleVariables
     
     if (component.variables && component.variables.length > 0) {
       preview += `  Variables: ${component.variables.join(', ')}\n`;
@@ -304,3 +347,190 @@ export async function getTemplateStats(): Promise<{
     throw error;
   }
 }
+
+/**
+ * Enhanced Template Management Service Class
+ */
+export class TemplateManagementService {
+  /**
+   * Create a new template
+   */
+  async createTemplate(data: CreateTemplateRequest): Promise<TemplateRequest> {
+    try {
+      const templateData = {
+        ...data,
+        status: 'DRAFT' as const,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      const templateRef = await addDoc(collection(db, 'templateRequests'), templateData);
+      
+      return {
+        id: templateRef.id,
+        ...templateData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as TemplateRequest;
+    } catch (error) {
+      console.error('Error creating template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific template
+   */
+  async getTemplate(templateId: string): Promise<TemplateRequest | null> {
+    try {
+      const templateRef = doc(db, 'templateRequests', templateId);
+      const templateSnap = await getDoc(templateRef);
+      
+      if (!templateSnap.exists()) {
+        return null;
+      }
+      
+      const data = templateSnap.data();
+      return {
+        id: templateSnap.id,
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+        submittedAt: data.submittedAt?.toDate(),
+        approvedAt: data.approvedAt?.toDate()
+      } as TemplateRequest;
+    } catch (error) {
+      console.error('Error getting template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a template
+   */
+  async updateTemplate(templateId: string, updates: UpdateTemplateRequest): Promise<TemplateRequest> {
+    try {
+      const templateRef = doc(db, 'templateRequests', templateId);
+      const updateData = {
+        ...updates,
+        updatedAt: serverTimestamp()
+      };
+      
+      await updateDoc(templateRef, updateData);
+      
+      // Return updated template
+      const updatedTemplate = await this.getTemplate(templateId);
+      if (!updatedTemplate) {
+        throw new Error('Template not found after update');
+      }
+      
+      return updatedTemplate;
+    } catch (error) {
+      console.error('Error updating template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a template
+   */
+  async deleteTemplate(templateId: string): Promise<void> {
+    try {
+      const templateRef = doc(db, 'templateRequests', templateId);
+      await deleteDoc(templateRef);
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * List templates with filtering and pagination
+   */
+  async listTemplates(request: ListTemplatesRequest): Promise<ListTemplatesResponse> {
+    try {
+      const { status, category, language, limit = 50, offset = 0 } = request;
+      
+      let q = query(
+        collection(db, 'templateRequests'),
+        orderBy('createdAt', 'desc')
+      );
+      
+      if (status) {
+        q = query(q, where('status', '==', status));
+      }
+      
+      if (category) {
+        q = query(q, where('category', '==', category));
+      }
+      
+      if (language) {
+        q = query(q, where('language', '==', language));
+      }
+      
+      const snapshot = await getDocs(q);
+      const templates: TemplateRequest[] = [];
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        templates.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          submittedAt: data.submittedAt?.toDate(),
+          approvedAt: data.approvedAt?.toDate()
+        } as TemplateRequest);
+      });
+      
+      // Apply pagination
+      const paginatedTemplates = templates.slice(offset, offset + limit);
+      const hasMore = offset + limit < templates.length;
+      
+      return {
+        templates: paginatedTemplates,
+        total: templates.length,
+        hasMore
+      };
+    } catch (error) {
+      console.error('Error listing templates:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Submit template for approval
+   */
+  async submitForApproval(templateId: string): Promise<void> {
+    return submitTemplateForApproval(templateId);
+  }
+
+  /**
+   * Review template (approve/reject)
+   */
+  async reviewTemplate(
+    templateId: string,
+    reviewerId: string,
+    reviewerName: string,
+    status: 'APPROVED' | 'REJECTED',
+    comments: string
+  ): Promise<void> {
+    return reviewTemplate(templateId, reviewerId, reviewerName, status, comments);
+  }
+
+  /**
+   * Get template statistics
+   */
+  async getStats(): Promise<{
+    total: number;
+    draft: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  }> {
+    return getTemplateStats();
+  }
+}
+
+// Export singleton instance
+export const templateManagementService = new TemplateManagementService();

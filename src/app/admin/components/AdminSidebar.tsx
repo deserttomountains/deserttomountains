@@ -1,6 +1,6 @@
 "use client";
 
-import { User, LogOut, X, ArrowLeft, BarChart3, UserPlus, FileText, Users, Target, MessageSquare, Calendar } from 'lucide-react';
+import { User, LogOut, X, ArrowLeft, BarChart3, UserPlus, FileText, Users, Target, MessageSquare, Calendar, Layout } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -26,6 +26,7 @@ const navigation: NavigationItem[] = [
   { name: 'Customers', id: 'customers', icon: Users, href: '/admin/customers' },
   { name: 'Sales', id: 'sales', icon: Target, href: '/admin/sales' },
   { name: 'Messages', id: 'messages', icon: MessageSquare, href: '/admin/messages' },
+  { name: 'Templates', id: 'templates', icon: Layout, href: '/admin/templates' },
   { name: 'Tasks', id: 'tasks', icon: Calendar, href: '/admin/tasks' },
   { name: 'Form Submissions', id: 'formSubmissions', icon: FileText, href: '/admin/form-submissions' },
 ];

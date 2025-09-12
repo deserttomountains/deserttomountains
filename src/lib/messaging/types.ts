@@ -285,3 +285,223 @@ export interface InstagramRead {
     watermark: number;
   };
 }
+
+// Campaign Types
+export interface Campaign {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'marketing' | 'announcement' | 'followup' | 'support' | 'promotional';
+  channel: 'whatsapp' | 'instagram' | 'email' | 'multi';
+  template: {
+    name: string;
+    content: string;
+    variables: string[];
+    lang: string;
+  };
+  recipients: {
+    contactIds: string[];
+    filters: {
+      tags?: string[];
+      groups?: string[];
+      status?: string[];
+      channels?: string[];
+    };
+    totalCount: number;
+  };
+  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed' | 'paused';
+  scheduledAt?: Date;
+  sentAt?: Date;
+  completedAt?: Date;
+  stats: CampaignStats;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CampaignStats {
+  totalRecipients: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  failed: number;
+  pending: number;
+  deliveryRate: number;
+  readRate: number;
+  failureRate: number;
+}
+
+export interface CampaignMessage {
+  id: string;
+  campaignId: string;
+  contactId: string;
+  channel: 'whatsapp' | 'instagram' | 'email';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  providerId?: string; // wamid, mid, or email message ID
+  sentAt?: Date;
+  deliveredAt?: Date;
+  readAt?: Date;
+  error?: string;
+  createdAt: Date;
+}
+
+// Contact Types
+export interface Contact {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  channels: {
+    whatsapp?: string;
+    instagram?: string;
+    email?: string;
+  };
+  tags: string[];
+  groups: string[];
+  status: 'active' | 'inactive' | 'unsubscribed' | 'bounced';
+  source: 'manual' | 'import' | 'webhook' | 'campaign';
+  lastCampaign?: string;
+  lastMessageAt?: Date;
+  metadata: {
+    customFields?: Record<string, any>;
+    notes?: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Campaign API Types
+export interface CreateCampaignRequest {
+  name: string;
+  description?: string;
+  type: 'marketing' | 'announcement' | 'followup' | 'support' | 'promotional';
+  channel: 'whatsapp' | 'instagram' | 'email' | 'multi';
+  template: {
+    name: string;
+    content: string;
+    variables: string[];
+    lang: string;
+  };
+  recipients: {
+    contactIds?: string[];
+    filters?: {
+      tags?: string[];
+      groups?: string[];
+      status?: string[];
+      channels?: string[];
+    };
+  };
+  scheduledAt?: Date;
+}
+
+export interface CampaignListRequest {
+  status?: string;
+  type?: string;
+  channel?: string;
+  createdBy?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CampaignListResponse {
+  campaigns: Campaign[];
+  total: number;
+  hasMore: boolean;
+}
+
+export interface ContactListRequest {
+  tags?: string[];
+  groups?: string[];
+  status?: string;
+  channels?: string[];
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ContactListResponse {
+  contacts: Contact[];
+  total: number;
+  hasMore: boolean;
+}
+
+// Analytics Types
+export interface CampaignAnalyticsRequest {
+  period: '7d' | '30d' | '90d' | '1y';
+  campaignId?: string;
+  channel?: 'whatsapp' | 'instagram' | 'email';
+  status?: 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed' | 'paused';
+}
+
+export interface CampaignAnalytics {
+  overview: {
+    totalCampaigns: number;
+    activeCampaigns: number;
+    completedCampaigns: number;
+    totalRecipients: number;
+    totalSent: number;
+    totalDelivered: number;
+    totalRead: number;
+    totalFailed: number;
+    deliveryRate: number;
+    readRate: number;
+    failureRate: number;
+  };
+  performance: {
+    period: string;
+    campaigns: number;
+    sent: number;
+    delivered: number;
+    read: number;
+    failed: number;
+    deliveryRate: number;
+    readRate: number;
+    failureRate: number;
+  };
+  channelBreakdown: {
+    whatsapp: ChannelStats;
+    instagram: ChannelStats;
+    email: ChannelStats;
+  };
+  topCampaigns: {
+    id: string;
+    name: string;
+    type: string;
+    channel: string;
+    recipients: number;
+    sent: number;
+    delivered: number;
+    read: number;
+    failed: number;
+    deliveryRate: number;
+    readRate: number;
+  }[];
+  trends: {
+    date: string;
+    campaigns: number;
+    sent: number;
+    delivered: number;
+    read: number;
+    failed: number;
+  }[];
+  insights: {
+    bestPerformingChannel: string;
+    bestPerformingCampaign: string;
+    averageDeliveryRate: number;
+    averageReadRate: number;
+    totalCost: number;
+    costPerMessage: number;
+    recommendations: string[];
+  };
+}
+
+export interface ChannelStats {
+  campaigns: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  failed: number;
+  deliveryRate: number;
+  readRate: number;
+  failureRate: number;
+}
