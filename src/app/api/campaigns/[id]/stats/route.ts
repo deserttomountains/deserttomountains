@@ -13,7 +13,8 @@ export async function GET(
   context: any
 ) {
   try {
-    const campaignId = context?.params?.id;
+    const params = await context.params;
+    const campaignId = params?.id;
     
     if (!campaignId) {
       throw AppError.validation('Campaign ID is required');

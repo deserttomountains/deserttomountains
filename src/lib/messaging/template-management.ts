@@ -33,6 +33,13 @@ export interface TemplateRequest {
     useCase: string;
     exampleVariables: Record<string, string>;
   };
+  // Meta API integration fields
+  metaTemplateId?: string; // Meta's template ID after submission
+  metaStatus?: 'PENDING' | 'APPROVED' | 'REJECTED'; // Status from Meta webhook
+  metaRejectionReason?: string; // Rejection reason from Meta
+  version?: string; // For template versioning (e.g., promo_offer_v2)
+  // Platform support
+  platforms: ('whatsapp' | 'instagram')[]; // Which platforms this template supports
   createdAt: Date;
   updatedAt: Date;
   submittedAt?: Date;
@@ -69,6 +76,96 @@ export interface CreateTemplateRequest {
     useCase: string;
     exampleVariables: Record<string, string>;
   };
+  platforms?: ('whatsapp' | 'instagram')[];
+  version?: string;
+}
+
+// Utility Template (WhatsApp only, predefined by us)
+export interface UtilityTemplate {
+  id: string;
+  name: string;
+  language: string;
+  category: 'UTILITY';
+  components: TemplateComponent[];
+  status: 'APPROVED'; // Utility templates are always approved
+  platforms: ['whatsapp']; // WhatsApp only
+  meta: {
+    description: string;
+    useCase: string;
+    exampleVariables: Record<string, string>;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Marketing Template (WhatsApp + Instagram, user-created)
+export interface MarketingTemplate {
+  id: string;
+  name: string; // lowercase, underscores only
+  language: string;
+  category: 'MARKETING';
+  components: TemplateComponent[];
+  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string;
+  meta: {
+    description: string;
+    useCase: string;
+    exampleVariables: Record<string, string>;
+  };
+  // Meta API integration
+  metaTemplateId?: string;
+  metaStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  metaRejectionReason?: string;
+  version?: string;
+  platforms: ('whatsapp' | 'instagram')[]; // Both platforms
+  createdAt: Date;
+  updatedAt: Date;
+  submittedAt?: Date;
+  approvedAt?: Date;
+}
+
+// Meta API Template Submission
+export interface MetaTemplateSubmission {
+  name: string;
+  language: string;
+  category: 'MARKETING';
+  components: MetaTemplateComponent[];
+}
+
+export interface MetaTemplateComponent {
+  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+  format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  text?: string;
+  example?: {
+    header_text?: string[];
+    body_text?: string[];
+    footer_text?: string[];
+  };
+  buttons?: MetaTemplateButton[];
+}
+
+export interface MetaTemplateButton {
+  type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+  text: string;
+  url?: string;
+  phone_number?: string;
+}
+
+// Meta API Response
+export interface MetaTemplateResponse {
+  id: string;
+  name: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  category: string;
+  language: string;
+  quality_score?: {
+    score: number;
+    date: string;
+  };
+  rejection_reason?: string;
+  components: MetaTemplateComponent[];
+  created_time: string;
+  modified_time: string;
 }
 
 export interface UpdateTemplateRequest {
@@ -79,6 +176,9 @@ export interface UpdateTemplateRequest {
     exampleVariables?: Record<string, string>;
   };
   status?: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  metaTemplateId?: string;
+  metaStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  metaRejectionReason?: string;
 }
 
 export interface ListTemplatesRequest {
@@ -281,6 +381,56 @@ export function validateTemplate(template: Omit<TemplateRequest, 'id' | 'status'
 }
 
 /**
+ * Get fallback value for missing variables
+ */
+export function getFallbackValue(varName: string): string {
+  // Check if this is a customer name variable (numbered or named)
+  const isCustomerName = varName === '1' || 
+    varName.toLowerCase().includes('customer_name') ||
+    varName.toLowerCase().includes('user_name') ||
+    varName.toLowerCase().includes('name') ||
+    varName.toLowerCase().includes('first_name');
+  
+  if (isCustomerName) {
+    return "Sir/Ma'am";
+  }
+  
+  // For other variables, return empty string (will be handled by template system)
+  return '';
+}
+
+/**
+ * Process template variables with fallbacks for actual messages
+ */
+export function processTemplateVariables(
+  templateText: string,
+  variables: Record<string, string> = {}
+): string {
+  let processedText = templateText;
+  
+  // Find all variables in the template
+  const allVariables = templateText.match(/\{\{([^}]+)\}\}/g) || [];
+  const uniqueVariables = [...new Set(allVariables.map(match => match.slice(2, -2).trim()))];
+  
+  // Replace variables with actual values or fallbacks
+  uniqueVariables.forEach(varName => {
+    const value = variables[varName];
+    const placeholder = `{{${varName}}}`;
+    
+    if (value && value.trim()) {
+      // Use provided value
+      processedText = processedText.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+    } else {
+      // Use fallback value
+      const fallbackValue = getFallbackValue(varName);
+      processedText = processedText.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), fallbackValue);
+    }
+  });
+  
+  return processedText;
+}
+
+/**
  * Generate template preview with variables
  */
 export function generateTemplatePreview(
@@ -297,10 +447,8 @@ export function generateTemplatePreview(
     if (component.text) {
       let text = component.text;
       
-      // Replace variables with actual values
-      Object.entries(variables).forEach(([key, value]) => {
-        text = text.replace(new RegExp(`{{${key}}}`, 'g'), value);
-      });
+      // Replace variables with actual values or fallbacks
+      text = processTemplateVariables(text, variables);
       
       preview += `  ${text}\n`;
     }
@@ -530,6 +678,202 @@ export class TemplateManagementService {
   }> {
     return getTemplateStats();
   }
+}
+
+/**
+ * Meta API Integration for Template Management
+ */
+export class MetaTemplateService {
+  private wabaId: string;
+  private accessToken: string;
+
+  constructor(wabaId: string, accessToken: string) {
+    this.wabaId = wabaId;
+    this.accessToken = accessToken;
+  }
+
+  /**
+   * Submit template to Meta API for approval
+   */
+  async submitTemplateToMeta(template: MarketingTemplate): Promise<MetaTemplateResponse> {
+    try {
+      const metaTemplate: MetaTemplateSubmission = {
+        name: template.name,
+        language: template.language,
+        category: 'MARKETING',
+        components: this.convertToMetaComponents(template.components, template.platforms)
+      };
+
+      const response = await fetch(`https://graph.facebook.com/v18.0/${this.wabaId}/message_templates`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(metaTemplate)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Meta API error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error submitting template to Meta:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get template status from Meta API
+   */
+  async getTemplateStatus(templateId: string): Promise<MetaTemplateResponse> {
+    try {
+      const response = await fetch(`https://graph.facebook.com/v18.0/${templateId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Meta API error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting template status from Meta:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all templates from Meta API
+   */
+  async getAllTemplates(): Promise<MetaTemplateResponse[]> {
+    try {
+      const response = await fetch(`https://graph.facebook.com/v18.0/${this.wabaId}/message_templates`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Meta API error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      console.error('Error getting templates from Meta:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Convert internal template components to Meta API format
+   */
+  private convertToMetaComponents(components: TemplateComponent[], platforms?: string[]): MetaTemplateComponent[] {
+    return components.map(comp => {
+      const metaComp: MetaTemplateComponent = {
+        type: comp.type === 'TEXT' ? 'BODY' : 'BUTTONS',
+        text: comp.text,
+        format: comp.format
+      };
+
+      if (comp.buttons) {
+        metaComp.buttons = comp.buttons.map(btn => {
+          // For Instagram, convert phone number buttons to URL buttons with tel: links
+          if (btn.type === 'PHONE_NUMBER' && platforms?.includes('instagram')) {
+            return {
+              type: 'URL' as const,
+              text: btn.text,
+              url: btn.url ? `tel:${btn.url}` : `tel:`
+            };
+          }
+          
+          return {
+            type: btn.type,
+            text: btn.text,
+            url: btn.url,
+            phone_number: btn.phone_number
+          };
+        });
+      }
+
+      return metaComp;
+    });
+  }
+}
+
+/**
+ * Enhanced validation for Marketing templates
+ */
+export function validateMarketingTemplate(template: CreateTemplateRequest): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  // Marketing template specific validations
+  if (template.category === 'MARKETING') {
+    // Name must be lowercase with underscores only
+    if (!/^[a-z0-9_]+$/.test(template.name)) {
+      errors.push('Marketing template name must be lowercase with underscores only (e.g., promo_offer_2024)');
+    }
+    
+    // Name must be at least 3 characters
+    if (template.name.length < 3) {
+      errors.push('Template name must be at least 3 characters long');
+    }
+    
+    // Check for required variables in body text
+    const bodyComponent = template.components.find(comp => comp.type === 'TEXT');
+    if (bodyComponent?.text) {
+      const variables = (bodyComponent.text.match(/\{\{([^}]+)\}\}/g) || [])
+        .map(match => match.slice(2, -2).trim());
+      
+      if (variables.length === 0) {
+        errors.push('Marketing templates must include at least one variable (e.g., {{1}}, {{2}})');
+      }
+      
+      // Validate variable format (should be numbers for Meta API)
+      const invalidVars = variables.filter(v => !/^\d+$/.test(v));
+      if (invalidVars.length > 0) {
+        errors.push(`Marketing template variables must be numbers (e.g., {{1}}, {{2}}). Found: ${invalidVars.map(v => `{{${v}}}`).join(', ')}. Please convert to numbered variables like {{1}}, {{2}}, etc.`);
+      }
+    }
+  }
+  
+  // Run general validation
+  const generalValidation = validateTemplate({
+    ...template,
+    platforms: template.platforms || ['whatsapp', 'instagram']
+  });
+  errors.push(...generalValidation.errors);
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Generate version name for template updates
+ */
+export function generateTemplateVersion(baseName: string, existingVersions: string[]): string {
+  const versionPattern = new RegExp(`^${baseName}_v(\\d+)$`);
+  const versions = existingVersions
+    .filter(name => versionPattern.test(name))
+    .map(name => {
+      const match = name.match(versionPattern);
+      return match ? parseInt(match[1]) : 0;
+    })
+    .sort((a, b) => b - a);
+  
+  const nextVersion = versions.length > 0 ? versions[0] + 1 : 1;
+  return `${baseName}_v${nextVersion}`;
 }
 
 // Export singleton instance

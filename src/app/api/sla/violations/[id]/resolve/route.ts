@@ -6,7 +6,8 @@ export async function POST(request: NextRequest, context: any) {
   try {
     const body = await request.json();
     const { resolvedBy, notes } = body;
-    const violationId = context?.params?.id as string | undefined;
+    const params = await context.params;
+    const violationId = params?.id as string | undefined;
 
     if (!violationId || !resolvedBy) {
       return NextResponse.json({ error: 'Violation ID and resolvedBy are required' }, { status: 400 });

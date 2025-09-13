@@ -14,7 +14,8 @@ export async function GET(
   context: any
 ) {
   try {
-    const templateId = context?.params?.id;
+    const params = await context.params;
+    const templateId = params?.id;
     
     if (!templateId) {
       throw AppError.validation('Template ID is required');
@@ -68,7 +69,8 @@ export async function PATCH(
   context: any
 ) {
   try {
-    const templateId = context?.params?.id;
+    const params = await context.params;
+    const templateId = params?.id;
     
     if (!templateId) {
       throw AppError.validation('Template ID is required');
@@ -91,7 +93,7 @@ export async function PATCH(
     const body = await request.json();
     
     // Only allow updates to certain fields
-    const allowedUpdates = ['components', 'meta', 'status'];
+    const allowedUpdates = ['components', 'meta', 'status', 'platforms', 'version'];
     const updates: any = {};
     
     allowedUpdates.forEach(field => {
@@ -134,7 +136,8 @@ export async function DELETE(
   context: any
 ) {
   try {
-    const templateId = context?.params?.id;
+    const params = await context.params;
+    const templateId = params?.id;
     
     if (!templateId) {
       throw AppError.validation('Template ID is required');

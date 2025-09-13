@@ -18,7 +18,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { CreateCampaignRequest } from '@/lib/messaging/types';
-import { getAvailableTemplates, WhatsAppTemplate } from '@/lib/messaging/templates';
+import { WhatsAppTemplate, getTemplatesByCategory } from '@/lib/messaging/templates';
+import { templateManagementService, TemplateRequest } from '@/lib/messaging/template-management';
 import { getVariableConfigs } from '@/lib/messaging/template-variables';
 import TemplateVariableInput from './TemplateVariableInput';
 import TemplatePreview from './TemplatePreview';
@@ -38,7 +39,8 @@ export default function CreateCampaignModal({
 }: CreateCampaignModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [approvedTemplates, setApprovedTemplates] = useState<TemplateRequest[]>([]);
+  const [utilityTemplates, setUtilityTemplates] = useState<WhatsAppTemplate[]>([]);
   
   const [formData, setFormData] = useState<CreateCampaignRequest>({
     name: '',
@@ -66,9 +68,28 @@ export default function CreateCampaignModal({
   // Load templates on mount
   useEffect(() => {
     if (isOpen) {
-      setTemplates(getAvailableTemplates());
+      loadApprovedTemplates();
+      loadUtilityTemplates();
     }
   }, [isOpen]);
+
+  const loadApprovedTemplates = async () => {
+    try {
+      const response = await templateManagementService.listTemplates({
+        status: 'APPROVED',
+        limit: 100,
+        offset: 0
+      });
+      setApprovedTemplates(response.templates);
+    } catch (error) {
+      console.error('Error loading approved templates:', error);
+    }
+  };
+
+  const loadUtilityTemplates = () => {
+    const utilityTemplates = getTemplatesByCategory('UTILITY');
+    setUtilityTemplates(utilityTemplates);
+  };
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -105,7 +126,8 @@ export default function CreateCampaignModal({
     }));
   };
 
-  const handleTemplateSelect = (template: WhatsAppTemplate) => {
+
+  const handleUtilityTemplateSelect = (template: WhatsAppTemplate) => {
     setSelectedTemplate(template);
     setFormData(prev => ({
       ...prev,
@@ -120,6 +142,38 @@ export default function CreateCampaignModal({
     // Initialize template variables
     const vars: Record<string, string> = {};
     template.requiredVars.forEach(varName => {
+      vars[varName] = '';
+    });
+    setTemplateVariables(vars);
+  };
+
+  const handleApprovedTemplateSelect = (template: TemplateRequest) => {
+    // Convert TemplateRequest to WhatsAppTemplate format for compatibility
+    const whatsappTemplate: WhatsAppTemplate = {
+      name: template.name,
+      language: template.language,
+      category: template.category,
+      description: template.meta.description,
+      requiredVars: template.components[0]?.variables || [],
+      exampleContent: '',
+      useCase: template.meta.useCase,
+      targetAudience: ''
+    };
+
+    setSelectedTemplate(whatsappTemplate);
+    setFormData(prev => ({
+      ...prev,
+      template: {
+        name: template.name,
+        content: template.components[0]?.text || template.meta.description,
+        variables: template.components[0]?.variables || [],
+        lang: template.language
+      }
+    }));
+    
+    // Initialize template variables
+    const vars: Record<string, string> = {};
+    (template.components[0]?.variables || []).forEach(varName => {
       vars[varName] = '';
     });
     setTemplateVariables(vars);
@@ -263,22 +317,6 @@ export default function CreateCampaignModal({
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Campaign Type *
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => handleInputChange('type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
-                >
-                  <option value="marketing">Marketing</option>
-                  <option value="announcement">Announcement</option>
-                  <option value="followup">Follow-up</option>
-                  <option value="support">Support</option>
-                  <option value="promotional">Promotional</option>
-                </select>
-              </div>
             </div>
 
             <div>
@@ -325,39 +363,109 @@ export default function CreateCampaignModal({
 
           {/* Template Selection */}
           <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900">Template Selection</h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {templates.map((template) => (
-                <button
-                  key={template.name}
-                  type="button"
-                  onClick={() => handleTemplateSelect(template)}
-                  className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                    selectedTemplate?.name === template.name
-                      ? 'border-[#D4AF37] bg-[#F5F2E8]'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-medium text-gray-900">{template.name}</h5>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      template.category === 'MARKETING' 
-                        ? 'bg-orange-100 text-orange-800' 
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {template.category}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">{template.description}</p>
-                  {template.requiredVars.length > 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Variables: {template.requiredVars.join(', ')}
-                    </p>
-                  )}
-                </button>
-              ))}
+            <div className="flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-gray-900">Template Selection</h4>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span>Only approved templates are available</span>
+              </div>
             </div>
+            
+            {/* Legacy Templates (Utility) */}
+
+            {/* Utility Templates */}
+            {utilityTemplates.length > 0 && (
+              <div className="space-y-3">
+                <h5 className="text-sm font-medium text-gray-700">Utility Templates (WhatsApp Only)</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {utilityTemplates.map((template) => (
+                    <button
+                      key={template.name}
+                      type="button"
+                      onClick={() => handleUtilityTemplateSelect(template)}
+                      className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                        selectedTemplate?.name === template.name
+                          ? 'border-[#D4AF37] bg-[#F5F2E8]'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-medium text-gray-900">{template.name}</h5>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                            UTILITY
+                          </span>
+                          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                            WhatsApp
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600">{template.description}</p>
+                      {template.requiredVars.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Variables: {template.requiredVars.join(', ')}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Approved Marketing Templates */}
+            {approvedTemplates.length > 0 && (
+              <div className="space-y-3">
+                <h5 className="text-sm font-medium text-gray-700">Marketing Templates (WhatsApp + Instagram)</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {approvedTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => handleApprovedTemplateSelect(template)}
+                      className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                        selectedTemplate?.name === template.name
+                          ? 'border-[#D4AF37] bg-[#F5F2E8]'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-medium text-gray-900">{template.name}</h5>
+                        <div className="flex items-center gap-1">
+                          <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">
+                            MARKETING
+                          </span>
+                          {template.platforms?.map(platform => (
+                            <span
+                              key={platform}
+                              className={`px-2 py-1 text-xs rounded-full ${
+                                platform === 'whatsapp' 
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-pink-100 text-pink-800'
+                              }`}
+                            >
+                              {platform === 'whatsapp' ? 'WhatsApp' : 'Instagram'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600">{template.meta.description}</p>
+                      {template.components[0]?.variables && template.components[0].variables.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Variables: {template.components[0].variables.join(', ')}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {utilityTemplates.length === 0 && approvedTemplates.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                <p>No templates available. Please create and approve marketing templates first.</p>
+              </div>
+            )}
           </div>
 
           {/* Template Variables */}

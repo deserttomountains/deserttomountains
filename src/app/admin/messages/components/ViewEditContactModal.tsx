@@ -15,10 +15,34 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
-  Save
+  Save,
+  Package,
+  Link
 } from 'lucide-react';
 import { Contact } from '@/lib/messaging/types';
 import { CONTACT_STATUS_OPTIONS } from '@/lib/messaging/constants';
+import OrderLinkingModal from './OrderLinkingModal';
+
+// Helper function to safely convert Firestore timestamps to dates
+const safeToDate = (dateValue: any): Date => {
+  if (!dateValue) return new Date();
+  
+  // If it's already a Date object
+  if (dateValue instanceof Date) return dateValue;
+  
+  // If it's a Firestore Timestamp
+  if (dateValue && typeof dateValue.toDate === 'function') {
+    return dateValue.toDate();
+  }
+  
+  // If it's a string or number
+  if (typeof dateValue === 'string' || typeof dateValue === 'number') {
+    return new Date(dateValue);
+  }
+  
+  // Fallback
+  return new Date();
+};
 
 interface ViewEditContactModalProps {
   isOpen: boolean;
@@ -39,6 +63,7 @@ export default function ViewEditContactModal({
 }: ViewEditContactModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showOrderLinking, setShowOrderLinking] = useState(false);
   
   const [formData, setFormData] = useState<Partial<Contact>>({});
 
@@ -139,6 +164,23 @@ export default function ViewEditContactModal({
       setSubmitError(error instanceof Error ? error.message : 'Failed to update contact');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle linking orders
+  const handleLinkOrders = async (orderIds: string[]) => {
+    if (!contact) return;
+    
+    try {
+      const currentLinkedOrders = contact.linkedOrders || [];
+      const newLinkedOrders = [...new Set([...currentLinkedOrders, ...orderIds])];
+      
+      await onUpdate(contact.id, {
+        linkedOrders: newLinkedOrders
+      });
+    } catch (error) {
+      console.error('Error linking orders:', error);
+      throw error;
     }
   };
 
@@ -343,19 +385,51 @@ export default function ViewEditContactModal({
               </div>
               <div>
                 <span className="font-medium text-gray-700">Created:</span>
-                <span className="ml-2 text-gray-600">{new Date(contact.createdAt).toLocaleDateString()}</span>
+                <span className="ml-2 text-gray-600">{safeToDate(contact.createdAt).toLocaleDateString()}</span>
               </div>
               <div>
                 <span className="font-medium text-gray-700">Last Updated:</span>
-                <span className="ml-2 text-gray-600">{new Date(contact.updatedAt).toLocaleDateString()}</span>
+                <span className="ml-2 text-gray-600">{safeToDate(contact.updatedAt).toLocaleDateString()}</span>
               </div>
               {contact.lastMessageAt && (
                 <div>
                   <span className="font-medium text-gray-700">Last Message:</span>
-                  <span className="ml-2 text-gray-600">{new Date(contact.lastMessageAt).toLocaleDateString()}</span>
+                  <span className="ml-2 text-gray-600">{safeToDate(contact.lastMessageAt).toLocaleDateString()}</span>
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Linked Orders Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-gray-900">Linked Orders</h4>
+              <button
+                type="button"
+                onClick={() => setShowOrderLinking(true)}
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-colors"
+              >
+                <Link className="w-4 h-4" />
+                Link Orders
+              </button>
+            </div>
+            
+            {contact.linkedOrders && contact.linkedOrders.length > 0 ? (
+              <div className="space-y-2">
+                {contact.linkedOrders.map((orderId, index) => (
+                  <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                    <Package className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-900">Order #{orderId}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-gray-50 rounded-lg">
+                <Package className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">No orders linked to this contact</p>
+                <p className="text-xs text-gray-500 mt-1">Link orders to enable utility templates</p>
+              </div>
+            )}
           </div>
         </form>
 
@@ -390,6 +464,14 @@ export default function ViewEditContactModal({
           </div>
         )}
       </div>
+
+      {/* Order Linking Modal */}
+      <OrderLinkingModal
+        isOpen={showOrderLinking}
+        onClose={() => setShowOrderLinking(false)}
+        contact={contact}
+        onLinkOrders={handleLinkOrders}
+      />
     </div>
   );
 }

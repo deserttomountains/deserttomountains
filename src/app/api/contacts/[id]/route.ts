@@ -15,7 +15,8 @@ export async function GET(
   context: any
 ) {
   try {
-    const contactId = context?.params?.id;
+    const params = await context.params;
+    const contactId = params?.id;
 
     if (!contactId) {
       throw AppError.validation('Contact ID is required');
@@ -72,7 +73,8 @@ export async function PATCH(
   context: any
 ) {
   try {
-    const contactId = context?.params?.id;
+    const params = await context.params;
+    const contactId = params?.id;
 
     if (!contactId) {
       throw AppError.validation('Contact ID is required');
@@ -148,7 +150,8 @@ export async function DELETE(
   context: any
 ) {
   try {
-    const contactId = context?.params?.id;
+    const params = await context.params;
+    const contactId = params?.id;
 
     if (!contactId) {
       throw AppError.validation('Contact ID is required');

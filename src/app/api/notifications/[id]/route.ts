@@ -5,7 +5,8 @@ export async function PATCH(request: NextRequest, context: any) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
-    const notificationId = context?.params?.id as string | undefined;
+    const params = await context.params;
+    const notificationId = params?.id as string | undefined;
     
     if (!notificationId) {
       return NextResponse.json(

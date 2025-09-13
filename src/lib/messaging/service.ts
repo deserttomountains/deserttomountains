@@ -358,10 +358,10 @@ export class MessagingService {
   private buildTemplateComponents(vars: Record<string, string>): any[] {
     const components = [];
     
-    // Add body component with variables
+    // Add body component with variables (including fallbacks for missing values)
     const bodyParams = Object.entries(vars).map(([key, value]) => ({
       type: 'text',
-      text: value
+      text: value && value.trim() ? value : this.getFallbackValue(key)
     }));
 
     if (bodyParams.length > 0) {
@@ -372,6 +372,25 @@ export class MessagingService {
     }
 
     return components;
+  }
+
+  /**
+   * Get fallback value for missing variables
+   */
+  private getFallbackValue(varName: string): string {
+    // Check if this is a customer name variable (numbered or named)
+    const isCustomerName = varName === '1' || 
+      varName.toLowerCase().includes('customer_name') ||
+      varName.toLowerCase().includes('user_name') ||
+      varName.toLowerCase().includes('name') ||
+      varName.toLowerCase().includes('first_name');
+    
+    if (isCustomerName) {
+      return "Sir/Ma'am";
+    }
+    
+    // For other variables, return empty string
+    return '';
   }
 }
 

@@ -89,17 +89,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Create template
-    const template = await templateManagementService.createTemplate({
+    const templateData: any = {
       name: body.name,
       language: body.language,
       category: body.category,
       components: body.components,
+      platforms: body.platforms || ['whatsapp', 'instagram'], // Default to both platforms
       meta: {
         description: body.description || '',
         useCase: body.useCase || '',
         exampleVariables: body.exampleVariables || {}
       }
-    });
+    };
+
+    // Only include version if it exists and is not empty
+    if (body.version && body.version.trim()) {
+      templateData.version = body.version;
+    }
+
+    const template = await templateManagementService.createTemplate(templateData);
 
     return NextResponse.json({
       success: true,

@@ -27,9 +27,11 @@ import {
 import { 
   TemplateRequest, 
   CreateTemplateRequest,
-  ListTemplatesRequest 
+  ListTemplatesRequest,
+  templateManagementService
 } from '@/lib/messaging/template-management';
-import SimpleTemplateBuilder from '../messages/components/SimpleTemplateBuilder';
+import TemplateLibrary from '../messages/components/TemplateLibrary';
+import StatusMonitor from '../messages/components/StatusMonitor';
 import AdvancedTemplateBuilder from '../messages/components/AdvancedTemplateBuilder';
 
 function TemplatesPageContent() {
@@ -37,8 +39,15 @@ function TemplatesPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
-  const [builderType, setBuilderType] = useState<'simple' | 'advanced'>('simple');
   const [editingTemplate, setEditingTemplate] = useState<TemplateRequest | null>(null);
+  const [activeTab, setActiveTab] = useState<'library' | 'status' | 'builder'>('library');
+  
+  // Ensure activeTab is valid when showBuilder changes
+  useEffect(() => {
+    if (!showBuilder && activeTab === 'builder') {
+      setActiveTab('library');
+    }
+  }, [showBuilder, activeTab]);
   const [filters, setFilters] = useState<ListTemplatesRequest>({
     status: undefined,
     category: undefined,
@@ -243,19 +252,8 @@ function TemplatesPageContent() {
   );
 
   if (showBuilder) {
-    if (builderType === 'advanced') {
-      return (
-        <AdvancedTemplateBuilder
-          template={editingTemplate || undefined}
-          onSave={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}
-          onCancel={handleCancelBuilder}
-          isEditing={!!editingTemplate}
-        />
-      );
-    }
-    
     return (
-      <SimpleTemplateBuilder
+      <AdvancedTemplateBuilder
         template={editingTemplate || undefined}
         onSave={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}
         onCancel={handleCancelBuilder}
@@ -270,95 +268,106 @@ function TemplatesPageContent() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Template Management</h1>
-            <p className="text-gray-600 mt-1">Create and manage custom WhatsApp templates</p>
+            <p className="text-gray-600 mt-1">Create and manage WhatsApp and Instagram templates</p>
           </div>
           
-          <div className="relative group mt-4 sm:mt-0">
-            <button
-              onClick={() => setShowBuilder(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-md hover:from-[#8B7A1A] hover:to-[#5E4E06] transition-all duration-300 transform hover:scale-105 shadow-lg"
-            >
-              <Plus className="w-4 h-4" />
-              Create Template
-            </button>
-            
-            {/* Builder Type Dropdown */}
-            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 min-w-48">
-              <button
-                onClick={() => {
-                  setBuilderType('simple');
-                  setShowBuilder(true);
-                }}
-                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-              >
-                <MessageSquare className="w-4 h-4" />
-                Simple Template (Text Only)
-              </button>
-              <button
-                onClick={() => {
-                  setBuilderType('advanced');
-                  setShowBuilder(true);
-                }}
-                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Advanced Template (Components + Media)
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search templates..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37]"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <select
-                value={filters.status || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as any || undefined }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37]"
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('library')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'library'
+                  ? 'border-[#D4AF37] text-[#D4AF37]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Template Library
+            </button>
+            <button
+              onClick={() => setActiveTab('status')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'status'
+                  ? 'border-[#D4AF37] text-[#D4AF37]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Status Monitor
+            </button>
+            {showBuilder && (
+              <button
+                onClick={() => setActiveTab('builder')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'builder'
+                    ? 'border-[#D4AF37] text-[#D4AF37]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                <option value="">All Status</option>
-                <option value="DRAFT">Draft</option>
-                <option value="PENDING">Pending</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-              
-              <select
-                value={filters.category || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value as any || undefined }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37]"
-              >
-                <option value="">All Categories</option>
-                <option value="UTILITY">Utility</option>
-                <option value="MARKETING">Marketing</option>
-              </select>
-              
-              <select
-                value={filters.language || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, language: e.target.value || undefined }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37]"
-              >
-                <option value="">All Languages</option>
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-              </select>
-            </div>
-          </div>
+                Template Builder
+              </button>
+            )}
+          </nav>
         </div>
+
+        {/* Tab Content */}
+        {activeTab === 'library' && (
+          <TemplateLibrary
+            onEditTemplate={(template) => {
+              setEditingTemplate(template);
+              setActiveTab('builder');
+              setShowBuilder(true);
+            }}
+            onDeleteTemplate={async (templateId) => {
+              if (confirm('Are you sure you want to delete this template?')) {
+                try {
+                  await templateManagementService.deleteTemplate(templateId);
+                  await loadTemplates();
+                  showToast('Template deleted successfully', 'success');
+                } catch (error) {
+                  console.error('Error deleting template:', error);
+                  showToast('Failed to delete template', 'error');
+                }
+              }
+            }}
+            onSubmitToMeta={async (templateId) => {
+              try {
+                const response = await fetch('/api/templates/submit-to-meta', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ templateId })
+                });
+                
+                if (response.ok) {
+                  showToast('Template submitted to Meta for approval', 'success');
+                  await loadTemplates();
+                } else {
+                  const error = await response.json();
+                  showToast(error.error || 'Failed to submit template', 'error');
+                }
+              } catch (error) {
+                console.error('Error submitting template:', error);
+                showToast('Failed to submit template', 'error');
+              }
+            }}
+            onCreateTemplate={() => {
+              setActiveTab('builder');
+              setShowBuilder(true);
+            }}
+          />
+        )}
+
+        {activeTab === 'status' && (
+          <StatusMonitor
+            onViewTemplate={(template) => {
+              setEditingTemplate(template);
+              setActiveTab('builder');
+              setShowBuilder(true);
+            }}
+            onRefresh={loadTemplates}
+          />
+        )}
 
         {/* Templates List */}
         {loading ? (
@@ -388,101 +397,36 @@ function TemplatesPageContent() {
               Try again
             </button>
           </div>
-        ) : filteredTemplates.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No templates found</h3>
-            <p className="text-gray-500 mb-4">
-              {searchTerm ? 'No templates match your search criteria.' : 'Get started by creating your first template.'}
-            </p>
-            <button
-              onClick={() => setShowBuilder(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] text-white rounded-md hover:from-[#8B7A1A] hover:to-[#5E4E06] transition-all duration-300 transform hover:scale-105 shadow-lg mx-auto"
-            >
-              <Plus className="w-4 h-4" />
-              Create Template
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Template
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Language
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredTemplates.map((template) => (
-                    <tr key={template.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{template.name}</div>
-                          <div className="text-sm text-gray-500">{template.meta.description}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          template.category === 'UTILITY' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-purple-100 text-purple-800'
-                        }`}>
-                          {template.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {template.language.toUpperCase()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(template.status)}`}>
-                          {getStatusIcon(template.status)}
-                          {template.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(template.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleEditTemplate(template)}
-                            className="text-[#8B7A1A] hover:text-[#D4AF37] transition-colors duration-200"
-                            title="Edit template"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTemplate(template.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors duration-200"
-                            title="Delete template"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        ) : null}
+
+        {activeTab === 'builder' && showBuilder && (
+          <AdvancedTemplateBuilder
+            template={editingTemplate || undefined}
+            onSave={async (templateData) => {
+              try {
+                if (editingTemplate) {
+                  await templateManagementService.updateTemplate(editingTemplate.id, templateData);
+                  showToast('Template updated successfully', 'success');
+                } else {
+                  await templateManagementService.createTemplate(templateData);
+                  showToast('Template created successfully', 'success');
+                }
+                await loadTemplates();
+                setEditingTemplate(null);
+                setShowBuilder(false);
+                // activeTab will be automatically set to 'library' by the useEffect above
+              } catch (error) {
+                console.error('Error saving template:', error);
+                showToast('Failed to save template', 'error');
+              }
+            }}
+            onCancel={() => {
+              setEditingTemplate(null);
+              setShowBuilder(false);
+              // activeTab will be automatically set to 'library' by the useEffect above
+            }}
+            isEditing={!!editingTemplate}
+          />
         )}
       </div>
   );

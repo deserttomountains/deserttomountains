@@ -366,6 +366,7 @@ export interface Contact {
     customFields?: Record<string, any>;
     notes?: string;
   };
+  linkedOrders?: string[]; // Array of order IDs linked to this contact
   createdAt: Date;
   updatedAt: Date;
 }

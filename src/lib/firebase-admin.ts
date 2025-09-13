@@ -4,11 +4,11 @@
  */
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin SDK
 let adminApp;
-let adminDb;
+let adminDb: Firestore;
 
 try {
   // Check if already initialized
@@ -40,7 +40,7 @@ try {
         get: () => Promise.resolve({ docs: [], empty: true })
       })
     })
-  } as any;
+  } as any as Firestore;
 }
 
 export { adminDb };
