@@ -263,22 +263,76 @@ function TemplatesPageContent() {
   }
 
   return (
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Template Management</h1>
-            <p className="text-gray-600 mt-1">Create and manage WhatsApp and Instagram templates</p>
+      <div className="p-3 sm:p-4 lg:p-6">
+        {/* Mobile Header */}
+        <div className="lg:hidden mb-6">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Template Management</h1>
+              <p className="text-sm text-gray-600 mt-1">Create and manage WhatsApp and Instagram templates</p>
+            </div>
           </div>
-          
         </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200 mb-6">
+        {/* Desktop Header */}
+        <div className="hidden lg:block mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Template Management</h1>
+              <p className="text-gray-600 mt-1">Create and manage WhatsApp and Instagram templates</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Tab Navigation */}
+        <div className="lg:hidden mb-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-1">
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setActiveTab('library')}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                  activeTab === 'library'
+                    ? 'bg-[#D4AF37] text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Library</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('status')}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                  activeTab === 'status'
+                    ? 'bg-[#D4AF37] text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Status</span>
+              </button>
+              {showBuilder && (
+                <button
+                  onClick={() => setActiveTab('builder')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                    activeTab === 'builder'
+                      ? 'bg-[#D4AF37] text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Edit className="w-4 h-4" />
+                  <span className="hidden sm:inline">Builder</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Tab Navigation */}
+        <div className="hidden lg:block border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab('library')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                 activeTab === 'library'
                   ? 'border-[#D4AF37] text-[#D4AF37]'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -288,7 +342,7 @@ function TemplatesPageContent() {
             </button>
             <button
               onClick={() => setActiveTab('status')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                 activeTab === 'status'
                   ? 'border-[#D4AF37] text-[#D4AF37]'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -299,7 +353,7 @@ function TemplatesPageContent() {
             {showBuilder && (
               <button
                 onClick={() => setActiveTab('builder')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                   activeTab === 'builder'
                     ? 'border-[#D4AF37] text-[#D4AF37]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

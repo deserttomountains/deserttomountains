@@ -426,100 +426,104 @@ export default function TemplateLibrary({
   return (
     <div className="space-y-6">
       {/* Enhanced Header */}
-      <div className="bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] rounded-lg p-4 sm:p-6 text-white">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Template Library</h2>
-            <p className="text-white/90">
+          <div className="mb-4 lg:mb-0">
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">Template Library</h2>
+            <p className="text-white/90 text-sm sm:text-base">
               Manage your WhatsApp and Instagram message templates with advanced features
             </p>
           </div>
           
-          <div className="flex items-center gap-3 mt-4 lg:mt-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             {onCreateTemplate && (
               <button
                 onClick={onCreateTemplate}
-                className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-300 transform hover:scale-105 w-full sm:w-auto cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                Create Template
+                <span className="sm:hidden">Create</span>
+                <span className="hidden sm:inline">Create Template</span>
               </button>
             )}
             
             <button
               onClick={refreshTemplates}
               disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-300 disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-300 disabled:opacity-50 w-full sm:w-auto cursor-pointer disabled:cursor-not-allowed"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
+              <span className="sm:hidden">Refresh</span>
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Template Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Total</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-          <div className="text-sm text-gray-600">Approved</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.approved}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Approved</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          <div className="text-sm text-gray-600">Pending</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.pending}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Pending</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-gray-600">{stats.draft}</div>
-          <div className="text-sm text-gray-600">Draft</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-gray-600">{stats.draft}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Draft</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-          <div className="text-sm text-gray-600">Rejected</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-red-600">{stats.rejected}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Rejected</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.marketing}</div>
-          <div className="text-sm text-gray-600">Marketing</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.marketing}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Marketing</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-purple-600">{stats.utility}</div>
-          <div className="text-sm text-gray-600">Utility</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-purple-600">{stats.utility}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Utility</div>
         </div>
       </div>
 
       {/* Enhanced Filters and Controls */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <h3 className="text-lg font-semibold text-gray-900">Filters & Controls</h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-colors ${
+                className={`p-2 rounded-md transition-colors cursor-pointer ${
                   viewMode === 'grid' 
                     ? 'bg-[#D4AF37] text-white' 
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
+                title="Grid view"
               >
                 <Grid3X3 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-colors ${
+                className={`p-2 rounded-md transition-colors cursor-pointer ${
                   viewMode === 'list' 
                     ? 'bg-[#D4AF37] text-white' 
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
+                title="List view"
               >
                 <List className="w-4 h-4" />
               </button>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-700">Sort by:</label>
               <select
@@ -534,16 +538,16 @@ export default function TemplateLibrary({
               </select>
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="p-1 text-gray-600 hover:text-gray-800 transition-colors"
+                className="p-1 text-gray-600 hover:text-gray-800 transition-colors cursor-pointer"
+                title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
               >
                 {sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
               </button>
             </div>
-            
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
             <div className="relative">
@@ -598,7 +602,7 @@ export default function TemplateLibrary({
                 </span>
                 <button
                   onClick={clearSelection}
-                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                 >
                   Clear selection
                 </button>
@@ -606,14 +610,14 @@ export default function TemplateLibrary({
               <div className="flex items-center gap-2">
                 <button
                   onClick={exportTemplates}
-                  className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                   Export
                 </button>
                 <button
                   onClick={selectAllTemplates}
-                  className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors cursor-pointer"
                 >
                   <CheckCircle className="w-4 h-4" />
                   Select All
@@ -642,13 +646,13 @@ export default function TemplateLibrary({
             </div>
           </div>
           
-          <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}`}>
+          <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6' : 'space-y-4'}`}>
             {filteredUtilityTemplates.map((template) => (
               <div key={template.id} className={`bg-white border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 ${
                 selectedTemplates.has(template.id) ? 'ring-2 ring-[#D4AF37] border-[#D4AF37]' : ''
               }`}>
                 {viewMode === 'grid' ? (
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start gap-3">
                         <input
@@ -686,7 +690,7 @@ export default function TemplateLibrary({
                       <div className="flex gap-1">
                         <button
                           onClick={() => handlePreviewTemplate(template)}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                           title="Preview template"
                         >
                           <Eye className="w-4 h-4" />
@@ -722,18 +726,18 @@ export default function TemplateLibrary({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handlePreviewTemplate(template)}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => copyTemplateContent(template)}
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors cursor-pointer"
                         >
                           <Copy className="w-4 h-4" />
                         </button>
                         <button
-                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
+                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-md transition-colors cursor-pointer"
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
@@ -765,13 +769,13 @@ export default function TemplateLibrary({
         </div>
         
         {filteredTemplates.length > 0 ? (
-          <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}`}>
+          <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6' : 'space-y-4'}`}>
             {filteredTemplates.map((template) => (
               <div key={template.id} className={`bg-white border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 ${
                 selectedTemplates.has(template.id) ? 'ring-2 ring-[#D4AF37] border-[#D4AF37]' : ''
               }`}>
                 {viewMode === 'grid' ? (
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start gap-3">
                         <input
@@ -809,7 +813,7 @@ export default function TemplateLibrary({
                       <div className="flex gap-1">
                         <button
                           onClick={() => handlePreviewTemplate(template)}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                           title="Preview template"
                         >
                           <Eye className="w-4 h-4" />
@@ -822,7 +826,7 @@ export default function TemplateLibrary({
                       {template.status === 'DRAFT' && onSubmitToMeta && (
                         <button
                           onClick={() => onSubmitToMeta(template.id)}
-                          className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
+                          className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors cursor-pointer"
                         >
                           <Upload className="w-3 h-3" />
                           Submit to Meta
@@ -832,7 +836,7 @@ export default function TemplateLibrary({
                       {onEditTemplate && (
                         <button
                           onClick={() => onEditTemplate(template)}
-                          className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors"
+                          className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors cursor-pointer"
                         >
                           <Edit className="w-3 h-3" />
                           Edit
@@ -842,7 +846,7 @@ export default function TemplateLibrary({
                       {onDeleteTemplate && template.status === 'DRAFT' && (
                         <button
                           onClick={() => onDeleteTemplate(template.id)}
-                          className="flex items-center gap-1 px-3 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors"
+                          className="flex items-center gap-1 px-3 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                           Delete
@@ -898,7 +902,7 @@ export default function TemplateLibrary({
                         {template.status === 'DRAFT' && onSubmitToMeta && (
                           <button
                             onClick={() => onSubmitToMeta(template.id)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                             title="Submit to Meta"
                           >
                             <Upload className="w-4 h-4" />
@@ -907,7 +911,7 @@ export default function TemplateLibrary({
                         {onEditTemplate && (
                           <button
                             onClick={() => onEditTemplate(template)}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-md transition-colors cursor-pointer"
                             title="Edit template"
                           >
                             <Edit className="w-4 h-4" />
@@ -915,20 +919,20 @@ export default function TemplateLibrary({
                         )}
                         <button
                           onClick={() => handlePreviewTemplate(template)}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => copyTemplateContent(template)}
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors cursor-pointer"
                         >
                           <Copy className="w-4 h-4" />
                         </button>
                         {onDeleteTemplate && template.status === 'DRAFT' && (
                           <button
                             onClick={() => onDeleteTemplate(template.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                             title="Delete template"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -953,7 +957,7 @@ export default function TemplateLibrary({
             {onCreateTemplate && (
               <button
                 onClick={onCreateTemplate}
-                className="flex items-center gap-2 px-6 py-3 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-all duration-300 transform hover:scale-105 shadow-lg mx-auto"
+                className="flex items-center gap-2 px-6 py-3 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-all duration-300 transform hover:scale-105 shadow-lg mx-auto cursor-pointer"
               >
                 <Plus className="w-5 h-5" />
                 Create Marketing Template
@@ -980,7 +984,7 @@ export default function TemplateLibrary({
             {onCreateTemplate && (
               <button
                 onClick={onCreateTemplate}
-                className="flex items-center gap-2 px-6 py-3 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-all duration-300 transform hover:scale-105 shadow-lg"
+                className="flex items-center gap-2 px-6 py-3 bg-[#D4AF37] text-white rounded-lg hover:bg-[#8B7A1A] transition-all duration-300 transform hover:scale-105 shadow-lg cursor-pointer"
               >
                 <Plus className="w-5 h-5" />
                 Create Your First Template
@@ -993,7 +997,7 @@ export default function TemplateLibrary({
                   setStatusFilter('all');
                   setCategoryFilter('all');
                 }}
-                className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
               >
                 Clear Filters
               </button>
@@ -1004,23 +1008,23 @@ export default function TemplateLibrary({
 
       {/* Template Preview Modal */}
       {showPreview && previewTemplate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">Template Preview</h3>
-                <p className="text-sm text-gray-600 mt-1">{previewTemplate.name}</p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">Template Preview</h3>
+                <p className="text-sm text-gray-600 mt-1 truncate">{previewTemplate.name}</p>
               </div>
               <button
                 onClick={() => setShowPreview(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors ml-2 cursor-pointer"
               >
-                <XCircle className="w-6 h-6" />
+                <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-3">Template Details</h4>
                   <div className="space-y-3">
@@ -1089,7 +1093,7 @@ export default function TemplateLibrary({
                     onEditTemplate(previewTemplate as TemplateRequest);
                     setShowPreview(false);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors cursor-pointer"
                 >
                   <Edit className="w-4 h-4" />
                   Edit Template

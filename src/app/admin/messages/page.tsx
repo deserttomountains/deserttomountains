@@ -67,6 +67,13 @@ function MessagesPageContent() {
     tags: [] as string[],
     groups: [] as string[]
   });
+  const [contactSearch, setContactSearch] = useState('');
+  const [contactPagination, setContactPagination] = useState({
+    currentPage: 1,
+    pageSize: 20,
+    totalCount: 0,
+    totalPages: 0
+  });
 
   // Thread state (for individual conversations)
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -122,6 +129,17 @@ function MessagesPageContent() {
     loadData();
   }, []);
 
+  // Debounced search for contacts
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (activeTab === 'contacts') {
+        loadContacts(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [contactSearch, contactFilters]);
+
   // Load campaigns
   const loadCampaigns = async () => {
     try {
@@ -145,20 +163,30 @@ function MessagesPageContent() {
     }
   };
 
+
   // Load contacts
-  const loadContacts = async () => {
+  const loadContacts = async (page = contactPagination.currentPage) => {
     try {
       const params = new URLSearchParams();
       if (contactFilters.status) params.append('status', contactFilters.status);
       if (contactFilters.tags.length > 0) params.append('tags', contactFilters.tags.join(','));
       if (contactFilters.groups.length > 0) params.append('groups', contactFilters.groups.join(','));
-      params.append('limit', '100');
+      if (contactSearch.trim()) params.append('search', contactSearch.trim());
+      params.append('limit', contactPagination.pageSize.toString());
+      params.append('offset', ((page - 1) * contactPagination.pageSize).toString());
 
       const response = await fetch(`/api/contacts?${params}`);
       const data = await response.json();
       
       if (response.ok) {
+        console.log('Contacts API Response:', data);
         setContacts(data.data.contacts);
+        setContactPagination(prev => ({
+          ...prev,
+          currentPage: page,
+          totalCount: data.data.total || 0,
+          totalPages: Math.ceil((data.data.total || 0) / contactPagination.pageSize)
+        }));
       } else {
         showToast('Error loading contacts', 'error');
       }
@@ -451,9 +479,62 @@ function MessagesPageContent() {
 
   return (
     <AdminLayout userProfile={userProfile} onLogout={handleLogout}>
-      <div className="flex h-screen bg-gray-50">
-        {/* Left Sidebar - Navigation */}
-        <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div className="flex flex-col lg:flex-row h-screen bg-gray-50">
+        {/* Mobile Tab Navigation */}
+        <div className="lg:hidden bg-white border-b border-gray-200 p-4">
+          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('campaigns')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'campaigns'
+                  ? 'bg-[#D4AF37] text-white'
+                  : 'text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Mail className="w-4 h-4" />
+              <span className="hidden sm:inline">Campaigns</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('conversations')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'conversations'
+                  ? 'bg-[#D4AF37] text-white'
+                  : 'text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Chats</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('contacts')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'contacts'
+                  ? 'bg-[#D4AF37] text-white'
+                  : 'text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Contacts</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'analytics'
+                  ? 'bg-[#D4AF37] text-white'
+                  : 'text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Analytics</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Left Sidebar - Navigation */}
+        <div className="hidden lg:flex w-64 bg-white border-r border-gray-200 flex-col">
           <div className="p-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Messaging</h2>
             
@@ -584,6 +665,17 @@ function MessagesPageContent() {
             {activeTab === 'contacts' && (
               <div className="space-y-3">
                 <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                  <input
+                    type="text"
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    placeholder="Search contacts..."
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                  />
+                </div>
+                
+                <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
                   <select
                     value={contactFilters.status}
@@ -598,7 +690,7 @@ function MessagesPageContent() {
                 </div>
                 
                 <button
-                  onClick={loadContacts}
+                  onClick={() => loadContacts(1)}
                   className="w-full px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors"
                 >
                   Apply Filters
@@ -612,20 +704,66 @@ function MessagesPageContent() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {activeTab === 'campaigns' && (
-            <div className="flex-1 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Campaigns</h1>
+            <div className="flex-1 p-3 sm:p-4 lg:p-6">
+              {/* Mobile Header with Action Button */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Campaigns</h1>
                 <button
                   onClick={() => setShowCreateCampaign(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors w-full sm:w-auto"
                 >
                   <Plus className="w-5 h-5" />
-                  Create Campaign
+                  <span className="sm:hidden">New Campaign</span>
+                  <span className="hidden sm:inline">Create Campaign</span>
                 </button>
               </div>
 
+              {/* Mobile Filters */}
+              <div className="lg:hidden mb-6">
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Filters</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                      <select
+                        value={campaignFilters.status}
+                        onChange={(e) => setCampaignFilters(prev => ({ ...prev, status: e.target.value }))}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                      >
+                        <option value="">All Status</option>
+                        <option value="draft">Draft</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="sending">Sending</option>
+                        <option value="sent">Sent</option>
+                        <option value="failed">Failed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                      <select
+                        value={campaignFilters.type}
+                        onChange={(e) => setCampaignFilters(prev => ({ ...prev, type: e.target.value }))}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                      >
+                        <option value="">All Types</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="announcement">Announcement</option>
+                        <option value="followup">Follow-up</option>
+                        <option value="support">Support</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    onClick={loadCampaigns}
+                    className="w-full mt-3 px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+
               {/* Campaign Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-100 rounded-lg">
@@ -689,34 +827,56 @@ function MessagesPageContent() {
                 
                 <div className="divide-y divide-gray-200">
                   {campaigns.map((campaign) => (
-                    <div key={campaign.id} className="p-4 hover:bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-medium text-gray-900">{campaign.name}</h4>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              campaign.status === 'sent' ? 'bg-green-100 text-green-800' :
-                              campaign.status === 'sending' ? 'bg-blue-100 text-blue-800' :
-                              campaign.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                              campaign.status === 'failed' ? 'bg-red-100 text-red-800' :
-                              campaign.status === 'paused' ? 'bg-orange-100 text-orange-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                            </span>
-                            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
-                              {campaign.type}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                            <div className="flex items-center gap-1">
-                              {campaign.channel === 'whatsapp' && <Phone className="w-4 h-4 text-green-600" />}
-                              {campaign.channel === 'instagram' && <Instagram className="w-4 h-4 text-pink-600" />}
-                              {campaign.channel === 'email' && <Mail className="w-4 h-4 text-blue-600" />}
-                              {campaign.channel === 'multi' && <Users className="w-4 h-4 text-purple-600" />}
-                              {campaign.channel}
+                    <div key={campaign.id} className="p-3 sm:p-4 hover:bg-gray-50">
+                      {/* Mobile Layout */}
+                      <div className="lg:hidden">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 truncate">{campaign.name}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                campaign.status === 'sent' ? 'bg-green-100 text-green-800' :
+                                campaign.status === 'sending' ? 'bg-blue-100 text-blue-800' :
+                                campaign.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                                campaign.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                campaign.status === 'paused' ? 'bg-orange-100 text-orange-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                              </span>
+                              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+                                {campaign.type}
+                              </span>
                             </div>
+                          </div>
+                          <div className="flex items-center gap-1 ml-2">
+                            {campaign.status === 'draft' && (
+                              <button
+                                onClick={() => handleExecuteCampaign(campaign.id)}
+                                className="p-2 text-green-600 hover:bg-green-100 rounded"
+                                title="Execute Campaign"
+                              >
+                                <Play className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              className="p-2 text-blue-600 hover:bg-blue-100 rounded"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            {campaign.channel === 'whatsapp' && <Phone className="w-4 h-4 text-green-600" />}
+                            {campaign.channel === 'instagram' && <Instagram className="w-4 h-4 text-pink-600" />}
+                            {campaign.channel === 'email' && <Mail className="w-4 h-4 text-blue-600" />}
+                            {campaign.channel === 'multi' && <Users className="w-4 h-4 text-purple-600" />}
+                            <span className="capitalize">{campaign.channel}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1">
                               <Users className="w-4 h-4" />
                               {campaign.recipients.totalCount} recipients
@@ -726,60 +886,114 @@ function MessagesPageContent() {
                               {new Date(campaign.createdAt).toLocaleDateString()}
                             </div>
                           </div>
+                        </div>
 
-                          {/* Campaign Stats */}
-                          {campaign.status === 'sent' && (
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                        {/* Campaign Stats for Mobile */}
+                        {campaign.status === 'sent' && (
+                          <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-500">
+                            <div className="grid grid-cols-2 gap-2">
                               <span>Sent: {campaign.stats.sent}</span>
                               <span>Delivered: {campaign.stats.delivered}</span>
                               <span>Read: {campaign.stats.read}</span>
-                              <span>Failed: {campaign.stats.failed}</span>
                               <span className="text-green-600">Delivery: {campaign.stats.deliveryRate.toFixed(1)}%</span>
                             </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {campaign.status === 'draft' && (
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Desktop Layout */}
+                      <div className="hidden lg:block">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-medium text-gray-900">{campaign.name}</h4>
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                campaign.status === 'sent' ? 'bg-green-100 text-green-800' :
+                                campaign.status === 'sending' ? 'bg-blue-100 text-blue-800' :
+                                campaign.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                                campaign.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                campaign.status === 'paused' ? 'bg-orange-100 text-orange-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                              </span>
+                              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+                                {campaign.type}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                              <div className="flex items-center gap-1">
+                                {campaign.channel === 'whatsapp' && <Phone className="w-4 h-4 text-green-600" />}
+                                {campaign.channel === 'instagram' && <Instagram className="w-4 h-4 text-pink-600" />}
+                                {campaign.channel === 'email' && <Mail className="w-4 h-4 text-blue-600" />}
+                                {campaign.channel === 'multi' && <Users className="w-4 h-4 text-purple-600" />}
+                                {campaign.channel}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Users className="w-4 h-4" />
+                                {campaign.recipients.totalCount} recipients
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                {new Date(campaign.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
+
+                            {/* Campaign Stats */}
+                            {campaign.status === 'sent' && (
+                              <div className="flex items-center gap-4 text-xs text-gray-500">
+                                <span>Sent: {campaign.stats.sent}</span>
+                                <span>Delivered: {campaign.stats.delivered}</span>
+                                <span>Read: {campaign.stats.read}</span>
+                                <span>Failed: {campaign.stats.failed}</span>
+                                <span className="text-green-600">Delivery: {campaign.stats.deliveryRate.toFixed(1)}%</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            {campaign.status === 'draft' && (
+                              <button
+                                onClick={() => handleExecuteCampaign(campaign.id)}
+                                className="p-2 text-green-600 hover:bg-green-100 rounded"
+                                title="Execute Campaign"
+                              >
+                                <Play className="w-4 h-4" />
+                              </button>
+                            )}
+                            
+                            {campaign.status === 'sending' && (
+                              <button
+                                className="p-2 text-orange-600 hover:bg-orange-100 rounded"
+                                title="Pause Campaign"
+                              >
+                                <Pause className="w-4 h-4" />
+                              </button>
+                            )}
+                            
                             <button
-                              onClick={() => handleExecuteCampaign(campaign.id)}
-                              className="p-2 text-green-600 hover:bg-green-100 rounded"
-                              title="Execute Campaign"
+                              className="p-2 text-blue-600 hover:bg-blue-100 rounded"
+                              title="View Details"
                             >
-                              <Play className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </button>
-                          )}
-                          
-                          {campaign.status === 'sending' && (
+                            
                             <button
-                              className="p-2 text-orange-600 hover:bg-orange-100 rounded"
-                              title="Pause Campaign"
+                              className="p-2 text-gray-600 hover:bg-gray-100 rounded"
+                              title="Edit Campaign"
                             >
-                              <Pause className="w-4 h-4" />
+                              <Edit className="w-4 h-4" />
                             </button>
-                          )}
-                          
-                          <button
-                            className="p-2 text-blue-600 hover:bg-blue-100 rounded"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          
-                          <button
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded"
-                            title="Edit Campaign"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          
-                          <button
-                            onClick={() => handleDeleteCampaign(campaign.id)}
-                            className="p-2 text-red-600 hover:bg-red-100 rounded"
-                            title="Delete Campaign"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            
+                            <button
+                              onClick={() => handleDeleteCampaign(campaign.id)}
+                              className="p-2 text-red-600 hover:bg-red-100 rounded"
+                              title="Delete Campaign"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -804,79 +1018,66 @@ function MessagesPageContent() {
           )}
 
           {activeTab === 'contacts' && (
-            <div className="flex-1 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
+            <div className="flex-1 p-3 sm:p-4 lg:p-6">
+              {/* Mobile Header with Action Button */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Contacts</h1>
                 <button
                   onClick={() => setShowCreateContact(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors w-full sm:w-auto"
                 >
                   <Plus className="w-5 h-5" />
-                  Add Contact
+                  <span className="sm:hidden">Add Contact</span>
+                  <span className="hidden sm:inline">Add Contact</span>
                 </button>
               </div>
 
-              {/* Contact Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="w-5 h-5 text-blue-600" />
+              {/* Mobile Filters */}
+              <div className="lg:hidden mb-6">
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Filters</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                      <input
+                        type="text"
+                        value={contactSearch}
+                        onChange={(e) => setContactSearch(e.target.value)}
+                        placeholder="Search contacts..."
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                      />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Total Contacts</p>
-                      <p className="text-2xl font-bold text-gray-900">{contacts.length}</p>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                      <select
+                        value={contactFilters.status}
+                        onChange={(e) => setContactFilters(prev => ({ ...prev, status: e.target.value }))}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                      >
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="unsubscribed">Unsubscribed</option>
+                      </select>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <User className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Active</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {contacts.filter(c => c.status === 'active').length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <Phone className="w-5 h-5 text-yellow-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">WhatsApp</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {contacts.filter(c => c.channels.whatsapp).length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Mail className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Email</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {contacts.filter(c => c.channels.email).length}
-                      </p>
-                    </div>
+                    <button
+                      onClick={() => loadContacts(1)}
+                      className="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors"
+                    >
+                      Apply Filters
+                    </button>
                   </div>
                 </div>
               </div>
 
+
               {/* Contact List */}
               <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-4 border-b border-gray-200">
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">All Contacts</h3>
+                  <div className="text-sm text-gray-500">
+                    Showing {contacts.length} of {contactPagination.totalCount} contacts
+                  </div>
                 </div>
                 
                 <div className="divide-y divide-gray-200">
@@ -1002,14 +1203,113 @@ function MessagesPageContent() {
                     </div>
                   )}
                 </div>
+                
+                {/* Pagination */}
+                {contactPagination.totalPages > 1 && (
+                  <div className="p-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => loadContacts(contactPagination.currentPage - 1)}
+                          disabled={contactPagination.currentPage <= 1}
+                          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, contactPagination.totalPages) }, (_, i) => {
+                            const pageNum = Math.max(1, contactPagination.currentPage - 2) + i;
+                            if (pageNum > contactPagination.totalPages) return null;
+                            
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => loadContacts(pageNum)}
+                                className={`px-3 py-1 text-sm border rounded ${
+                                  pageNum === contactPagination.currentPage
+                                    ? 'bg-[#D4AF37] text-white border-[#D4AF37]'
+                                    : 'border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        
+                        <button
+                          onClick={() => loadContacts(contactPagination.currentPage + 1)}
+                          disabled={contactPagination.currentPage >= contactPagination.totalPages}
+                          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                      
+                      <div className="text-sm text-gray-500">
+                        Page {contactPagination.currentPage} of {contactPagination.totalPages}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {activeTab === 'conversations' && (
-            <div className="flex-1 flex">
-              {/* Thread List */}
-              <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+            <div className="flex-1 flex flex-col lg:flex-row">
+              {/* Mobile Thread List - Full Width */}
+              <div className="lg:hidden bg-white border-b border-gray-200">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="font-semibold text-gray-900">Conversations</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="flex space-x-2 p-4">
+                    {threads.map((thread) => (
+                      <div
+                        key={thread.id}
+                        onClick={() => handleThreadSelect(thread)}
+                        className={`min-w-[200px] p-3 rounded-lg cursor-pointer transition-colors ${
+                          selectedThread?.id === thread.id
+                            ? 'bg-[#D4AF37] text-white'
+                            : 'bg-gray-50 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {thread.channels.includes('whatsapp') && (
+                              <Phone className="w-4 h-4 text-green-600" />
+                            )}
+                            {thread.channels.includes('instagram') && (
+                              <Instagram className="w-4 h-4 text-pink-600" />
+                            )}
+                            <span className="text-sm font-medium">
+                              Customer {thread.customerId.slice(-6)}
+                            </span>
+                          </div>
+                          {thread.unreadCount > 0 && (
+                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                              {thread.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className={`${selectedThread?.id === thread.id ? 'text-white' : 'text-gray-500'}`}>
+                            {thread.status}
+                          </span>
+                          <span className={`${selectedThread?.id === thread.id ? 'text-white' : 'text-gray-400'}`}>
+                            {new Date(thread.lastMessageAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop Thread List */}
+              <div className="hidden lg:flex w-80 bg-white border-r border-gray-200 flex-col">
                 <div className="p-4 border-b border-gray-200">
                   <h3 className="font-semibold text-gray-900">Conversations</h3>
                 </div>
@@ -1114,8 +1414,8 @@ function MessagesPageContent() {
               </div>
 
               {/* Message Input */}
-              <div className="bg-white border-t border-gray-200 p-4">
-                <div className="space-y-4">
+              <div className="bg-white border-t border-gray-200 p-3 sm:p-4">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Template Selection */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1124,7 +1424,7 @@ function MessagesPageContent() {
                     <select
                       value={selectedTemplate}
                       onChange={(e) => handleTemplateSelect(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm"
                     >
                       <option value="">Select a template</option>
                       {templates.map((template) => (
@@ -1137,7 +1437,7 @@ function MessagesPageContent() {
 
                   {/* Template Variables */}
                   {selectedTemplate && Object.keys(templateVars).length > 0 && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {Object.entries(templateVars).map(([key, value]) => (
                         <div key={key}>
                           <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -1156,20 +1456,21 @@ function MessagesPageContent() {
                   )}
 
                   {/* Message Input */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <textarea
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type your message..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] resize-none"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] resize-none text-sm"
                       rows={3}
                     />
                     <button
                       onClick={sendMessage}
                       disabled={!newMessage && !selectedTemplate}
-                      className="px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:flex-col sm:gap-1"
                     >
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-sm sm:hidden">Send</span>
                     </button>
                   </div>
                 </div>

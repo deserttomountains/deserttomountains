@@ -39,6 +39,7 @@ export default function CreateContactModal({
     name: '',
     email: '',
     phone: '',
+    alternatePhone: '',
     channels: {
       whatsapp: '',
       instagram: '',
@@ -63,6 +64,7 @@ export default function CreateContactModal({
         name: '',
         email: '',
         phone: '',
+        alternatePhone: '',
         channels: {
           whatsapp: '',
           instagram: '',
@@ -132,6 +134,11 @@ export default function CreateContactModal({
     // Validate phone format if provided
     if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
       return 'Please enter a valid phone number';
+    }
+    
+    // Validate alternate phone format if provided
+    if (formData.alternatePhone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.alternatePhone.replace(/\s/g, ''))) {
+      return 'Please enter a valid alternate phone number';
     }
     
     return null;
@@ -259,6 +266,40 @@ export default function CreateContactModal({
                 <p className="text-xs text-gray-500 mt-1">
                   {CONTACT_STATUS_OPTIONS.find(opt => opt.value === formData.status)?.description}
                 </p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-blue-600" />
+                    Phone Number
+                  </div>
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone || ''}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
+                  placeholder="+1234567890"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-600" />
+                    Alternate Phone Number
+                  </div>
+                </label>
+                <input
+                  type="tel"
+                  value={formData.alternatePhone || ''}
+                  onChange={(e) => handleInputChange('alternatePhone', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
+                  placeholder="+1234567890"
+                />
               </div>
             </div>
           </div>

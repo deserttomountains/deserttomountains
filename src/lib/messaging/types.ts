@@ -351,6 +351,7 @@ export interface Contact {
   name: string;
   email?: string;
   phone?: string;
+  alternatePhone?: string;
   channels: {
     whatsapp?: string;
     instagram?: string;

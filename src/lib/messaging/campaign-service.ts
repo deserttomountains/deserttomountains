@@ -390,20 +390,14 @@ export class CampaignService {
       const contactsRef = collection(db, 'contacts');
       let q = query(contactsRef, orderBy('createdAt', 'desc'));
 
-      // Apply filters
+      // Apply database-level filters
       if (request.status) {
         q = query(q, where('status', '==', request.status));
       }
-      if (request.channels && request.channels.length > 0) {
-        // This would need to be implemented with array-contains-any
-        // For now, we'll filter in memory
-      }
 
-      const limitCount = request.limit || 50;
-      q = query(q, limit(limitCount));
-
+      // Get all contacts first to apply in-memory filters
       const snapshot = await getDocs(q);
-      const contacts: Contact[] = [];
+      let allContacts: Contact[] = [];
 
       snapshot.forEach((doc) => {
         const contact = {
@@ -433,13 +427,25 @@ export class CampaignService {
           }
         }
 
-        contacts.push(contact);
+        allContacts.push(contact);
+      });
+
+      // Apply pagination
+      const offset = request.offset || 0;
+      const limitCount = request.limit || 50;
+      const paginatedContacts = allContacts.slice(offset, offset + limitCount);
+
+      console.log('getContacts result:', {
+        totalContacts: allContacts.length,
+        paginatedCount: paginatedContacts.length,
+        offset,
+        limit: limitCount
       });
 
       return {
-        contacts,
-        total: contacts.length,
-        hasMore: contacts.length === limitCount
+        contacts: paginatedContacts,
+        total: allContacts.length,
+        hasMore: offset + limitCount < allContacts.length
       };
     } catch (error) {
       console.error('Error getting contacts:', error);

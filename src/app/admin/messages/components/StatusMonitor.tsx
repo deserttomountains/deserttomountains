@@ -370,17 +370,17 @@ export default function StatusMonitor({
   return (
     <div className="space-y-6">
       {/* Enhanced Header */}
-      <div className="bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-[#D4AF37] to-[#8B7A1A] rounded-lg p-4 sm:p-6 text-white">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex-1">
+          <div className="flex-1 mb-4 lg:mb-0">
             <div className="flex items-center gap-3 mb-2">
-              <Activity className="w-6 h-6" />
-              <h2 className="text-2xl font-bold">Template Status Monitor</h2>
+              <Activity className="w-5 h-5 sm:w-6 sm:h-6" />
+              <h2 className="text-xl sm:text-2xl font-bold">Template Status Monitor</h2>
             </div>
-            <p className="text-[#F5E6A3] mb-2">
+            <p className="text-[#F5E6A3] mb-2 text-sm sm:text-base">
               Real-time tracking of template approval status and Meta API integration
             </p>
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <Database className="w-4 h-4" />
                 <span>Last updated: {getTimeSinceUpdate(lastUpdated)}</span>
@@ -389,21 +389,23 @@ export default function StatusMonitor({
             </div>
           </div>
           
-          <div className="flex gap-2 mt-4 lg:mt-0">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={exportStatusReport}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-md hover:bg-white/30 transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-md hover:bg-white/30 transition-colors w-full sm:w-auto cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              Export Report
+              <span className="sm:hidden">Export</span>
+              <span className="hidden sm:inline">Export Report</span>
             </button>
             <button
               onClick={refreshTemplates}
               disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-md hover:bg-white/30 transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-md hover:bg-white/30 transition-colors disabled:opacity-50 w-full sm:w-auto cursor-pointer disabled:cursor-not-allowed"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
+              <span className="sm:hidden">Refresh</span>
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
@@ -422,7 +424,7 @@ export default function StatusMonitor({
             </div>
             <button
               onClick={checkConnectionStatus}
-              className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm"
+              className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm cursor-pointer"
             >
               Retry
             </button>
@@ -431,95 +433,95 @@ export default function StatusMonitor({
       )}
 
       {/* Enhanced Status Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Total Templates</p>
-              <p className="text-3xl font-bold text-gray-900">{statusSummary.total}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Total Templates</p>
+              <p className="text-xl sm:text-3xl font-bold text-gray-900">{statusSummary.total}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <MessageSquare className="w-6 h-6 text-blue-600" />
+            <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+              <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             </div>
           </div>
-          <div className="mt-3 flex items-center text-sm text-gray-500">
-            <TrendingUp className="w-4 h-4 mr-1" />
+          <div className="mt-2 sm:mt-3 flex items-center text-xs sm:text-sm text-gray-500">
+            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
             <span>All categories</span>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Approved</p>
-              <p className="text-3xl font-bold text-green-600">{statusSummary.approved}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Approved</p>
+              <p className="text-xl sm:text-3xl font-bold text-green-600">{statusSummary.approved}</p>
             </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+            <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+              <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
             </div>
           </div>
-          <div className="mt-3 flex items-center text-sm text-green-600">
-            <Zap className="w-4 h-4 mr-1" />
+          <div className="mt-2 sm:mt-3 flex items-center text-xs sm:text-sm text-green-600">
+            <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
             <span>Ready to use</span>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Pending</p>
-              <p className="text-3xl font-bold text-yellow-600">{statusSummary.pending}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Pending</p>
+              <p className="text-xl sm:text-3xl font-bold text-yellow-600">{statusSummary.pending}</p>
             </div>
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <Clock className="w-6 h-6 text-yellow-600" />
+            <div className="p-2 sm:p-3 bg-yellow-100 rounded-lg">
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
             </div>
           </div>
-          <div className="mt-3 flex items-center text-sm text-yellow-600">
-            <Calendar className="w-4 h-4 mr-1" />
+          <div className="mt-2 sm:mt-3 flex items-center text-xs sm:text-sm text-yellow-600">
+            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
             <span>Under review</span>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Rejected</p>
-              <p className="text-3xl font-bold text-red-600">{statusSummary.rejected}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Rejected</p>
+              <p className="text-xl sm:text-3xl font-bold text-red-600">{statusSummary.rejected}</p>
             </div>
-            <div className="p-3 bg-red-100 rounded-lg">
-              <XCircle className="w-6 h-6 text-red-600" />
+            <div className="p-2 sm:p-3 bg-red-100 rounded-lg">
+              <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
             </div>
           </div>
-          <div className="mt-3 flex items-center text-sm text-red-600">
-            <AlertCircle className="w-4 h-4 mr-1" />
+          <div className="mt-2 sm:mt-3 flex items-center text-xs sm:text-sm text-red-600">
+            <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
             <span>Needs revision</span>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Draft</p>
-              <p className="text-3xl font-bold text-gray-600">{statusSummary.draft}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Draft</p>
+              <p className="text-xl sm:text-3xl font-bold text-gray-600">{statusSummary.draft}</p>
             </div>
-            <div className="p-3 bg-gray-100 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-gray-600" />
+            <div className="p-2 sm:p-3 bg-gray-100 rounded-lg">
+              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
             </div>
           </div>
-          <div className="mt-3 flex items-center text-sm text-gray-600">
-            <Users className="w-4 h-4 mr-1" />
+          <div className="mt-2 sm:mt-3 flex items-center text-xs sm:text-sm text-gray-600">
+            <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
             <span>In progress</span>
           </div>
         </div>
       </div>
 
       {/* Enhanced Filters */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-4">
-          <Filter className="w-5 h-5 text-gray-600" />
-          <h3 className="text-lg font-medium text-gray-900">Filters & Search</h3>
+          <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+          <h3 className="text-base sm:text-lg font-medium text-gray-900">Filters & Search</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Search Templates</label>
             <div className="relative">
@@ -563,7 +565,7 @@ export default function StatusMonitor({
             </div>
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors cursor-pointer"
             >
               <Info className="w-4 h-4" />
               {showDetails ? 'Hide' : 'Show'} Details
@@ -638,7 +640,7 @@ export default function StatusMonitor({
                     <button
                       onClick={() => handleSubmitToMeta(template.id)}
                       disabled={submittingToMeta === template.id}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       title="Submit to Meta for approval"
                     >
                       {submittingToMeta === template.id ? 'Submitting...' : 'Submit to Meta'}
@@ -648,7 +650,7 @@ export default function StatusMonitor({
                   {onViewTemplate && (
                     <button
                       onClick={() => onViewTemplate(template)}
-                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                       title="View template"
                     >
                       <Eye className="w-4 h-4" />
@@ -660,7 +662,7 @@ export default function StatusMonitor({
                       href={`https://business.facebook.com/wa/manage/message-templates/${template.metaTemplateId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                       title="View in Meta Business Manager"
                     >
                       <ExternalLink className="w-4 h-4" />
@@ -682,7 +684,7 @@ export default function StatusMonitor({
                 setSearchTerm('');
                 setStatusFilter('all');
               }}
-              className="px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors"
+              className="px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#8B7A1A] transition-colors cursor-pointer"
             >
               Clear Filters
             </button>
