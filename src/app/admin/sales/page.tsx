@@ -71,14 +71,9 @@ function SalesPageContent() {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
     return orders.filter(order => {
-      try {
-        const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                         (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
-                         (order.orderDate as any).toDate() : new Date(order.orderDate);
-        return orderDate >= startOfMonth;
-      } catch (error) {
-        return false;
-      }
+      const orderDate = safeDateConversion(order.orderDate);
+      if (!orderDate) return false;
+      return orderDate >= startOfMonth;
     });
   };
 
@@ -96,15 +91,11 @@ function SalesPageContent() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return orders.filter(order => {
-      try {
-        const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                         (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
-                         (order.orderDate as any).toDate() : new Date(order.orderDate);
-        orderDate.setHours(0, 0, 0, 0);
-        return orderDate.getTime() === today.getTime();
-      } catch (error) {
-        return false;
-      }
+      const orderDate = safeDateConversion(order.orderDate);
+      if (!orderDate) return false;
+      const orderDateStart = new Date(orderDate);
+      orderDateStart.setHours(0, 0, 0, 0);
+      return orderDateStart.getTime() === today.getTime();
     });
   };
 
@@ -140,39 +131,25 @@ function SalesPageContent() {
          const today = new Date();
          today.setHours(0, 0, 0, 0);
          filtered = filtered.filter(order => {
-           try {
-             const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                              (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
-                              (order.orderDate as any).toDate() : new Date(order.orderDate);
-             orderDate.setHours(0, 0, 0, 0);
-             return orderDate.getTime() === today.getTime();
-           } catch (error) {
-             return false;
-           }
+           const orderDate = safeDateConversion(order.orderDate);
+           if (!orderDate) return false;
+           const orderDateStart = new Date(orderDate);
+           orderDateStart.setHours(0, 0, 0, 0);
+           return orderDateStart.getTime() === today.getTime();
          });
        } else if (selectedTimeFilter === 'week') {
          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
          filtered = filtered.filter(order => {
-           try {
-             const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                              (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
-                              (order.orderDate as any).toDate() : new Date(order.orderDate);
-             return orderDate >= weekAgo;
-           } catch (error) {
-             return false;
-           }
+           const orderDate = safeDateConversion(order.orderDate);
+           if (!orderDate) return false;
+           return orderDate >= weekAgo;
          });
        } else if (selectedTimeFilter === 'month') {
          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
          filtered = filtered.filter(order => {
-           try {
-             const orderDate = order.orderDate instanceof Date ? order.orderDate : 
-                              (order.orderDate && typeof order.orderDate === 'object' && 'toDate' in order.orderDate) ? 
-                              (order.orderDate as any).toDate() : new Date(order.orderDate);
-             return orderDate >= monthAgo;
-           } catch (error) {
-             return false;
-           }
+           const orderDate = safeDateConversion(order.orderDate);
+           if (!orderDate) return false;
+           return orderDate >= monthAgo;
          });
        }
      }
@@ -265,36 +242,132 @@ function SalesPageContent() {
     try {
       if (!dateValue) return null;
       
+      // If it's already a Date object
       if (dateValue instanceof Date) {
         return isNaN(dateValue.getTime()) ? null : dateValue;
       }
       
-      if (dateValue && typeof dateValue === 'object' && dateValue.toDate) {
-        // Handle Firestore Timestamp
-        const converted = dateValue.toDate();
-        return isNaN(converted.getTime()) ? null : converted;
+      // IMPORTANT: Check for Firestore Timestamp with toDate method FIRST
+      // This must come before empty object check, as Timestamps might appear empty when inspected
+      if (dateValue && typeof dateValue === 'object') {
+        // Check if it has toDate method (Firestore Timestamp v9+)
+        if (typeof dateValue.toDate === 'function') {
+          try {
+            const converted = dateValue.toDate();
+            if (converted instanceof Date && !isNaN(converted.getTime())) {
+              return converted;
+            }
+          } catch (e) {
+            // toDate() might throw, continue to other methods
+          }
+        }
+        
+        // Check if it's an empty object (like {}) - but only after checking for Timestamp methods
+        // Empty object check should come after Timestamp checks
+        const keys = Object.keys(dateValue);
+        if (keys.length === 0) {
+          // But also check for non-enumerable properties (Firestore Timestamps might have these)
+          if (!('toDate' in dateValue) && !('seconds' in dateValue) && !('_seconds' in dateValue)) {
+            return null;
+          }
+        }
+        
+        // Check for Firestore Timestamp with seconds/nanoseconds (v9+ format)
+        if ('seconds' in dateValue || 'nanoseconds' in dateValue) {
+          const seconds = dateValue.seconds ?? dateValue._seconds ?? 0;
+          const nanoseconds = dateValue.nanoseconds ?? dateValue._nanoseconds ?? 0;
+          // Convert seconds to milliseconds and add nanoseconds as milliseconds
+          const timestampMs = seconds * 1000 + Math.floor(nanoseconds / 1000000);
+          const converted = new Date(timestampMs);
+          if (!isNaN(converted.getTime())) {
+            return converted;
+          }
+        }
+        
+        // Check for Firestore Timestamp with _seconds/_nanoseconds (v8 format or serialized)
+        if ('_seconds' in dateValue || '_nanoseconds' in dateValue) {
+          const seconds = dateValue._seconds ?? 0;
+          const nanoseconds = dateValue._nanoseconds ?? 0;
+          const timestampMs = seconds * 1000 + Math.floor(nanoseconds / 1000000);
+          const converted = new Date(timestampMs);
+          if (!isNaN(converted.getTime())) {
+            return converted;
+          }
+        }
+        
+        // Check for Timestamp-like object with constructor name
+        if (dateValue.constructor && dateValue.constructor.name === 'Timestamp') {
+          // Try toDate if available
+          if (typeof dateValue.toDate === 'function') {
+            try {
+              const converted = dateValue.toDate();
+              if (converted instanceof Date && !isNaN(converted.getTime())) {
+                return converted;
+              }
+            } catch (e) {
+              // Continue
+            }
+          }
+          // Try seconds/nanoseconds
+          if ('seconds' in dateValue || 'nanoseconds' in dateValue) {
+            const seconds = dateValue.seconds ?? 0;
+            const nanoseconds = dateValue.nanoseconds ?? 0;
+            const timestampMs = seconds * 1000 + Math.floor(nanoseconds / 1000000);
+            const converted = new Date(timestampMs);
+            if (!isNaN(converted.getTime())) {
+              return converted;
+            }
+          }
+        }
       }
       
+      // If it's a string, try to parse it
       if (typeof dateValue === 'string') {
-        const parsed = new Date(dateValue);
-        return isNaN(parsed.getTime()) ? null : parsed;
+        // Try ISO string first
+        const isoDate = new Date(dateValue);
+        if (!isNaN(isoDate.getTime())) {
+          return isoDate;
+        }
+        // Try other formats
+        const parsed = Date.parse(dateValue);
+        if (!isNaN(parsed)) {
+          return new Date(parsed);
+        }
       }
       
+      // If it's a number, treat as timestamp
       if (typeof dateValue === 'number') {
-        const parsed = new Date(dateValue);
-        return isNaN(parsed.getTime()) ? null : parsed;
+        const converted = new Date(dateValue);
+        if (!isNaN(converted.getTime())) {
+          return converted;
+        }
       }
       
-      // Additional debugging for unknown types
-      console.log('Unknown date type in safeDateConversion:', {
-        value: dateValue,
-        type: typeof dateValue,
-        constructor: dateValue?.constructor?.name
-      });
+      // Last resort: if it's an object, try to extract any date-like properties
+      if (dateValue && typeof dateValue === 'object') {
+        // Log in development to help debug
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Could not convert date value, attempting deep inspection:', {
+            value: dateValue,
+            type: typeof dateValue,
+            constructor: dateValue?.constructor?.name,
+            keys: Object.keys(dateValue),
+            hasToDate: typeof dateValue.toDate === 'function',
+            hasSeconds: 'seconds' in dateValue,
+            hasNanoseconds: 'nanoseconds' in dateValue,
+            has_Seconds: '_seconds' in dateValue,
+            has_Nanoseconds: '_nanoseconds' in dateValue,
+            stringified: JSON.stringify(dateValue)
+          });
+        }
+      }
       
       return null;
     } catch (error) {
-      console.error('Error converting date:', dateValue, error);
+      // Only log errors in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error converting date:', dateValue, error);
+      }
       return null;
     }
   };
@@ -308,28 +381,212 @@ function SalesPageContent() {
     return validDate.toISOString().split('T')[0];
   };
 
+  // Try to extract date from order ID (some order IDs contain timestamps)
+  const tryExtractDateFromOrderId = (orderId: string): Date | null => {
+    try {
+      if (!orderId) return null;
+      
+      // Check if order ID contains a timestamp (e.g., "DTM1761449286599" -> extract "1761449286599")
+      // Look for numbers that could be timestamps (10-13 digits)
+      const timestampMatch = orderId.match(/\d{10,13}/);
+      if (timestampMatch) {
+        const timestampStr = timestampMatch[0];
+        const timestamp = parseInt(timestampStr, 10);
+        
+        // Check if it's a valid timestamp (milliseconds since epoch)
+        // Valid range: between 2000-01-01 and 2100-01-01
+        const minTimestamp = 946684800000; // 2000-01-01
+        const maxTimestamp = 4102444800000; // 2100-01-01
+        
+        // Try as milliseconds first (13 digits)
+        if (timestampStr.length === 13 && timestamp >= minTimestamp && timestamp <= maxTimestamp) {
+          const date = new Date(timestamp);
+          if (!isNaN(date.getTime()) && date.getFullYear() >= 2000 && date.getFullYear() <= 2100) {
+            return date;
+          }
+        }
+        
+        // Try as seconds (10 digits)
+        if (timestampStr.length === 10) {
+          const date = new Date(timestamp * 1000);
+          if (!isNaN(date.getTime()) && date.getFullYear() >= 2000 && date.getFullYear() <= 2100) {
+            return date;
+          }
+        }
+      }
+    } catch (error) {
+      // Silently fail - this is just a fallback attempt
+    }
+    return null;
+  };
+
   // Convert Firestore dates to proper Date objects
   const convertOrderDates = (order: Order): Order => {
+    // Add debugging for orderDate to see what we're receiving
+    if (process.env.NODE_ENV === 'development' && order.orderDate) {
+      console.log('Converting orderDate for order:', order.orderId, {
+        orderDate: order.orderDate,
+        orderDateType: typeof order.orderDate,
+        orderDateConstructor: order.orderDate?.constructor?.name,
+        isDateInstance: order.orderDate instanceof Date,
+        hasToDate: typeof (order.orderDate as any)?.toDate === 'function',
+        keys: order.orderDate && typeof order.orderDate === 'object' && !(order.orderDate instanceof Date) ? Object.keys(order.orderDate) : 'N/A (Date object)',
+        stringified: order.orderDate instanceof Date ? order.orderDate.toISOString() : JSON.stringify(order.orderDate),
+        getTime: order.orderDate instanceof Date ? order.orderDate.getTime() : 'N/A',
+        isValid: order.orderDate instanceof Date ? !isNaN(order.orderDate.getTime()) : 'N/A'
+      });
+    }
+    
     const convertedEstimatedDelivery = order.estimatedDelivery ? safeDateConversion(order.estimatedDelivery) : undefined;
     const convertedActualDelivery = order.actualDelivery ? safeDateConversion(order.actualDelivery) : undefined;
     
-    // Ensure orderDate is always set - if missing, use createdAt as fallback
-    let orderDate = safeDateConversion(order.orderDate);
+    // Convert createdAt and updatedAt first (these are usually reliable and should always exist)
+    // If they're already Date objects, use them directly
+    let convertedCreatedAt: Date | null = null;
+    if (order.createdAt instanceof Date) {
+      convertedCreatedAt = isNaN(order.createdAt.getTime()) ? null : order.createdAt;
+    } else {
+      convertedCreatedAt = safeDateConversion(order.createdAt);
+    }
+    
+    let convertedUpdatedAt: Date | null = null;
+    if (order.updatedAt instanceof Date) {
+      convertedUpdatedAt = isNaN(order.updatedAt.getTime()) ? null : order.updatedAt;
+    } else {
+      convertedUpdatedAt = safeDateConversion(order.updatedAt);
+    }
+    
+    // Check if orderDate is empty object, null, or undefined - treat all as missing
+    // IMPORTANT: Date objects have Object.keys().length === 0, so we must check instanceof Date first!
+    const isOrderDateEmpty = !order.orderDate || 
+                             (typeof order.orderDate === 'object' && 
+                              !(order.orderDate instanceof Date) && // Date objects are not empty!
+                              Object.keys(order.orderDate).length === 0 &&
+                              !('toDate' in order.orderDate) &&
+                              !('seconds' in order.orderDate) &&
+                              !('_seconds' in order.orderDate));
+    
+    // Convert orderDate - if it's already a Date object, use it directly
+    let orderDate: Date | null = null;
+    if (order.orderDate instanceof Date) {
+      // Already a Date object, use it directly if valid
+      orderDate = isNaN(order.orderDate.getTime()) ? null : order.orderDate;
+    } else {
+      // Try to convert using safeDateConversion
+      orderDate = safeDateConversion(order.orderDate);
+    }
+    
+    // Debug: Log if conversion failed
+    if (process.env.NODE_ENV === 'development' && order.orderDate && !orderDate) {
+      console.warn('Failed to convert orderDate for order:', order.orderId, {
+        original: order.orderDate,
+        converted: orderDate,
+        isDate: order.orderDate instanceof Date,
+        isValidDate: order.orderDate instanceof Date && !isNaN(order.orderDate.getTime())
+      });
+    }
+    
+    // If orderDate is empty/invalid, try createdAt as fallback
     if (!orderDate) {
-      orderDate = safeDateConversion(order.createdAt) || new Date();
-      // If orderDate was missing, update it in the database
-      if (order.id && !order.orderDate) {
-        AuthService.updateOrder(order.id, { orderDate }).catch(error => {
-          console.error('Error updating missing orderDate:', error);
+      if (convertedCreatedAt && !isNaN(convertedCreatedAt.getTime())) {
+        orderDate = convertedCreatedAt;
+        // Update database if orderDate was empty/missing and we have a valid createdAt
+        if (order.id && isOrderDateEmpty) {
+          AuthService.updateOrder(order.id, { orderDate }).catch(() => {
+            // Silently fail - don't show errors to users
+          });
+        }
+      }
+    }
+    
+    // Try additional fallback sources if we still don't have valid dates
+    let fallbackDate: Date | null = null;
+    let fallbackCreatedAt: Date | null = null;
+    
+    // 1. Try extracting from order ID (this can help both orderDate and createdAt)
+    if (order.orderId) {
+      const extractedDate = tryExtractDateFromOrderId(order.orderId);
+      if (extractedDate) {
+        if (!orderDate) {
+          orderDate = extractedDate;
+        }
+        if (!convertedCreatedAt || isNaN(convertedCreatedAt.getTime())) {
+          fallbackCreatedAt = extractedDate;
+        }
+        fallbackDate = extractedDate;
+      }
+    }
+    
+    // 2. Try paymentTime (ISO string) if available
+    if (!orderDate && (order as any).paymentTime) {
+      const paymentDate = safeDateConversion((order as any).paymentTime);
+      if (paymentDate && !isNaN(paymentDate.getTime())) {
+        orderDate = paymentDate;
+        if (!fallbackDate) {
+          fallbackDate = paymentDate;
+        }
+        if (!fallbackCreatedAt) {
+          fallbackCreatedAt = paymentDate;
+        }
+      }
+    }
+    
+    // 3. Try lastUpdated (ISO string) if available
+    if (!orderDate && (order as any).lastUpdated) {
+      const lastUpdatedDate = safeDateConversion((order as any).lastUpdated);
+      if (lastUpdatedDate && !isNaN(lastUpdatedDate.getTime())) {
+        orderDate = lastUpdatedDate;
+        if (!fallbackDate) {
+          fallbackDate = lastUpdatedDate;
+        }
+        if (!fallbackCreatedAt) {
+          fallbackCreatedAt = lastUpdatedDate;
+        }
+      }
+    }
+    
+    // Try to update database if we found valid dates from fallback sources
+    if (order.id) {
+      const updates: any = {};
+      if (orderDate && isOrderDateEmpty) {
+        updates.orderDate = orderDate;
+      }
+      if (fallbackCreatedAt && (!convertedCreatedAt || isNaN(convertedCreatedAt.getTime()))) {
+        updates.createdAt = fallbackCreatedAt;
+      }
+      if (Object.keys(updates).length > 0) {
+        AuthService.updateOrder(order.id, updates).catch(() => {
+          // Silently fail - don't show errors to users
         });
       }
     }
     
+    // Final fallback: use a placeholder date that will show as "N/A"
+    // Use epoch date (timestamp 0) which formatDateForDisplay will filter out
+    const placeholderDate = new Date(0);
+    
+    // For orderDate: use converted orderDate if valid, otherwise use createdAt, then fallback sources, then placeholder
+    const finalOrderDate: Date = (orderDate && !isNaN(orderDate.getTime())) 
+      ? orderDate 
+      : (convertedCreatedAt && !isNaN(convertedCreatedAt.getTime()) 
+          ? convertedCreatedAt 
+          : (fallbackDate || placeholderDate));
+    
+    // For createdAt: use converted if valid, otherwise try fallback sources, then placeholder
+    const finalCreatedAt: Date = (convertedCreatedAt && !isNaN(convertedCreatedAt.getTime())) 
+      ? convertedCreatedAt 
+      : (fallbackCreatedAt || fallbackDate || placeholderDate);
+    
+    // For updatedAt: use converted if valid, fallback to createdAt, then fallback sources, then placeholder
+    const finalUpdatedAt: Date = (convertedUpdatedAt && !isNaN(convertedUpdatedAt.getTime())) 
+      ? convertedUpdatedAt 
+      : (finalCreatedAt.getTime() !== 0 ? finalCreatedAt : (fallbackDate || placeholderDate));
+    
     return {
       ...order,
-      orderDate: orderDate,
-      createdAt: safeDateConversion(order.createdAt) || new Date(),
-      updatedAt: safeDateConversion(order.updatedAt) || new Date(),
+      orderDate: finalOrderDate,
+      createdAt: finalCreatedAt,
+      updatedAt: finalUpdatedAt,
       estimatedDelivery: convertedEstimatedDelivery || undefined,
       actualDelivery: convertedActualDelivery || undefined
     };
@@ -338,17 +595,45 @@ function SalesPageContent() {
   // Format date for display (handles Firestore Timestamps and other date formats)
   const formatDateForDisplay = (dateValue: any): string => {
     try {
-      const validDate = safeDateConversion(dateValue);
-      if (!validDate) {
+      // If dateValue is undefined or null, return N/A
+      if (dateValue === undefined || dateValue === null) {
         return 'N/A';
       }
+      
+      // IMPORTANT: Date objects have Object.keys().length === 0, so check instanceof Date FIRST!
+      // If it's already a Date object, use it directly
+      let validDate: Date | null = null;
+      if (dateValue instanceof Date) {
+        validDate = isNaN(dateValue.getTime()) ? null : dateValue;
+      } else {
+        // Check if it's an empty object (but NOT a Date object)
+        if (typeof dateValue === 'object' && !(dateValue instanceof Date) && Object.keys(dateValue).length === 0) {
+          return 'N/A';
+        }
+        // Try to convert using safeDateConversion
+        validDate = safeDateConversion(dateValue);
+      }
+      
+      if (!validDate || isNaN(validDate.getTime())) {
+        return 'N/A';
+      }
+      
+      // Check if it's the epoch date (1970-01-01) or any date with timestamp 0 or before 2000
+      // This catches invalid dates that might have been set to epoch or corrupted
+      const timestamp = validDate.getTime();
+      if (timestamp === 0 || timestamp < 946684800000) { // Before 2000-01-01
+        return 'N/A';
+      }
+      
       return validDate.toLocaleDateString('en-IN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
       });
     } catch (error) {
-      console.error('Error formatting date:', dateValue, error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error formatting date:', dateValue, error);
+      }
       return 'N/A';
     }
   };

@@ -392,6 +392,140 @@ export class MessagingService {
     // For other variables, return empty string
     return '';
   }
+
+  /**
+   * Send message directly to a contact
+   */
+  async sendMessageToContact(request: {
+    contactId: string;
+    channel: 'whatsapp' | 'instagram' | 'email';
+    template?: {
+      name: string;
+      lang: string;
+      vars: Record<string, string>;
+    };
+    text?: string;
+  }): Promise<SendMessageResponse> {
+    try {
+      // Get contact information
+      const contactRef = doc(db, 'contacts', request.contactId);
+      const contactSnap = await getDoc(contactRef);
+      
+      if (!contactSnap.exists()) {
+        return { success: false, error: 'Contact not found' };
+      }
+      
+      const contactData = contactSnap.data();
+      
+      // Validate channel availability
+      if (request.channel === 'whatsapp' && !contactData.channels?.whatsapp) {
+        return { success: false, error: 'WhatsApp not available for this contact' };
+      }
+      if (request.channel === 'instagram' && !contactData.channels?.instagram) {
+        return { success: false, error: 'Instagram not available for this contact' };
+      }
+      if (request.channel === 'email' && !contactData.channels?.email) {
+        return { success: false, error: 'Email not available for this contact' };
+      }
+
+      // Get or create thread for this contact
+      let thread = await this.getOrCreateThreadForContact(request.contactId, request.channel);
+      
+      if (!thread) {
+        return { success: false, error: 'Failed to create thread for contact' };
+      }
+
+      // Prepare message request
+      const messageRequest: SendMessageRequest = {
+        channel: request.channel,
+        threadId: thread.id,
+        ...(request.template ? {
+          template: {
+            name: request.template.name,
+            lang: request.template.lang,
+            vars: request.template.vars
+          }
+        } : {
+          text: request.text
+        })
+      };
+
+      // Send the message using existing method
+      return await this.sendMessage(messageRequest);
+
+    } catch (error) {
+      console.error('Error sending message to contact:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to send message to contact' 
+      };
+    }
+  }
+
+  /**
+   * Get or create a thread for a contact
+   */
+  private async getOrCreateThreadForContact(contactId: string, channel: 'whatsapp' | 'instagram' | 'email'): Promise<Thread | null> {
+    try {
+      // First, try to find existing thread
+      const threadsQuery = query(
+        collection(db, 'threads'),
+        where('customerId', '==', contactId),
+        where('channels', 'array-contains', channel),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      
+      const threadsSnapshot = await getDocs(threadsQuery);
+      
+      if (!threadsSnapshot.empty) {
+        const threadDoc = threadsSnapshot.docs[0];
+        const threadData = threadDoc.data();
+        return {
+          id: threadDoc.id,
+          ...threadData,
+          createdAt: threadData.createdAt?.toDate() || new Date(),
+          updatedAt: threadData.updatedAt?.toDate() || new Date(),
+          lastMessageAt: threadData.lastMessageAt?.toDate() || new Date(),
+          lastInboundAt: threadData.lastInboundAt?.toDate() || new Date()
+        } as Thread;
+      }
+
+      // Create new thread if none exists
+      const threadData = {
+        customerId: contactId,
+        channels: [channel],
+        status: 'open',
+        priority: 'medium',
+        lastMessageAt: serverTimestamp(),
+        lastInboundAt: serverTimestamp(),
+        unreadCount: 0,
+        meta: {},
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      const threadRef = await addDoc(collection(db, 'threads'), threadData);
+      
+      return {
+        id: threadRef.id,
+        customerId,
+        channels: [channel],
+        status: 'open',
+        priority: 'medium',
+        lastMessageAt: new Date(),
+        lastInboundAt: new Date(),
+        unreadCount: 0,
+        meta: {},
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as Thread;
+
+    } catch (error) {
+      console.error('Error getting or creating thread for contact:', error);
+      return null;
+    }
+  }
 }
 
 // Export singleton instance

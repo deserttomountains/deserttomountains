@@ -43,6 +43,7 @@ import { getAvailableTemplates, WhatsAppTemplate } from '@/lib/messaging/templat
 import CreateCampaignModal from './components/CreateCampaignModal';
 import CreateContactModal from './components/CreateContactModal';
 import ViewEditContactModal from './components/ViewEditContactModal';
+import SendMessageModal, { SendMessageData } from './components/SendMessageModal';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 
 function MessagesPageContent() {
@@ -90,6 +91,8 @@ function MessagesPageContent() {
   const [showViewEditContact, setShowViewEditContact] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [viewEditMode, setViewEditMode] = useState<'view' | 'edit'>('view');
+  const [showSendMessage, setShowSendMessage] = useState(false);
+  const [contactToMessage, setContactToMessage] = useState<Contact | null>(null);
 
   const router = useRouter();
   const { showToast } = useToast();
@@ -382,6 +385,11 @@ function MessagesPageContent() {
     setShowViewEditContact(true);
   };
 
+  const handleSendMessage = (contact: Contact) => {
+    setContactToMessage(contact);
+    setShowSendMessage(true);
+  };
+
   // Handle thread selection
   const handleThreadSelect = (thread: Thread) => {
     setSelectedThread(thread);
@@ -455,6 +463,44 @@ function MessagesPageContent() {
       ...prev,
       [key]: value
     }));
+  };
+
+  // Handle sending individual messages
+  const handleSendIndividualMessage = async (messageData: SendMessageData) => {
+    try {
+      const response = await fetch('/api/messages/send-to-contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contactId: messageData.contactId,
+          channel: messageData.channel,
+          ...(messageData.template ? {
+            template: {
+              name: messageData.template.name,
+              lang: 'en',
+              vars: messageData.template.variables
+            }
+          } : {
+            text: messageData.text
+          })
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showToast('Message sent successfully', 'success');
+        setShowSendMessage(false);
+        setContactToMessage(null);
+      } else {
+        throw new Error(result.error || 'Failed to send message');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
   };
 
   const handleLogout = async () => {
@@ -1179,6 +1225,7 @@ function MessagesPageContent() {
                           </button>
 
                           <button
+                            onClick={() => handleSendMessage(contact)}
                             className="p-2 text-green-600 hover:bg-green-100 rounded"
                             title="Send Message"
                           >
@@ -1518,6 +1565,17 @@ function MessagesPageContent() {
         onUpdate={handleUpdateContact}
         mode={viewEditMode}
         onModeChange={setViewEditMode}
+      />
+
+      {/* Send Message Modal */}
+      <SendMessageModal
+        isOpen={showSendMessage}
+        onClose={() => {
+          setShowSendMessage(false);
+          setContactToMessage(null);
+        }}
+        contact={contactToMessage}
+        onSend={handleSendIndividualMessage}
       />
     </AdminLayout>
   );

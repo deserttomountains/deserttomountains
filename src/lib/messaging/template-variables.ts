@@ -110,6 +110,134 @@ export const TEMPLATE_VARIABLE_CONFIGS: TemplateVariableConfig = {
     },
     examples: ['John Doe', 'Priya Sharma', 'Ahmed Ali']
   },
+
+  // Additional variables for templates
+  customer_name: {
+    name: 'customer_name',
+    type: 'text',
+    label: 'Customer Name',
+    description: 'Full name of the customer',
+    required: true,
+    category: 'utility',
+    placeholder: 'e.g., John Doe',
+    validation: {
+      minLength: 2,
+      maxLength: 50
+    },
+    examples: ['John Doe', 'Priya Sharma', 'Ahmed Ali']
+  },
+
+  order_number: {
+    name: 'order_number',
+    type: 'text',
+    label: 'Order Number',
+    description: 'The order number or ID',
+    required: true,
+    category: 'utility',
+    placeholder: 'e.g., ORD-2024-001',
+    validation: {
+      pattern: '^[A-Z0-9-_]+$',
+      minLength: 3,
+      maxLength: 20
+    },
+    examples: ['ORD-2024-001', 'WP-12345', 'ORDER-789']
+  },
+
+  status: {
+    name: 'status',
+    type: 'select',
+    label: 'Status',
+    description: 'Current status of the order',
+    required: true,
+    category: 'utility',
+    options: [
+      { value: 'confirmed', label: 'Confirmed', description: 'Order has been confirmed' },
+      { value: 'processing', label: 'Processing', description: 'Order is being prepared' },
+      { value: 'shipped', label: 'Shipped', description: 'Order has been shipped' },
+      { value: 'out_for_delivery', label: 'Out for Delivery', description: 'Order is out for delivery' },
+      { value: 'delivered', label: 'Delivered', description: 'Order has been delivered' },
+      { value: 'cancelled', label: 'Cancelled', description: 'Order has been cancelled' },
+      { value: 'refunded', label: 'Refunded', description: 'Order has been refunded' }
+    ],
+    defaultValue: 'confirmed'
+  },
+
+  tracking_number: {
+    name: 'tracking_number',
+    type: 'text',
+    label: 'Tracking Number',
+    description: 'Package tracking number',
+    required: true,
+    category: 'utility',
+    placeholder: 'e.g., BD123456789',
+    validation: {
+      minLength: 5,
+      maxLength: 30
+    },
+    examples: ['BD123456789', 'FDX987654321', 'UPS123456789']
+  },
+
+  carrier: {
+    name: 'carrier',
+    type: 'select',
+    label: 'Carrier',
+    description: 'Shipping carrier name',
+    required: true,
+    category: 'utility',
+    options: [
+      { value: 'Blue Dart', label: 'Blue Dart', description: 'Blue Dart Express' },
+      { value: 'FedEx', label: 'FedEx', description: 'FedEx Express' },
+      { value: 'DHL', label: 'DHL', description: 'DHL Express' },
+      { value: 'DTDC', label: 'DTDC', description: 'DTDC Express' },
+      { value: 'India Post', label: 'India Post', description: 'India Post' },
+      { value: 'Delhivery', label: 'Delhivery', description: 'Delhivery' },
+      { value: 'Ecom Express', label: 'Ecom Express', description: 'Ecom Express' }
+    ],
+    defaultValue: 'Blue Dart'
+  },
+
+  discount_percentage: {
+    name: 'discount_percentage',
+    type: 'number',
+    label: 'Discount Percentage',
+    description: 'Discount percentage for the offer',
+    required: true,
+    category: 'marketing',
+    placeholder: 'e.g., 20',
+    validation: {
+      min: 1,
+      max: 99
+    },
+    examples: ['10', '20', '30', '50']
+  },
+
+  valid_until: {
+    name: 'valid_until',
+    type: 'date',
+    label: 'Valid Until',
+    description: 'Offer validity end date',
+    required: true,
+    category: 'marketing',
+    validation: {
+      min: new Date().toISOString().split('T')[0] // Today or later
+    },
+    examples: ['2024-12-31', '2024-01-15']
+  },
+
+  product_name: {
+    name: 'product_name',
+    type: 'text',
+    label: 'Product Name',
+    description: 'Name of the product being offered',
+    required: true,
+    category: 'marketing',
+    placeholder: 'e.g., Premium Wall Putty',
+    validation: {
+      minLength: 3,
+      maxLength: 100
+    },
+    examples: ['Premium Wall Putty', 'Weather Shield', 'Interior Paint']
+  },
 };
 
 /**

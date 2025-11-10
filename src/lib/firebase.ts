@@ -1118,10 +1118,48 @@ export class AuthService {
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(ordersQuery);
-      const orders = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[];
+      const orders = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Helper function to convert Firestore Timestamp to Date
+        const convertTimestamp = (timestamp: any): Date | undefined => {
+          if (!timestamp) return undefined;
+          if (timestamp instanceof Date) return timestamp;
+          if (timestamp && typeof timestamp.toDate === 'function') {
+            try {
+              return timestamp.toDate();
+            } catch (e) {
+              // Fall through to other methods
+            }
+          }
+          // Try seconds/nanoseconds format
+          if (timestamp && typeof timestamp === 'object') {
+            const seconds = timestamp.seconds ?? timestamp._seconds;
+            const nanoseconds = timestamp.nanoseconds ?? timestamp._nanoseconds;
+            if (seconds !== undefined) {
+              const ms = seconds * 1000 + (nanoseconds ? Math.floor(nanoseconds / 1000000) : 0);
+              return new Date(ms);
+            }
+          }
+          // If it's already a Date or valid date string/number, try to convert
+          if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+            const date = new Date(timestamp);
+            if (!isNaN(date.getTime())) return date;
+          }
+          return undefined;
+        };
+        
+        return {
+          id: doc.id,
+          ...data,
+          // Convert Firestore Timestamps to JavaScript Date objects
+          orderDate: convertTimestamp(data.orderDate),
+          createdAt: convertTimestamp(data.createdAt) || new Date(),
+          updatedAt: convertTimestamp(data.updatedAt) || new Date(),
+          estimatedDelivery: convertTimestamp(data.estimatedDelivery),
+          actualDelivery: convertTimestamp(data.actualDelivery)
+        };
+      }) as Order[];
       
       // Sort locally to avoid index requirement
       orders.sort((a, b) => {
