@@ -101,7 +101,7 @@ const OptimizedKanbanColumn = memo(function OptimizedKanbanColumn({
               onDelete={onDelete}
               onStatusChange={onStatusChange}
               onShowActions={onShowActions}
-              showActions={showActions === task.id}
+              showActions={showActions}
               isOverdue={isOverdue}
               getPriorityColor={getPriorityColor}
               getStatusColor={getStatusColor}
