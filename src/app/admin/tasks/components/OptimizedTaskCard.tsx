@@ -62,6 +62,7 @@ const OptimizedTaskCard = memo(function OptimizedTaskCard({
   onViewTask
 }: OptimizedTaskCardProps) {
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!task.id) return;
     onStatusChange(task.id, e.target.value as Task['status']);
   };
 
@@ -128,7 +129,11 @@ const OptimizedTaskCard = memo(function OptimizedTaskCard({
         {showActionsDropdown && (
           <div className="relative ml-2" data-task-actions>
             <button
-              onClick={() => onShowActions(task.id)}
+              onClick={() => {
+                if (task.id) {
+                  onShowActions(task.id);
+                }
+              }}
               className="p-1 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
             >
               <MoreVertical className="w-4 h-4 text-gray-500" />
@@ -207,7 +212,7 @@ const OptimizedTaskCard = memo(function OptimizedTaskCard({
         {task.estimatedTime && (
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            <span>{formatEstimatedTime(task.estimatedTime)}</span>
+            <span>{formatEstimatedTime(String(task.estimatedTime))}</span>
           </div>
         )}
         
@@ -218,10 +223,10 @@ const OptimizedTaskCard = memo(function OptimizedTaskCard({
           </div>
         )}
         
-        {task.relatedToName && (
+        {task.relatedTo?.name && (
           <div className="flex items-center gap-1">
             <User className="w-3 h-3" />
-            <span>{task.relatedToName}</span>
+            <span>{task.relatedTo.name}</span>
           </div>
         )}
       </div>

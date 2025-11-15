@@ -6,7 +6,7 @@ import { Task } from '@/lib/firebase';
  * Implements memoization, debouncing, and efficient state management
  */
 export function useKanbanOptimization(tasks: Task[]) {
-  const updateTimeoutRef = useRef<NodeJS.Timeout>();
+  const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const lastUpdateRef = useRef<number>(0);
   
   // Memoize tasks by status to prevent unnecessary re-renders
@@ -30,7 +30,7 @@ export function useKanbanOptimization(tasks: Task[]) {
   const debouncedStatusUpdate = useCallback((
     taskId: string, 
     newStatus: Task['status'], 
-    onUpdate: (taskId: string, status: Task['status']) => Promise<void>
+    onUpdate: (taskId: string, status: Task['status']) => void
   ) => {
     const now = Date.now();
     

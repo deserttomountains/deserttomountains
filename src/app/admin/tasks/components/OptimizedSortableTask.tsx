@@ -40,6 +40,11 @@ const OptimizedSortableTask = memo(function OptimizedSortableTask({
   formatEstimatedTime,
   onViewTask
 }: OptimizedSortableTaskProps) {
+  // Ensure task.id exists (should be guaranteed by parent filter, but TypeScript needs this)
+  if (!task.id) {
+    return null;
+  }
+
   const {
     attributes,
     listeners,

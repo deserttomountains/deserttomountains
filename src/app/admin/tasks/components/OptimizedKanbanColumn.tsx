@@ -93,24 +93,26 @@ const OptimizedKanbanColumn = memo(function OptimizedKanbanColumn({
           </div>
         )}
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {tasks.map((task) => (
-            <OptimizedSortableTask
-              key={task.id}
-              task={task}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onStatusChange={onStatusChange}
-              onShowActions={onShowActions}
-              showActions={showActions}
-              isOverdue={isOverdue}
-              getPriorityColor={getPriorityColor}
-              getStatusColor={getStatusColor}
-              getCategoryColor={getCategoryColor}
-              getCategoryIcon={getCategoryIcon}
-              formatEstimatedTime={formatEstimatedTime}
-              onViewTask={onViewTask}
-            />
-          ))}
+          {tasks
+            .filter((task): task is Task & { id: string } => task.id !== undefined)
+            .map((task) => (
+              <OptimizedSortableTask
+                key={task.id}
+                task={task}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onStatusChange={onStatusChange}
+                onShowActions={onShowActions}
+                showActions={showActions}
+                isOverdue={isOverdue}
+                getPriorityColor={getPriorityColor}
+                getStatusColor={getStatusColor}
+                getCategoryColor={getCategoryColor}
+                getCategoryIcon={getCategoryIcon}
+                formatEstimatedTime={formatEstimatedTime}
+                onViewTask={onViewTask}
+              />
+            ))}
         </SortableContext>
       </div>
     </div>

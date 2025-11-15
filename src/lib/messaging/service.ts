@@ -428,6 +428,11 @@ export class MessagingService {
         return { success: false, error: 'Email not available for this contact' };
       }
 
+      // Email is not supported in SendMessageRequest
+      if (request.channel === 'email') {
+        return { success: false, error: 'Email channel is not yet supported for sending messages' };
+      }
+
       // Get or create thread for this contact
       let thread = await this.getOrCreateThreadForContact(request.contactId, request.channel);
       
@@ -435,9 +440,9 @@ export class MessagingService {
         return { success: false, error: 'Failed to create thread for contact' };
       }
 
-      // Prepare message request
+      // Prepare message request (channel is now guaranteed to be 'whatsapp' | 'instagram')
       const messageRequest: SendMessageRequest = {
-        channel: request.channel,
+        channel: request.channel as 'whatsapp' | 'instagram',
         threadId: thread.id,
         ...(request.template ? {
           template: {
@@ -509,7 +514,7 @@ export class MessagingService {
       
       return {
         id: threadRef.id,
-        customerId,
+        customerId: contactId,
         channels: [channel],
         status: 'open',
         priority: 'medium',

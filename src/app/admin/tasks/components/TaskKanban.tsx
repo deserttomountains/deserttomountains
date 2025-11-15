@@ -89,6 +89,11 @@ function SortableTask({
   getCategoryIcon,
   formatEstimatedTime
 }: SortableTaskProps) {
+  // Ensure task.id exists (should be guaranteed by parent filter, but TypeScript needs this)
+  if (!task.id) {
+    return null;
+  }
+
   const {
     attributes,
     listeners,
@@ -173,24 +178,29 @@ function KanbanColumn({
             Drop task here to move to {title}
           </div>
         )}
-        <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
-          {tasks.map((task) => (
-            <SortableTask
-              key={task.id}
-              task={task}
-              onStatusChange={onStatusChange}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onShowActions={onShowActions}
-              showActions={showActions}
-              isOverdue={isOverdue}
-              getPriorityColor={getPriorityColor}
-              getStatusColor={getStatusColor}
-              getCategoryColor={getCategoryColor}
-              getCategoryIcon={getCategoryIcon}
-              formatEstimatedTime={formatEstimatedTime}
-            />
-          ))}
+        <SortableContext 
+          items={tasks.map(task => task.id).filter((id): id is string => id !== undefined)} 
+          strategy={verticalListSortingStrategy}
+        >
+          {tasks
+            .filter((task): task is Task & { id: string } => task.id !== undefined)
+            .map((task) => (
+              <SortableTask
+                key={task.id}
+                task={task}
+                onStatusChange={onStatusChange}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onShowActions={onShowActions}
+                showActions={showActions}
+                isOverdue={isOverdue}
+                getPriorityColor={getPriorityColor}
+                getStatusColor={getStatusColor}
+                getCategoryColor={getCategoryColor}
+                getCategoryIcon={getCategoryIcon}
+                formatEstimatedTime={formatEstimatedTime}
+              />
+            ))}
         </SortableContext>
       </div>
     </div>

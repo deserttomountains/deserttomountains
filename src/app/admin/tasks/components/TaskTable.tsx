@@ -97,7 +97,11 @@ export default function TaskTable({
                 <td className="px-4 py-4">
                   <select
                     value={task.status}
-                    onChange={(e) => handleStatusChange(task.id, e)}
+                    onChange={(e) => {
+                      if (task.id) {
+                        handleStatusChange(task.id, e);
+                      }
+                    }}
                     className={`text-xs px-2 py-1 rounded-full border-0 font-medium ${getStatusColor(task.status)}`}
                   >
                     <option value="pending">Pending</option>
@@ -145,7 +149,11 @@ export default function TaskTable({
                 <td className="px-4 py-4">
                   <div className="relative" data-task-actions>
                     <button
-                      onClick={() => onShowActions(task.id)}
+                      onClick={() => {
+                        if (task.id) {
+                          onShowActions(task.id);
+                        }
+                      }}
                       className="p-1 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
                     >
                       <MoreVertical className="w-4 h-4 text-gray-500" />

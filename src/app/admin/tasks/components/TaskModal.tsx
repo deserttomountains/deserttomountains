@@ -73,16 +73,16 @@ export default function TaskModal({
           priority: task.priority || 'medium',
           category: task.category || 'follow_up',
           dueDate: safeToISOString(task.dueDate),
-          estimatedTime: task.estimatedTime || '',
-          tags: task.tags || '',
+          estimatedTime: task.estimatedTime ? String(task.estimatedTime) : '',
+          tags: task.tags.join(', '),
           notes: task.notes || '',
-          relatedToType: (task.relatedToType as 'lead' | 'order' | 'customer') || '',
-          relatedToId: task.relatedToId || '',
-          relatedToName: task.relatedToName || '',
-          isRecurring: task.isRecurring || false,
-          recurringType: task.recurringType || 'weekly',
-          recurringInterval: task.recurringInterval || 1,
-          recurringEndDate: safeToISOString(task.recurringEndDate)
+          relatedToType: task.relatedTo?.type || '',
+          relatedToId: task.relatedTo?.id || '',
+          relatedToName: task.relatedTo?.name || '',
+          isRecurring: !!task.recurring,
+          recurringType: task.recurring?.type || 'weekly',
+          recurringInterval: task.recurring?.interval || 1,
+          recurringEndDate: task.recurring?.endDate ? safeToISOString(task.recurring.endDate) : ''
         });
       } else {
         setForm(initialFormState);

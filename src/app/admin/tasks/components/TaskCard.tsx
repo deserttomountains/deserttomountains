@@ -51,6 +51,7 @@ export default function TaskCard({
   formatEstimatedTime
 }: TaskCardProps) {
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!task.id) return;
     onStatusChange(task.id, e.target.value as Task['status']);
   };
 
@@ -72,7 +73,11 @@ export default function TaskCard({
         {/* Actions Dropdown */}
         <div className="relative ml-2" data-task-actions>
           <button
-            onClick={() => onShowActions(task.id)}
+            onClick={() => {
+              if (task.id) {
+                onShowActions(task.id);
+              }
+            }}
             className="p-1 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           >
             <MoreVertical className="w-4 h-4 text-gray-500" />
@@ -141,7 +146,7 @@ export default function TaskCard({
         {task.estimatedTime && (
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            <span>{formatEstimatedTime(task.estimatedTime)}</span>
+            <span>{formatEstimatedTime(String(task.estimatedTime))}</span>
           </div>
         )}
         
@@ -152,10 +157,10 @@ export default function TaskCard({
           </div>
         )}
         
-        {task.relatedToName && (
+        {task.relatedTo?.name && (
           <div className="flex items-center gap-1">
             <User className="w-3 h-3" />
-            <span>{task.relatedToName}</span>
+            <span>{task.relatedTo.name}</span>
           </div>
         )}
       </div>
