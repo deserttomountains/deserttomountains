@@ -50,7 +50,11 @@ const OptimizedKanbanColumn = memo(function OptimizedKanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id });
   
   // Memoize task IDs to prevent unnecessary re-renders
-  const taskIds = useMemo(() => tasks.map(task => task.id), [tasks]);
+  // Filter out undefined IDs to satisfy SortableContext type requirements
+  const taskIds = useMemo(() => 
+    tasks.map(task => task.id).filter((id): id is string => id !== undefined), 
+    [tasks]
+  );
   
   // Memoize column styling to prevent recalculation
   const columnClasses = useMemo(() => 
