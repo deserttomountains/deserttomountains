@@ -1,7 +1,6 @@
 "use client";
 
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
 import { 
   ShoppingCart, 
   CreditCard, 
@@ -313,36 +312,174 @@ export default function PaymentPage() {
       }
 
       if (selectedGateway === 'cashfree') {
-        // 2. Create Cashfree order via API
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const res = await fetch('/api/payment/cashfree/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: orderId,
-        orderAmount: total,
-        orderCurrency: 'INR',
-        customerName: orderData.customerName,
-        customerEmail: orderData.customerEmail,
-        customerPhone: orderData.customerPhone,
-            orderNote: orderData.notes,
-            returnUrl: `${origin}/order-confirmation?orderId=${orderId}`,
-            notifyUrl: `${origin}/api/payment/cashfree/webhook`
-          })
-        });
-        const cashfreeOrder = await res.json();
-        console.log('Cashfree order response:', cashfreeOrder);
+        try {
+          // 2. Create Cashfree order via API
+          const origin = typeof window !== 'undefined' ? window.location.origin : '';
+          let res: Response;
+          let response: any;
+          
+          try {
+            res = await fetch('/api/payment/cashfree/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId: orderId,
+              orderAmount: total,
+              orderCurrency: 'INR',
+              customerName: orderData.customerName,
+              customerEmail: orderData.customerEmail,
+              customerPhone: orderData.customerPhone,
+              orderNote: orderData.notes,
+              returnUrl: `${origin}/order-confirmation?orderId=${orderId}`,
+              notifyUrl: `${origin}/api/payment/cashfree/webhook`
+            })
+          });
+        } catch (networkError: any) {
+          console.error('Network error creating Cashfree order:', networkError);
+          throw new Error('Network error: Unable to connect to payment server. Please check your internet connection and try again.');
+        }
         
-        if (!cashfreeOrder.paymentSessionId) {
-          console.error('Cashfree order creation failed:', cashfreeOrder);
+        // Check if response has content before parsing
+        const contentType = res.headers.get('content-type');
+        const text = await res.text();
+        
+        // Log raw response for debugging
+        console.log('=== Cashfree API Response Debug ===');
+        console.log('Status:', res.status, res.statusText);
+        console.log('Content-Type:', contentType);
+        console.log('Response Text Length:', text?.length || 0);
+        console.log('Response Text (first 500 chars):', text?.substring(0, 500) || '(empty)');
+        console.log('Response Text (full):', text);
+        console.log('===================================');
+        
+        if (!text || text.trim() === '') {
+          console.error('Cashfree order creation failed: Empty response from server', {
+            status: res.status,
+            statusText: res.statusText
+          });
+          throw new Error(`Empty response from payment server (Status: ${res.status}). Please check server logs and try again.`);
+        }
+        
+        try {
+          response = JSON.parse(text);
+        } catch (parseError) {
+          console.error('Cashfree order creation failed: Invalid JSON response', { 
+            text, 
+            status: res.status, 
+            statusText: res.statusText,
+            parseError 
+          });
+          throw new Error(`Invalid response from payment server (Status: ${res.status}). Response: ${text.substring(0, 100)}`);
+        }
+        
+        // Check if response is empty object
+        const responseKeys = Object.keys(response || {});
+        const isEmptyResponse = responseKeys.length === 0;
+        
+        // Log parsed response for debugging
+        console.log('=== Cashfree Parsed Response Debug ===');
+        console.log('Status:', res.status, res.statusText);
+        console.log('Response Keys:', responseKeys);
+        console.log('Is Empty:', isEmptyResponse);
+        console.log('Has Error:', !!response.error);
+        console.log('Has Data:', !!response.data);
+        console.log('Has Status:', !!response.status);
+        console.log('Response Type:', typeof response);
+        console.log('Full Response Object:', JSON.stringify(response, null, 2));
+        console.log('======================================');
+        
+        // Handle empty response - check both error and success cases
+        if (isEmptyResponse) {
+          console.error('Cashfree order creation failed: Empty response object from server', {
+            status: res.status,
+            statusText: res.statusText,
+            isOk: res.ok,
+            originalText: text.substring(0, 500)
+          });
+          throw new Error(`Server returned empty response (Status: ${res.status} ${res.statusText}). This usually indicates a server error. Please check server logs for details.`);
+        }
+        
+        // Check if response indicates an error
+        if (!res.ok || response.error) {
+          console.error('Cashfree order creation failed:', {
+            status: res.status,
+            statusText: res.statusText,
+            response: response,
+            responseStringified: JSON.stringify(response),
+            isEmptyResponse: isEmptyResponse,
+            originalText: text.substring(0, 500)
+          });
           
           // Check if it's a configuration issue
-          if (cashfreeOrder.error?.includes('payment_session_id') || cashfreeOrder.code === 'payment_session_id_invalid') {
+          if (response.error?.includes('payment_session_id') || response.code === 'payment_session_id_invalid') {
             throw new Error('Cashfree payment gateway is not properly configured. Please contact support or try Razorpay instead.');
           }
           
-          throw new Error(cashfreeOrder.error || cashfreeOrder.message || 'Failed to create Cashfree order');
+          // Provide more detailed error message - ensure it's always a string
+          let errorMessage: string = '';
+          
+          if (response.error && typeof response.error === 'string') {
+            errorMessage = response.error;
+          } else if (response.message && typeof response.message === 'string') {
+            errorMessage = response.message;
+          } else if (response.code && typeof response.code === 'string') {
+            errorMessage = `Error code: ${response.code}`;
+          }
+          
+          if (!errorMessage) {
+            if (isEmptyResponse) {
+              errorMessage = `Server returned empty error response (Status: ${res.status} ${res.statusText})`;
+            } else {
+              errorMessage = `Payment server error (Status: ${res.status} ${res.statusText}). Response: ${JSON.stringify(response).substring(0, 200)}`;
+            }
+          }
+          
+          console.error('Throwing error with message:', errorMessage);
+          throw new Error(errorMessage);
         }
+        
+        // Handle new standardized response format: { status: 'success', data: order }
+        // Check if response structure is valid
+        if (!response || typeof response !== 'object') {
+          console.error('Cashfree order creation failed: Invalid response structure', {
+            response: response,
+            responseType: typeof response
+          });
+          throw new Error('Invalid response structure from payment server. Please try again or contact support.');
+        }
+        
+        const cashfreeOrder = response.data || response;
+        
+        if (!cashfreeOrder || typeof cashfreeOrder !== 'object' || !cashfreeOrder.paymentSessionId) {
+          console.error('Cashfree order creation failed - missing paymentSessionId:', {
+            response: response,
+            cashfreeOrder: cashfreeOrder,
+            hasData: !!response.data,
+            hasPaymentSessionId: !!cashfreeOrder?.paymentSessionId,
+            responseKeys: Object.keys(response || {}),
+            cashfreeOrderKeys: cashfreeOrder ? Object.keys(cashfreeOrder) : []
+          });
+          
+          // Check if it's a configuration issue
+          if (response.error?.includes('payment_session_id') || response.code === 'payment_session_id_invalid') {
+            throw new Error('Cashfree payment gateway is not properly configured. Please contact support or try Razorpay instead.');
+          }
+          
+          // Provide detailed error message
+          let errorMsg = 'Failed to create Cashfree order: Missing paymentSessionId.';
+          if (response.error) {
+            errorMsg = `Cashfree error: ${response.error}`;
+          } else if (response.message) {
+            errorMsg = `Cashfree error: ${response.message}`;
+          } else if (isEmptyResponse) {
+            errorMsg = 'Server returned empty response. Please check server configuration.';
+          } else {
+            errorMsg += ' Please check server logs for details.';
+          }
+          
+          throw new Error(errorMsg);
+        }
+        
         // 3. Load Cashfree Drop-in JS and open payment modal
         await loadCashfreeScript();
         // @ts-ignore
@@ -404,6 +541,16 @@ export default function PaymentPage() {
         }
         setIsProcessing(false);
         return;
+      } catch (cashfreeError: any) {
+          // Wrap any Cashfree-specific errors with better context
+          console.error('Cashfree payment error:', cashfreeError);
+          const errorMessage = cashfreeError instanceof Error 
+            ? cashfreeError.message 
+            : typeof cashfreeError === 'string' 
+            ? cashfreeError 
+            : 'Failed to process Cashfree payment. Please try again or use Razorpay.';
+          throw new Error(errorMessage);
+        }
       }
 
       // Default: Other gateways or fallback
@@ -412,7 +559,35 @@ export default function PaymentPage() {
       localStorage.removeItem('checkoutFlow');
       setTimeout(() => router.push('/order-confirmation'), 1200);
     } catch (error: any) {
-      showToast(error.message || 'Failed to create payment order. Please try again.', 'error');
+      console.error('Payment order creation error:', error);
+      
+      // Extract error message properly
+      let errorMessage = 'Failed to create payment order. Please try again.';
+      
+      if (error) {
+        if (typeof error === 'string') {
+          errorMessage = error;
+        } else if (error instanceof Error && error.message) {
+          errorMessage = error.message;
+        } else if (error?.message && typeof error.message === 'string') {
+          errorMessage = error.message;
+        } else if (error?.error && typeof error.error === 'string') {
+          errorMessage = error.error;
+        } else {
+          // If error is an object, try to stringify it safely
+          try {
+            const errorStr = JSON.stringify(error);
+            if (errorStr && errorStr !== '{}') {
+              errorMessage = `Payment error: ${errorStr.substring(0, 200)}`;
+            }
+          } catch {
+            // If stringification fails, use default message
+          }
+        }
+      }
+      
+      console.error('Final error message:', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -583,8 +758,6 @@ export default function PaymentPage() {
           </div>
         </div>
       </main>
-      
-      <Footer />
       
       <style jsx>{`
         @keyframes fade-in {

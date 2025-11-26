@@ -765,6 +765,22 @@ export class AuthService {
 
       const leadRef = doc(collection(db, 'leads'));
       await setDoc(leadRef, lead);
+      
+      // Send emails (non-blocking - don't fail if email fails)
+      try {
+        const { EmailService } = await import('@/lib/email/service');
+        await EmailService.sendLeadCreatedEmails({
+          name: leadData.name,
+          email: leadData.email,
+          phone: leadData.phone,
+          source: leadData.source,
+          interest: leadData.interest,
+        });
+      } catch (emailError) {
+        console.error('Error sending lead creation emails:', emailError);
+        // Don't throw - lead creation succeeded, email is secondary
+      }
+      
       return leadRef.id;
     } catch (error) {
       console.error('Error creating lead:', error);
@@ -1098,6 +1114,30 @@ export class AuthService {
       })));
       
       const orderRef = await addDoc(collection(db, 'orders'), cleanOrderData);
+      
+      // Send emails (non-blocking - don't fail if email fails)
+      try {
+        const { EmailService } = await import('@/lib/email/service');
+        await EmailService.sendOrderConfirmationEmails({
+          orderId: cleanOrderData.orderId || orderRef.id,
+          customerName: cleanOrderData.customerName,
+          customerEmail: cleanOrderData.customerEmail,
+          items: cleanOrderData.items.map((item: any) => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice || (item.unitPrice * item.quantity),
+          })),
+          totalAmount: cleanOrderData.totalAmount,
+          finalAmount: cleanOrderData.finalAmount,
+          shippingAddress: cleanOrderData.shippingAddress,
+          orderDate: cleanOrderData.orderDate || new Date(),
+        });
+      } catch (emailError) {
+        console.error('Error sending order confirmation emails:', emailError);
+        // Don't throw - order creation succeeded, email is secondary
+      }
+      
       return orderRef.id;
     } catch (error) {
       console.error('Error creating order:', error);

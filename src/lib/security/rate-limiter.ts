@@ -56,6 +56,11 @@ export const RATE_LIMITS = {
     windowMs: 60 * 1000,
     max: 100,
     keyGenerator: (req: NextRequest) => `instagram_webhook:${getClientIp(req)}`
+  },
+  WEBHOOK_CASHFREE: {
+    windowMs: 60 * 1000,
+    max: 100,
+    keyGenerator: (req: NextRequest) => `cashfree_webhook:${getClientIp(req)}`
   }
 } as const;
 

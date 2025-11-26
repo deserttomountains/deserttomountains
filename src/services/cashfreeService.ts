@@ -46,30 +46,101 @@ export interface CashfreePaymentStatus {
   signature: string;
 }
 
+// TypeScript interfaces for Cashfree API responses
+export interface CashfreeApiOrderResponse {
+  order_id?: string;
+  order_status?: string;
+  payment_session_id?: string;
+  payment_link?: string;
+  order_amount?: number;
+  order_currency?: string;
+  order_note?: string;
+  customer_details?: {
+    customer_id?: string;
+    customer_name?: string;
+    customer_email?: string;
+    customer_phone?: string;
+  };
+  order_meta?: {
+    return_url?: string;
+    notify_url?: string;
+    payment_methods?: string;
+  };
+  payment?: {
+    reference_id?: string;
+    tx_status?: string;
+    payment_mode?: string;
+    tx_msg?: string;
+    tx_time?: string;
+    signature?: string;
+  };
+  reference_id?: string;
+  tx_status?: string;
+  payment_mode?: string;
+  tx_msg?: string;
+  tx_time?: string;
+  signature?: string;
+  message?: string;
+  [key: string]: any; // Allow additional fields
+}
+
+export interface CashfreeApiError {
+  message?: string;
+  code?: string;
+  type?: string;
+  [key: string]: any;
+}
+
 class CashfreeService {
   private clientId: string;
   private clientSecret: string;
   private webhookSecret: string;
   private environment: 'TEST' | 'PROD';
   private baseUrl: string;
+  private paymentMethods: string;
 
   constructor() {
-    // These should be moved to environment variables
-    this.clientId = process.env.NEXT_PUBLIC_CASHFREE_CLIENT_ID || 'test_1234567890';
-    this.clientSecret = process.env.CASHFREE_CLIENT_SECRET || 'test_secret_1234567890';
-    this.webhookSecret = process.env.CASHFREE_WEBHOOK_SECRET || 'test_webhook_secret_1234567890';
     this.environment = (process.env.NEXT_PUBLIC_CASHFREE_ENV as 'TEST' | 'PROD') || 'TEST';
+    const isProduction = this.environment === 'PROD';
+    
+    // Validate environment variables - fail fast in production
+    this.clientId = process.env.NEXT_PUBLIC_CASHFREE_CLIENT_ID || '';
+    this.clientSecret = process.env.CASHFREE_CLIENT_SECRET || '';
+    this.webhookSecret = process.env.CASHFREE_WEBHOOK_SECRET || '';
+    
+    if (isProduction) {
+      const missingVars: string[] = [];
+      if (!this.clientId) missingVars.push('NEXT_PUBLIC_CASHFREE_CLIENT_ID');
+      if (!this.clientSecret) missingVars.push('CASHFREE_CLIENT_SECRET');
+      if (!this.webhookSecret) missingVars.push('CASHFREE_WEBHOOK_SECRET');
+      
+      if (missingVars.length > 0) {
+        throw new Error(
+          `Cashfree service initialization failed: Missing required environment variables in production: ${missingVars.join(', ')}`
+        );
+      }
+    } else {
+      // Use test defaults only in development/test
+      this.clientId = this.clientId || 'test_1234567890';
+      this.clientSecret = this.clientSecret || 'test_secret_1234567890';
+      this.webhookSecret = this.webhookSecret || 'test_webhook_secret_1234567890';
+    }
+    
     this.baseUrl = this.environment === 'PROD' 
       ? 'https://api.cashfree.com/pg' 
       : 'https://sandbox.cashfree.com/pg';
     
-    // Log configuration for debugging
+    // Payment methods from environment variable or default
+    this.paymentMethods = process.env.CASHFREE_PAYMENT_METHODS || 'cc,dc,nb,upi,paylater,emi';
+    
+    // Log configuration for debugging (sanitized)
     console.log('Cashfree Service Configuration:', {
       environment: this.environment,
       baseUrl: this.baseUrl,
       clientId: this.clientId.substring(0, 10) + '...', // Log partial for security
       hasClientSecret: !!this.clientSecret,
-      hasWebhookSecret: !!this.webhookSecret
+      hasWebhookSecret: !!this.webhookSecret,
+      paymentMethods: this.paymentMethods
     });
   }
 
@@ -100,23 +171,60 @@ class CashfreeService {
           order_meta: {
             return_url: orderData.returnUrl,
             notify_url: orderData.notifyUrl,
-            payment_methods: "cc,dc,nb,upi,paylater,emi"
+            payment_methods: this.paymentMethods
           },
           order_note: orderData.orderNote || "Desert to Mountains - Wall Putty Order"
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Cashfree API Error:', errorData);
-        throw new Error(`Cashfree API Error: ${errorData.message || JSON.stringify(errorData) || response.statusText}`);
+        let errorData: CashfreeApiError = {};
+        const responseText = await response.text();
+        
+        try {
+          if (responseText) {
+            errorData = JSON.parse(responseText);
+          }
+        } catch (parseError) {
+          console.error('Failed to parse Cashfree API error response:', parseError);
+          // Keep errorData as empty object, we'll use status text
+        }
+        
+        console.error('Cashfree API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorData.message,
+          code: errorData.code,
+          responseText: responseText.substring(0, 200) // Log first 200 chars
+        });
+        
+        const errorMessage = errorData.message || errorData.code || response.statusText || 'Unknown error';
+        throw new Error(`Cashfree API Error (${response.status}): ${errorMessage}`);
       }
 
-      const data = await response.json();
-      console.log('Raw Cashfree API response:', data);
+      const responseText = await response.text();
+      let data: CashfreeApiOrderResponse;
+      
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse Cashfree API success response:', parseError);
+        throw new Error('Invalid response format from Cashfree API');
+      }
+      
+      // Log only essential fields (no PII)
+      console.log('Cashfree API order response:', {
+        orderId: data.order_id,
+        orderStatus: data.order_status,
+        hasPaymentSessionId: !!data.payment_session_id
+      });
       return this.transformOrderResponse(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating Cashfree order:', error);
+      // Preserve the original error message if it exists
+      if (error instanceof Error && error.message) {
+        throw error; // Re-throw with original message
+      }
       throw new Error('Failed to create payment order. Please try again.');
     }
   }
@@ -129,11 +237,11 @@ class CashfreeService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData: CashfreeApiError = await response.json().catch(() => ({}));
         throw new Error(`Cashfree API Error: ${errorData.message || response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: CashfreeApiOrderResponse = await response.json();
       return this.transformPaymentStatus(data);
     } catch (error) {
       console.error('Error fetching order status:', error);
@@ -202,40 +310,99 @@ class CashfreeService {
     }
   }
 
-  private transformOrderResponse(data: any): CashfreeOrderResponse {
-    return {
-      orderId: data.order_id,
-      orderStatus: data.order_status,
-      paymentSessionId: data.payment_session_id, // For Drop-in JS
-      paymentUrl: data.payment_link || '', // Add paymentUrl, fallback to empty string
-      orderAmount: data.order_amount,
-      orderCurrency: data.order_currency,
-      orderNote: data.order_note,
-      customerDetails: {
-        customerId: data.customer_details.customer_id,
-        customerName: data.customer_details.customer_name,
-        customerEmail: data.customer_details.customer_email,
-        customerPhone: data.customer_details.customer_phone
-      },
-      orderMeta: {
-        returnUrl: data.order_meta.return_url,
-        notifyUrl: data.order_meta.notify_url,
-        paymentMethods: data.order_meta.payment_methods
-      }
-    };
+  private transformOrderResponse(data: CashfreeApiOrderResponse): CashfreeOrderResponse {
+    try {
+      // Add null checks and default values
+      const customerDetails = data.customer_details || {};
+      const orderMeta = data.order_meta || {};
+      
+      return {
+        orderId: data.order_id || '',
+        orderStatus: data.order_status || 'UNKNOWN',
+        paymentSessionId: data.payment_session_id, // For Drop-in JS
+        paymentUrl: data.payment_link || '',
+        orderAmount: data.order_amount || 0,
+        orderCurrency: data.order_currency || 'INR',
+        orderNote: data.order_note || '',
+        customerDetails: {
+          customerId: customerDetails.customer_id || '',
+          customerName: customerDetails.customer_name || '',
+          customerEmail: customerDetails.customer_email || '',
+          customerPhone: customerDetails.customer_phone || ''
+        },
+        orderMeta: {
+          returnUrl: orderMeta.return_url || '',
+          notifyUrl: orderMeta.notify_url || '',
+          paymentMethods: orderMeta.payment_methods || this.paymentMethods
+        }
+      };
+    } catch (error) {
+      console.error('Error transforming order response:', error);
+      console.warn('Cashfree API response structure may have changed:', {
+        hasOrderId: !!data.order_id,
+        hasCustomerDetails: !!data.customer_details,
+        hasOrderMeta: !!data.order_meta
+      });
+      // Return minimal valid response
+      return {
+        orderId: data.order_id || '',
+        orderStatus: data.order_status || 'UNKNOWN',
+        paymentSessionId: data.payment_session_id,
+        paymentUrl: data.payment_link || '',
+        orderAmount: data.order_amount || 0,
+        orderCurrency: data.order_currency || 'INR',
+        orderNote: data.order_note || '',
+        customerDetails: {
+          customerId: '',
+          customerName: '',
+          customerEmail: '',
+          customerPhone: ''
+        },
+        orderMeta: {
+          returnUrl: '',
+          notifyUrl: '',
+          paymentMethods: this.paymentMethods
+        }
+      };
+    }
   }
 
-  private transformPaymentStatus(data: any): CashfreePaymentStatus {
-    return {
-      orderId: data.order_id,
-      orderAmount: data.order_amount,
-      referenceId: data.reference_id,
-      txStatus: data.tx_status,
-      paymentMode: data.payment_mode,
-      txMsg: data.tx_msg,
-      txTime: data.tx_time,
-      signature: data.signature
-    };
+  private transformPaymentStatus(data: CashfreeApiOrderResponse): CashfreePaymentStatus {
+    try {
+      // Cashfree API might return tx_status in the payment object or order_status at root level
+      // Check both locations for transaction status with null checks
+      const payment = data.payment || {};
+      const txStatus = data.tx_status || payment.tx_status || data.order_status || '';
+      
+      return {
+        orderId: data.order_id || '',
+        orderAmount: data.order_amount || 0,
+        referenceId: data.reference_id || payment.reference_id || '',
+        txStatus: txStatus,
+        paymentMode: data.payment_mode || payment.payment_mode || '',
+        txMsg: data.tx_msg || payment.tx_msg || '',
+        txTime: data.tx_time || payment.tx_time || '',
+        signature: data.signature || payment.signature || ''
+      };
+    } catch (error) {
+      console.error('Error transforming payment status:', error);
+      console.warn('Cashfree API response structure may have changed:', {
+        hasOrderId: !!data.order_id,
+        hasPayment: !!data.payment,
+        hasTxStatus: !!data.tx_status
+      });
+      // Return minimal valid response
+      return {
+        orderId: data.order_id || '',
+        orderAmount: data.order_amount || 0,
+        referenceId: data.reference_id || '',
+        txStatus: data.tx_status || data.order_status || '',
+        paymentMode: '',
+        txMsg: '',
+        txTime: '',
+        signature: ''
+      };
+    }
   }
 
   // Get payment methods available
