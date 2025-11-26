@@ -217,8 +217,8 @@ export async function POST(request: NextRequest) {
             
             // Fix: Use ISO string for estimatedDelivery instead of Date object
             const updateData = {
-              paymentStatus: paymentStatus as const,
-              status: paymentStatus === 'completed' ? 'confirmed' as const : 'pending' as const,
+              paymentStatus: paymentStatus,
+              status: paymentStatus === 'completed' ? 'confirmed' : 'pending',
               transactionId: referenceId || orderStatusDetails?.referenceId,
               paymentMode: paymentMode || orderStatusDetails?.paymentMode || 'cashfree',
               paymentMessage: txMsg || orderStatusDetails?.txMsg || 'Payment captured successfully',
@@ -271,8 +271,8 @@ export async function POST(request: NextRequest) {
               console.log(`Order found via fallback: ${orderData.orderId}, current status: ${orderData.status}, payment status: ${orderData.paymentStatus}`);
               
               const updateData = {
-                paymentStatus: paymentStatus as const,
-                status: paymentStatus === 'completed' ? 'confirmed' as const : 'pending' as const,
+                paymentStatus: paymentStatus,
+                status: paymentStatus === 'completed' ? 'confirmed' : 'pending',
                 transactionId: referenceId || orderStatusDetails?.referenceId,
                 paymentMode: paymentMode || orderStatusDetails?.paymentMode || 'cashfree',
                 paymentMessage: txMsg || orderStatusDetails?.txMsg || 'Payment captured successfully',

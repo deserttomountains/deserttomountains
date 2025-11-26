@@ -648,7 +648,9 @@ export default function PaymentPage() {
             </h2>
             
             <div className="space-y-4 mb-6">
-              {gateways.map((gateway) => (
+              {gateways
+                .filter((gateway) => gateway.id !== 'cashfree') // Temporarily hide Cashfree from UI
+                .map((gateway) => (
                 <button
                   type="button"
                   key={gateway.id}
