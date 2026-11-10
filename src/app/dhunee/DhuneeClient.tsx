@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Navigation from '@/components/Navigation';
-import { Sparkles, CheckCircle, ShoppingCart, Star, ArrowRight, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
+import { Sparkles, CheckCircle, ShoppingCart, ArrowRight, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
@@ -44,7 +44,7 @@ export default function DhuneeClient() {
         image: '/images/dhunee_1.webp',
         price: PRICE,
         quantity: quantity,
-        subtitle: 'Traditional Vedic Incense (50g)',
+        subtitle: 'Traditional Vedic Incense',
         type: 'dhunee',
       });
       showToast('Added Dhunee to cart!', 'success');
@@ -64,7 +64,7 @@ export default function DhuneeClient() {
         image: '/images/dhunee_1.webp',
         price: PRICE,
         quantity: quantity,
-        subtitle: 'Traditional Vedic Incense (50g)',
+        subtitle: 'Traditional Vedic Incense',
         type: 'dhunee',
       });
       router.push('/cart');
@@ -89,19 +89,6 @@ export default function DhuneeClient() {
                 alt="Dhunee Organic Incense"
                 className="w-full h-72 sm:h-80 md:h-[390px] object-cover rounded-3xl"
               />
-              <div className="absolute top-4 left-4 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full p-3 shadow-lg animate-float">
-                <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-              </div>
-              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 sm:px-4 py-2 shadow-lg">
-                <div className="flex items-center gap-1">
-                  <Star className="w-3 h-3 sm:w-4 sm:h-4 text-[#E6C866] fill-current" />
-                  <span className="text-xs sm:text-sm font-bold text-[#2A2418]">4.9/5</span>
-                </div>
-              </div>
-              <div className="absolute bottom-4 left-4 bg-emerald-600/95 backdrop-blur-sm text-white rounded-full px-3.5 py-1.5 shadow-lg flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
-                <span className="text-xs sm:text-sm font-bold tracking-wide">In Stock</span>
-              </div>
             </div>
           </div>
           
@@ -126,10 +113,6 @@ export default function DhuneeClient() {
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 border border-[#B8A94A]/40 rounded-full text-xs sm:text-sm font-semibold text-[#5E4E06] shadow-xs">
                 <CheckCircle className="w-3.5 h-3.5 text-[#8B7A1A]" />
-                50g Net Weight
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 border border-[#B8A94A]/40 rounded-full text-xs sm:text-sm font-semibold text-[#5E4E06] shadow-xs">
-                <CheckCircle className="w-3.5 h-3.5 text-[#8B7A1A]" />
                 45-60 Mins Burn Time
               </span>
             </div>
@@ -141,7 +124,7 @@ export default function DhuneeClient() {
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl sm:text-4xl font-black text-[#5E4E06]">₹{PRICE}</span>
-                    <span className="text-xs text-gray-500 font-medium">/ pack (50g)</span>
+                    <span className="text-xs text-gray-500 font-medium">/ pack</span>
                   </div>
                   <span className="text-xs text-gray-500 font-medium">Inclusive of all taxes</span>
                 </div>

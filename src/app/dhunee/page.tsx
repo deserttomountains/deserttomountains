@@ -98,11 +98,6 @@ export default function DhuneePage() {
       },
       {
         "@type": "PropertyValue",
-        "name": "Weight",
-        "value": "50g per pack"
-      },
-      {
-        "@type": "PropertyValue",
         "name": "Organic",
         "value": "100% Natural"
       },
