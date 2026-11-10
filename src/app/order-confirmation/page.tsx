@@ -46,8 +46,8 @@ function OrderConfirmationContent() {
       // Process cart items to match the expected format
       const processedItems = parsedOrderData.items.map((item: any) => ({
         ...item,
-        type: item.type || 'sample', // Default to sample if type is not specified
-        variant: item.variant || 'sample', // Default to sample if variant is not specified
+        type: item.type || (item.name?.toLowerCase().includes('dhunee') ? 'dhunee' : 'sample'),
+        variant: item.variant || (item.type === 'dhunee' || item.name?.toLowerCase().includes('dhunee') ? 'standard' : 'sample'),
         // Ensure shades are properly formatted
         shades: item.shades ? item.shades.map((shade: any) => 
           typeof shade === 'string' ? shade : shade.shadeName || shade
@@ -84,15 +84,15 @@ function OrderConfirmationContent() {
         // Process cart items to match the expected format
         const processedCartItems = cart.map((item: any) => ({
           ...item,
-          type: item.type || 'sample', // Default to sample if type is not specified
-          variant: item.variant || 'sample', // Default to sample if variant is not specified
+          type: item.type || (item.name?.toLowerCase().includes('dhunee') ? 'dhunee' : 'sample'),
+          variant: item.variant || (item.type === 'dhunee' || item.name?.toLowerCase().includes('dhunee') ? 'standard' : 'sample'),
           // Ensure shades are properly formatted
           shades: item.shades ? item.shades.map((shade: any) => 
             typeof shade === 'string' ? shade : shade.shadeName || shade
           ) : []
         }));
         
-        const totalAmount = cart.reduce((sum: number, item: any) => sum + item.price, 0);
+        const totalAmount = cart.reduce((sum: number, item: any) => sum + item.price * (item.quantity || 1), 0);
         const shipping = 0; // Shipping fee will be calculated separately after order confirmation
         const finalTotal = totalAmount + shipping; // 5% GST already included in product prices
 
@@ -290,7 +290,7 @@ function OrderConfirmationContent() {
                      <div key={index} className="flex items-center gap-4 p-6 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-2xl border border-[#E8E4D8]">
                        <div className="w-16 h-16 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-2xl flex items-center justify-center">
                          <span className="text-white font-bold text-lg">
-                           {item.type === 'wallputty' ? 'WP' : 'SP'}
+                           {item.type === 'wallputty' ? 'WP' : (item.type === 'dhunee' || item.name?.toLowerCase().includes('dhunee')) ? 'DH' : 'SP'}
                          </span>
                        </div>
                        <div className="flex-1">
@@ -299,6 +299,8 @@ function OrderConfirmationContent() {
                                                        <p className="text-gray-600">
                               {item.type === 'wallputty' && item.variant === 'pigmented' && item.shades
                                 ? `${item.totalQuantity} × 25kg`
+                                : (item.type === 'dhunee' || item.name?.toLowerCase().includes('dhunee'))
+                                ? `${item.quantity || 1} pack`
                                 : item.type === 'sample'
                                 ? `${item.shades?.length || 0} colors`
                                 : '25kg pack'
@@ -347,6 +349,7 @@ function OrderConfirmationContent() {
                              {item.type === 'wallputty' && item.variant === 'sample' && 'Sample Pack'}
                              {item.type === 'wallputty' && item.variant === 'natural' && 'Natural White'}
                              {item.type === 'sample' && 'Sample Pack'}
+                             {(item.type === 'dhunee' || item.name?.toLowerCase().includes('dhunee')) && 'Traditional Vedic Incense'}
                            </p>
                          </div>
                        </div>
