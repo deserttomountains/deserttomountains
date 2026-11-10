@@ -2,6 +2,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['whatsapp-web.js', 'puppeteer', 'qrcode'],
+  turbopack: {},
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Don't bundle server-side modules on the client
