@@ -61,10 +61,10 @@ export default function DhuneePage() {
     "color": ["Natural Brown", "Golden", "Amber"],
     "offers": {
       "@type": "Offer",
-      "price": "299",
+      "price": "599",
       "priceCurrency": "INR",
-      "priceValidUntil": "2024-12-31",
-      "availability": "https://schema.org/OutOfStock",
+      "priceValidUntil": "2026-12-31",
+      "availability": "https://schema.org/InStock",
       "seller": {
         "@type": "Organization",
         "name": "Desert to Mountains"

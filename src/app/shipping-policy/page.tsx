@@ -63,9 +63,9 @@ const sections = [
     icon: <Truck className="w-7 h-7 text-[#E6C866]" />, title: 'Delivery Terms',
     content: (
       <ul className="list-disc ml-6">
-        <li><strong>Transit Time Domestically:</strong> In general, domestic shipments are in transit for 2 – 7 days</li>
-        <li><strong>Transit time Internationally:</strong> Generally, orders shipped internationally are in transit for 4 – 22 days. This varies greatly depending on the courier you have selected. We are able to offer a more specific estimate when you are choosing your courier at checkout.</li>
-        <li><strong>Change Of Delivery Address:</strong> Orders will be dispatched within a time of a week. Our warehouse operates on Monday – Friday during standard business hours, except on national holidays at which time the warehouse will be closed. In these instances, we take steps to ensure shipment delays will be kept to a minimum.</li>
+        <li><strong>Transit Time Domestically:</strong> In general, domestic shipments are in transit for 2-7 days</li>
+        <li><strong>Transit time Internationally:</strong> Generally, orders shipped internationally are in transit for 4-22 days. This varies greatly depending on the courier you have selected. We are able to offer a more specific estimate when you are choosing your courier at checkout.</li>
+        <li><strong>Change Of Delivery Address:</strong> Orders will be dispatched within a time of a week. Our warehouse operates on Monday - Friday during standard business hours, except on national holidays at which time the warehouse will be closed. In these instances, we take steps to ensure shipment delays will be kept to a minimum.</li>
         <li><strong>Change Of Delivery Address:</strong> For change of delivery address requests, we are able to change the address at any time before the order has been dispatched.</li>
         <li><strong>Items Out Of Stock:</strong> If an item is out of stock, we will wait for the item to be available before dispatching your order. Existing items in the order will be reserved while we await this item.</li>
         <li><strong>Delivery Time Exceeded:</strong> If delivery time has exceeded the forecasted time, please contact us so that we can conduct an investigation.</li>

@@ -2,16 +2,20 @@
 
 import { useState } from 'react';
 import Navigation from '@/components/Navigation';
-import { Sparkles, CheckCircle, ShoppingCart, Star, ArrowRight } from 'lucide-react';
+import { Sparkles, CheckCircle, ShoppingCart, Star, ArrowRight, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCart } from '@/components/CartContext';
+import { useToast } from '@/components/ToastContext';
 
 export default function DhuneeClient() {
-  const [selectedSize, setSelectedSize] = useState<'small' | 'large'>('small');
-  const [quantity, setQuantity] = useState(1);
+  const router = useRouter();
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
 
-  const sizes = [
-    { key: 'small', label: 'Small', price: 249 },
-    { key: 'large', label: 'Large', price: 400 }
-  ];
+  const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+
+  const PRICE = 599;
 
   const features = [
     {
@@ -31,24 +35,59 @@ export default function DhuneeClient() {
     }
   ];
 
-  const selected = sizes.find(s => s.key === selectedSize);
+  const handleAddToCart = () => {
+    setIsAddingToCart(true);
+    try {
+      addToCart({
+        id: 4,
+        name: 'Dhunee Organic Incense',
+        image: '/images/dhunee_1.webp',
+        price: PRICE,
+        quantity: quantity,
+        subtitle: 'Traditional Vedic Incense (50g)',
+        type: 'dhunee',
+      });
+      showToast('Added Dhunee to cart!', 'success');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showToast('Failed to add to cart', 'error');
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
 
-
+  const handleBuyNow = () => {
+    try {
+      addToCart({
+        id: 4,
+        name: 'Dhunee Organic Incense',
+        image: '/images/dhunee_1.webp',
+        price: PRICE,
+        quantity: quantity,
+        subtitle: 'Traditional Vedic Incense (50g)',
+        type: 'dhunee',
+      });
+      router.push('/cart');
+    } catch (error) {
+      console.error('Error proceeding to buy:', error);
+      showToast('Failed to proceed to checkout', 'error');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4]">
       <Navigation />
       
       {/* Hero/Product Section */}
-      <section className="relative pt-32 pb-20 bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-white overflow-hidden">
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-16 items-center">
+      <section className="relative pt-24 md:pt-28 pb-12 md:pb-16 bg-gradient-to-br from-[#F8F6F0] via-[#F0EDE4] to-white overflow-hidden">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 items-center">
           {/* Product Image */}
           <div className="flex justify-center">
             <div className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-fade-in-up">
               <img
                 src="/images/dhunee_1.webp"
                 alt="Dhunee Organic Incense"
-                className="w-full h-80 object-cover rounded-3xl"
+                className="w-full h-72 sm:h-80 md:h-[390px] object-cover rounded-3xl"
               />
               <div className="absolute top-4 left-4 bg-gradient-to-br from-[#5E4E06] to-[#8B7A1A] rounded-full p-3 shadow-lg animate-float">
                 <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
@@ -59,77 +98,130 @@ export default function DhuneeClient() {
                   <span className="text-xs sm:text-sm font-bold text-[#2A2418]">4.9/5</span>
                 </div>
               </div>
-              <div className="absolute bottom-4 left-4 bg-red-500 text-white rounded-full px-3 sm:px-4 py-2 shadow-lg">
-                <span className="text-xs sm:text-sm font-bold">Out of Stock</span>
+              <div className="absolute bottom-4 left-4 bg-emerald-600/95 backdrop-blur-sm text-white rounded-full px-3.5 py-1.5 shadow-lg flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                <span className="text-xs sm:text-sm font-bold tracking-wide">In Stock</span>
               </div>
             </div>
           </div>
           
           {/* Product Details */}
           <div className="animate-fade-in-up">
-            <div className="mb-4 inline-flex items-center gap-2 px-4 sm:px-6 py-2 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] border border-[#B8A94A] text-[#5E4E06] rounded-full text-xs sm:text-sm font-semibold animate-fade-in-up">
+            <div className="mb-3 inline-flex items-center gap-2 px-4 sm:px-5 py-1.5 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] border border-[#B8A94A] text-[#5E4E06] rounded-full text-xs sm:text-sm font-semibold animate-fade-in-up">
               <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" style={{animationDuration: '3s'}} />
               <span>Organic Incense • Vedic Tradition</span>
               <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" style={{animationDuration: '3s', animationDirection: 'reverse'}} />
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2A2418] mb-2 animate-fade-in-up">Dhunee</h1>
-            <p className="text-[#5E4E06] font-bold text-lg sm:text-xl mb-4 animate-fade-in-up">Organic Incense</p>
-            <p className="text-[#2A2418]/70 text-base sm:text-lg mb-6 animate-fade-in-up">Premium incense crafted from Himalayan herbs, desi cow dung, and pure ghee, based on traditional Vedic practices for purification and peaceful ambiance.</p>
-            
-            {/* Size Selection */}
-            <div className="mb-6">
-              <div className="font-semibold text-[#2A2418] mb-3 text-sm sm:text-base">Choose Size:</div>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                {sizes.map(size => (
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2A2418] mb-1 animate-fade-in-up">Dhunee</h1>
+            <p className="text-[#5E4E06] font-bold text-lg sm:text-xl mb-2 animate-fade-in-up">Organic Incense</p>
+            <p className="text-[#2A2418]/70 text-sm sm:text-base mb-4 animate-fade-in-up leading-relaxed">
+              Premium incense crafted from Himalayan herbs, desi cow dung, and pure ghee, based on traditional Vedic practices for purification and peaceful ambiance.
+            </p>
+
+            {/* Product Highlights */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 border border-[#B8A94A]/40 rounded-full text-xs sm:text-sm font-semibold text-[#5E4E06] shadow-xs">
+                <CheckCircle className="w-3.5 h-3.5 text-[#8B7A1A]" />
+                100% Organic Vedic Blend
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 border border-[#B8A94A]/40 rounded-full text-xs sm:text-sm font-semibold text-[#5E4E06] shadow-xs">
+                <CheckCircle className="w-3.5 h-3.5 text-[#8B7A1A]" />
+                50g Net Weight
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 border border-[#B8A94A]/40 rounded-full text-xs sm:text-sm font-semibold text-[#5E4E06] shadow-xs">
+                <CheckCircle className="w-3.5 h-3.5 text-[#8B7A1A]" />
+                45-60 Mins Burn Time
+              </span>
+            </div>
+
+            {/* Price & Purchase Box */}
+            <div className="bg-white/85 backdrop-blur-sm rounded-2xl border border-[#B8A94A]/40 p-4 sm:p-5 shadow-sm space-y-4">
+              {/* Price & Stock Header */}
+              <div className="flex items-baseline justify-between border-b border-[#E8E4D8] pb-3">
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl sm:text-4xl font-black text-[#5E4E06]">₹{PRICE}</span>
+                    <span className="text-xs text-gray-500 font-medium">/ pack (50g)</span>
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">Inclusive of all taxes</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>In Stock</span>
+                </div>
+              </div>
+
+              {/* Quantity Selector Row */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-bold text-[#2A2418]">Quantity:</span>
+                  {quantity > 1 && (
+                    <span className="ml-2 text-xs text-[#8B7A1A] font-semibold">
+                      (Total: ₹{(PRICE * quantity).toLocaleString()})
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center bg-[#F8F6F0] border border-[#B8A94A]/60 rounded-xl p-1 shadow-inner">
                   <button
-                    key={size.key}
-                    onClick={() => setSelectedSize(size.key as 'small' | 'large')}
-                    className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none cursor-pointer text-sm sm:text-base ${
-                      selectedSize === size.key 
-                        ? 'border-[#5E4E06] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#5E4E06] shadow-lg' 
-                        : 'border-[#B8A94A] bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] text-[#2A2418] hover:border-[#5E4E06] hover:shadow-md'
-                    }`}
+                    type="button"
+                    onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Decrease quantity"
+                    className="w-8 h-8 rounded-lg bg-white hover:bg-[#E6C866]/40 text-[#5E4E06] font-bold flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
                   >
-                    {size.label} (₹{size.price})
+                    -
                   </button>
-                ))}
+                  <span className="w-10 text-center font-bold text-[#2A2418] text-sm">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(prev => Math.min(99, prev + 1))}
+                    aria-label="Increase quantity"
+                    className="w-8 h-8 rounded-lg bg-white hover:bg-[#E6C866]/40 text-[#5E4E06] font-bold flex items-center justify-center transition-colors cursor-pointer shadow-xs"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons: Spacious and clearly separated */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Add to Cart */}
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] hover:from-[#4D3F05] hover:to-[#736515] text-white font-bold rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap cursor-pointer"
+                >
+                  <ShoppingCart className="w-4 h-4 flex-shrink-0" />
+                  <span>{isAddingToCart ? 'Adding...' : 'Add to Cart'}</span>
+                </button>
+
+                {/* Buy Now */}
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-[#E6C866] to-[#D4AF37] hover:from-[#DAC055] hover:to-[#C4A027] text-[#2A2418] font-bold rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap cursor-pointer"
+                >
+                  <span>Buy Now</span>
+                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                </button>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="pt-2.5 border-t border-[#E8E4D8] flex items-center justify-between text-xs text-[#5E4E06]">
+                <div className="flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-[#8B7A1A] flex-shrink-0" />
+                  <span>Pan-India Delivery</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#8B7A1A] flex-shrink-0" />
+                  <span>100% Authentic Vedic Blend</span>
+                </div>
               </div>
             </div>
-            
-            {/* Out of Stock Message */}
-            <div className="flex flex-col sm:flex-row gap-4 items-center mb-6 sm:mb-8">
-              <span className="text-2xl sm:text-3xl font-black text-[#5E4E06]">₹{selected?.price}</span>
-              <div className="flex items-center gap-2 opacity-50">
-                <button
-                  className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 font-bold flex items-center justify-center border border-gray-300 cursor-not-allowed"
-                  disabled
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  min={1}
-                  value={quantity}
-                  className="w-12 text-center font-bold text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-2 py-1 cursor-not-allowed text-sm"
-                  disabled
-                />
-                <button
-                  className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 font-bold flex items-center justify-center border border-gray-300 cursor-not-allowed"
-                  disabled
-                >
-                  +
-                </button>
-              </div>
-              <button
-                disabled
-                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gray-400 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base cursor-not-allowed opacity-75"
-              >
-                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                Out of Stock
-              </button>
-            </div>
-            <div className="text-xs sm:text-sm text-red-600 font-semibold mb-2">Currently Out of Stock</div>
-            <div className="text-xs sm:text-sm text-gray-500">Inclusive of all taxes</div>
           </div>
         </div>
       </section>
@@ -230,10 +322,10 @@ export default function DhuneeClient() {
           {/* Text Side */}
           <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-[#E8E4D8]">
             <h3 className="text-xl sm:text-2xl font-bold text-[#5E4E06] mb-4 text-center">About Dhunee & The Hawan Tradition</h3>
-                            <p className="text-sm sm:text-lg text-gray-700 mb-4">In primeval times, Deva Rishis, traditional scholars who lived their lives with simplicity and renunciation, practised Hawan – a crucial and sacred ritual of Hindu Culture – for mental peace and well being.</p>
+            <p className="text-sm sm:text-lg text-gray-700 mb-4">In primeval times, Deva Rishis, traditional scholars who lived their lives with simplicity and renunciation, practised Hawan, a crucial and sacred ritual of Hindu Culture, for mental peace and well being.</p>
             <blockquote className="border-l-4 border-[#5E4E06] pl-4 italic text-[#5E4E06] mb-4 bg-[#F8F6F0] py-2 rounded text-sm sm:text-base">Mahamrityunjay Mantra, a noted chant from Hindu Mythology, manifests as <span className='font-semibold'>sugandhim</span> (Aroma/Good Smell) <span className='font-semibold'>pushtivardhanam</span> (Give rise to good Health/nourishment) emphasizing that a clean and a fragrant atmosphere helps in nourishing the soul within.</blockquote>
             <p className="text-sm sm:text-lg text-gray-700 mb-4">Hawan follows the scientific process wherein carefully picked Himalayan medicinal herbs are offered to Agni Dev (the Fire God) along with 100% organic cow dung & Ghee (Butter), producing Oxygen when burnt together.</p>
-            <p className="text-sm sm:text-lg text-gray-700 mb-4">Although widely noted as something practiced by Deva Rishis, the practice of Hawan is also recommended by the earliest holy scriptures of Hindu religion – Yajur Veda. It advocates performing Hawan every morning and evening to attain spiritual enlightenment, mental peace, purification of mind, and calm aura.</p>
+            <p className="text-sm sm:text-lg text-gray-700 mb-4">Although widely noted as something practiced by Deva Rishis, the practice of Hawan is also recommended by the earliest holy scriptures of Hindu religion, the Yajur Veda. It advocates performing Hawan every morning and evening to attain spiritual enlightenment, mental peace, purification of mind, and calm aura.</p>
             <div className="mt-6 p-4 bg-gradient-to-r from-[#F8F6F0] to-[#F0EDE4] rounded-xl text-[#5E4E06] font-semibold text-center shadow text-sm sm:text-base">With a view to inculcate the recommendations of our holy scriptures in our daily lives, we present to you an opportunity to purify and to bless the aura engulfed by you at ease with Dhunee.</div>
           </div>
         </div>
@@ -243,28 +335,33 @@ export default function DhuneeClient() {
       <section className="py-12 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
           <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Experience Purity & Peace</h3>
-          <p className="text-sm sm:text-lg text-gray-700 mb-4">Dhunee is more than incense—it's a sacred tradition. Each stick is hand-rolled using Himalayan herbs, desi cow dung, and pure ghee, following traditional Vedic recipes for spiritual and environmental purification. Light Dhunee to cleanse your space, invite peace, and connect with timeless Indian knowledge.</p>
+          <p className="text-sm sm:text-lg text-gray-700 mb-4">Dhunee is more than incense, it's a sacred tradition. Each stick is hand-rolled using Himalayan herbs, desi cow dung, and pure ghee, following traditional Vedic recipes for spiritual and environmental purification. Light Dhunee to cleanse your space, invite peace, and connect with timeless Indian knowledge.</p>
         </div>
       </section>
 
-      {/* Final CTA - Inspired by Home, themed for Dhunee */}
+      {/* Final CTA - Themed for Dhunee */}
       <section className="py-16 sm:py-24 bg-gradient-to-br from-[#2A2418] via-[#5E4E06] to-[#8B7A1A] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-[#5E4E06]/20 to-[#8B7A1A]/20"></div>
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 sm:mb-10">Dhunee is Currently Out of Stock</h2>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 sm:mb-10">Experience the Sacred Purity of Dhunee</h2>
           <p className="text-lg sm:text-xl lg:text-2xl text-[#F0EDE4] mb-12 sm:mb-16 max-w-4xl mx-auto leading-relaxed font-light">
-            We're temporarily out of stock of this <span className="font-semibold text-[#E6C866]">spiritual incense</span>. Contact us to get notified when Dhunee becomes available again.
+            Bring home the divine fragrance of authentic Vedic incense crafted with <span className="font-semibold text-[#E6C866]">Himalayan herbs, desi cow dung, and pure ghee</span> for peace, clarity, and spiritual wellness.
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 justify-center">
-            <a href="/contact" className="group px-8 sm:px-12 py-4 sm:py-6 bg-gradient-to-r from-[#5E4E06] to-[#8B7A1A] text-white font-bold rounded-full shadow-2xl hover:shadow-[#B8A94A]/25 transition-all duration-500 hover:scale-105 cursor-pointer">
-              <span className="flex items-center gap-3 sm:gap-4 text-lg sm:text-xl">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                Get Notified When Available
-                <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-2 transition-transform" />
-              </span>
-            </a>
-            <a href="/gallery" className="px-8 sm:px-12 py-4 sm:py-6 border-2 border-white/30 text-white font-bold rounded-full hover:bg-white hover:text-[#5E4E06] transition-all duration-300 hover:scale-105 cursor-pointer">
-              <span className="text-lg sm:text-xl">View Gallery</span>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center">
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="group px-8 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-[#E6C866] to-[#D4AF37] hover:from-[#DAC055] hover:to-[#C4A027] text-[#2A2418] font-bold rounded-full shadow-2xl hover:shadow-[#B8A94A]/40 transition-all duration-300 hover:scale-105 cursor-pointer flex items-center gap-3 text-lg sm:text-xl"
+            >
+              <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
+              <span>Order Now • ₹{PRICE}</span>
+              <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <a
+              href="/cart"
+              className="px-8 sm:px-10 py-4 sm:py-5 border-2 border-white/40 text-white font-bold rounded-full hover:bg-white hover:text-[#5E4E06] transition-all duration-300 hover:scale-105 cursor-pointer text-lg"
+            >
+              View Cart
             </a>
           </div>
         </div>
@@ -272,5 +369,4 @@ export default function DhuneeClient() {
       
     </div>
   );
-} 
- 
+}

@@ -96,20 +96,12 @@ function QuotesPageContent() {
     },
     // Dhunee Products
     {
-      id: 'dhunee-100',
-      name: 'Dhunee Organic Incense - Small',
+      id: 'dhunee',
+      name: 'Dhunee Organic Incense',
       category: 'Dhunee',
-      price: 249,
+      price: 599,
       unit: 'per pack',
-      description: 'Natural organic incense sticks'
-    },
-    {
-      id: 'dhunee-200',
-      name: 'Dhunee Organic Incense - Large',
-      category: 'Dhunee',
-      price: 400,
-      unit: 'per pack',
-      description: 'Natural organic incense sticks'
+      description: 'Traditional Vedic incense with Himalayan herbs, cow dung & pure ghee'
     }
   ];
 

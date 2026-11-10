@@ -55,7 +55,7 @@ export default function AuraClient() {
     label: "25kg Pack",
     mrp: 689,
     price: 499,
-    coverageSummary: "20–40 sq ft per 25kg (by surface)",
+    coverageSummary: "20-40 sq ft per 25kg (by surface)",
   };
 
   const samplePacks = [
@@ -298,7 +298,7 @@ export default function AuraClient() {
               Natural Wall Plaster
             </p>
             <p className="text-[#2A2418]/70 text-lg mb-6 animate-fade-in-up">
-              AURA is more than a wall finish—it is a living surface shaped by
+              AURA is more than a wall finish, it is a living surface shaped by
               nature and heritage. Formulated from gypsum, cow dung, and earth
               minerals, it naturally balances indoor air while offering strength
               and timeless beauty. Each wall becomes a canvas of wellness,
@@ -404,15 +404,15 @@ export default function AuraClient() {
                           <ul className="list-disc pl-5 space-y-1 text-sm">
                             <li>
                               20 sq. ft. coverage on regular bricks or stones
-                              with a 12–15mm thickness.
+                              with a 12-15mm thickness.
                             </li>
                             <li>
-                              25–30 sq. ft. coverage on AAC blocks with an
-                              8–10mm thickness.
+                              25-30 sq. ft. coverage on AAC blocks with an
+                              8-10mm thickness.
                             </li>
                             <li>
                               40 sq. ft. coverage on concrete or plaster with a
-                              4–6mm thickness.
+                              4-6mm thickness.
                             </li>
                           </ul>
                           <p className="text-xs text-[#2A2418]/70 mt-2">

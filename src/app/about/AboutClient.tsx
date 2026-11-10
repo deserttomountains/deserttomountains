@@ -202,7 +202,7 @@ export default function AboutClient() {
                   natural landscapes and our environment,"
                 </blockquote>
                 <div className="text-right text-[#5E4E06] font-semibold">
-                  — Divyveer Singh Bhati
+                  - Divyveer Singh Bhati
                 </div>
               </div>
             </div>
@@ -244,7 +244,7 @@ export default function AboutClient() {
                       <p className="text-[#2A2418]/80 leading-relaxed">
                         For Divyveer,{" "}
                         <strong className="text-[#5E4E06]">
-                          sustainability is not just an idea—it's a way of life
+                          sustainability is not just an idea, it's a way of life
                         </strong>
                         . His mission is to reconnect people with nature through
                         mindful, ethical, and scalable building solutions that
@@ -396,7 +396,7 @@ export default function AboutClient() {
               property owners create well-laid, foundationally strong and
               aesthetically-attractive spaces to live, work and play, led us to
               create
-              <span className="font-bold text-[#5E4E06]"> Aura</span>—an
+              <span className="font-bold text-[#5E4E06]"> Aura</span>, an
               innovative gypsum-based natural plaster.
             </p>
           </div>
@@ -446,7 +446,7 @@ export default function AboutClient() {
               ."
             </p>
             <div className="mt-6 text-[#E6C866] font-semibold">
-              — Divyveer Singh Bhati
+              - Divyveer Singh Bhati
             </div>
           </div>
         </div>

@@ -175,7 +175,7 @@ export default function PaymentPage() {
         return {
           productId: String(item.id),
           productName: item.name,
-          productType: 'aura' as 'aura',
+          productType: (item.type === 'dhunee' || item.name.toLowerCase().includes('dhunee') ? 'dhunee' : 'aura') as 'aura' | 'dhunee',
           quantity: item.quantity || 1,
           unitPrice: item.price,
           totalPrice: (item.quantity || 1) * item.price,

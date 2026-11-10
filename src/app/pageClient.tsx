@@ -314,7 +314,7 @@ export default function HomeClient() {
               <div className="space-y-8">
                 <p className="text-xl md:text-2xl text-[#2A2418]/80 leading-relaxed font-light">
                   Desert to Mountains is a vision born from the raw beauty and
-                  wisdom of India's landscapes—from the sun-baked dunes of the
+                  wisdom of India's landscapes, from the sun-baked dunes of the
                   Thar Desert to the enduring serenity of the Himalayan ranges.
                   Our mission is rooted in a single belief:{" "}
                   <span className="font-semibold text-[#5E4E06]">
@@ -345,7 +345,7 @@ export default function HomeClient() {
                 </h3>
               </div>
               <p className="text-[#2A2418]/70 text-lg leading-relaxed">
-                Each of our products is developed with care—minimally processed,
+                Each of our products is developed with care: minimally processed,
                 naturally sourced, and designed to nourish not just your spaces,
                 but also your wellbeing.
               </p>
@@ -363,7 +363,7 @@ export default function HomeClient() {
               <p className="text-[#2A2418]/70 text-lg leading-relaxed">
                 From clay that breathes, to lime that strengthens, from gypsum
                 that insulates, to cow dung that heals, we work with ingredients
-                that have long protected Indian homes—now reimagined for the
+                that have long protected Indian homes, now reimagined for the
                 world of tomorrow.
               </p>
             </div>
@@ -374,7 +374,7 @@ export default function HomeClient() {
               <div className="relative p-8 bg-gradient-to-br from-[#F8F6F0] to-[#F0EDE4] rounded-3xl border border-[#B8A94A] shadow-xl">
                 <Quote className="w-12 h-12 text-[#5E4E06] mx-auto mb-6" />
                 <p className="text-2xl md:text-3xl text-[#2A2418]/80 font-light leading-relaxed mb-6">
-                  We don't just create materials—we create movements. Movements
+                  We don't just create materials, we create movements. Movements
                   toward healthier homes, cleaner air, skilled local
                   communities, and a future where construction doesn't
                   compromise the planet.
